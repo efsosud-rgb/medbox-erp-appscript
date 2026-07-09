@@ -60,7 +60,6 @@ const RFC_STOPWORDS = [
  * @param {number|Object} tamanhoLoteOuEvento Quantidade de linhas ou objeto de evento do trigger.
  */
 function processarLoteCosmos(tamanhoLoteOuEvento) {
-  // Trata o caso de ser chamado por trigger (onde o primeiro arg é o objeto de evento)
   let tamanhoLote = 50;
   if (typeof tamanhoLoteOuEvento === 'number') {
     tamanhoLote = tamanhoLoteOuEvento;
@@ -74,35 +73,52 @@ function processarLoteCosmos(tamanhoLoteOuEvento) {
     return;
   }
 
+  if (!RFC_COSMOS_TOKEN || RFC_COSMOS_TOKEN.includes('SEU_TOKEN')) {
+    const msg = 'Configure RFC_COSMOS_TOKEN no início de RoboFiscalCosmos.js.';
+    if (typeof tamanhoLoteOuEvento === 'number') SpreadsheetApp.getUi().alert(msg);
+    Logger.log(msg);
+    return;
+  }
+
   const headers = rfcGarantirColunas_(aba);
   const idx = rfcCriarIndice_(headers);
 
+  // Validação defensiva de colunas críticas
+  const colunasCriticas = ['DESCRICAO_FORNECEDOR', 'NCM', 'EAN', 'STATUS_CONSULTA_COSMOS'];
+  for (const col of colunasCriticas) {
+    if (idx[col] === undefined) {
+      Logger.log('Erro: Coluna ' + col + ' não encontrada na BD_PRECOS.');
+      return;
+    }
+  }
+
   const inicio = Date.now();
   const ultimaLinha = aba.getLastRow();
+  if (ultimaLinha < 2) return;
+
+  const totalDados = aba.getRange(2, 1, ultimaLinha - 1, headers.length).getValues();
 
   let processados = 0;
+  let encontradas = 0;
+  let naoEncontradas = 0;
+  let erros = 0;
 
-  for (let linha = 2; linha <= ultimaLinha && processados < tamanhoLote; linha++) {
+  for (let i = 0; i < totalDados.length && processados < tamanhoLote; i++) {
     if (Date.now() - inicio > RFC_LIMITE_TEMPO_MS) break;
 
-    const rowRange = aba.getRange(linha, 1, 1, headers.length);
-    const rowValues = rowRange.getValues()[0];
+    const linhaData = totalDados[i];
+    const linhaNum = i + 2;
 
-    const status = rfcUpper_(rfcGetCell_(rowValues, idx, 'STATUS_CONSULTA_COSMOS'));
+    const status = rfcUpper_(rfcGetCell_(linhaData, idx, 'STATUS_CONSULTA_COSMOS'));
+    if (status === 'ENCONTRADO' || status === 'NAO_ENCONTRADO' || status === 'SEM_DESCRICAO') continue;
 
-    // Pula se já processado com sucesso ou não encontrado
-    if (status === 'ENCONTRADO' || status === 'NAO_ENCONTRADO') continue;
-
-    const ncmOficial = rfcGetCell_(rowValues, idx, 'NCM');
-    const eanOficial = rfcGetCell_(rowValues, idx, 'EAN');
-
-    // Só processa se NCM ou EAN estiverem vazios
+    const ncmOficial = rfcGetCell_(linhaData, idx, 'NCM');
+    const eanOficial = rfcGetCell_(linhaData, idx, 'EAN');
     if (ncmOficial && eanOficial) continue;
 
-    const descricao = rfcLimpar_(rfcGetCell_(rowValues, idx, 'DESCRICAO_FORNECEDOR'));
-
+    const descricao = rfcLimpar_(rfcGetCell_(linhaData, idx, 'DESCRICAO_FORNECEDOR'));
     if (!descricao || descricao.length < 5) {
-      rfcEscreverResultado_(aba, linha, idx, {
+      rfcEscreverResultadoIndividual_(aba, linhaNum, idx, {
         status: 'SEM_DESCRICAO',
         descricao: '', ncm: '', ean: '', marca: '', url: '', data: new Date()
       });
@@ -111,26 +127,40 @@ function processarLoteCosmos(tamanhoLoteOuEvento) {
 
     try {
       const resultado = rfcConsultarCosmosPorDescricao_(descricao);
-      rfcEscreverResultado_(aba, linha, idx, resultado);
+      rfcEscreverResultadoIndividual_(aba, linhaNum, idx, resultado);
 
-      // Se encontrado, preenche as colunas oficiais caso estejam vazias
       if (resultado.status === 'ENCONTRADO') {
+        encontradas++;
         if (!ncmOficial && resultado.ncm) {
-          aba.getRange(linha, idx['NCM'] + 1).setValue(resultado.ncm);
+          aba.getRange(linhaNum, idx['NCM'] + 1).setValue(resultado.ncm);
         }
         if (!eanOficial && resultado.ean) {
-          aba.getRange(linha, idx['EAN'] + 1).setValue(resultado.ean);
+          aba.getRange(linhaNum, idx['EAN'] + 1).setValue(resultado.ean);
         }
+      } else if (resultado.status === 'NAO_ENCONTRADO') {
+        naoEncontradas++;
       }
 
       processados++;
       Utilities.sleep(RFC_PAUSA_MS);
 
     } catch (e) {
-      Logger.log('Erro na linha ' + linha + ': ' + e.message);
-      rfcSetCell_(aba, linha, idx, 'STATUS_CONSULTA_COSMOS', 'ERRO');
+      Logger.log('Erro na linha ' + linhaNum + ': ' + e.message);
+      aba.getRange(linhaNum, idx['STATUS_CONSULTA_COSMOS'] + 1).setValue('ERRO');
+      erros++;
       continue;
     }
+  }
+
+  const resumo = 'Processamento Cosmos concluído.\n\n' +
+                 'Lote processado: ' + processados + '\n' +
+                 'Encontrados: ' + encontradas + '\n' +
+                 'Não encontrados: ' + naoEncontradas + '\n' +
+                 'Erros: ' + erros;
+
+  Logger.log(resumo);
+  if (typeof tamanhoLoteOuEvento === 'number') {
+    SpreadsheetApp.getUi().alert(resumo);
   }
 }
 
@@ -138,38 +168,20 @@ function processarLoteCosmos(tamanhoLoteOuEvento) {
  * TRIGGER AUTOMÁTICO
  ************************************************************/
 
-/**
- * Trigger disparado por alterações na planilha.
- * Detecta adições na BD_PRECOS e agenda o processamento.
- */
 function rfcTriggerOnChange(e) {
   if (!e) return;
-
   const tipo = e.changeType;
-
   if (tipo === 'INSERT_ROW' || tipo === 'EDIT' || tipo === 'OTHER') {
     const triggers = ScriptApp.getProjectTriggers();
     const jaTemTrigger = triggers.some(t => t.getHandlerFunction() === 'processarLoteCosmos');
-
     if (!jaTemTrigger) {
-      ScriptApp.newTrigger('processarLoteCosmos')
-        .timeBased()
-        .after(30 * 1000)
-        .create();
+      ScriptApp.newTrigger('processarLoteCosmos').timeBased().after(30 * 1000).create();
     }
   }
 }
 
 /************************************************************
- * FUNÇÕES DE VARREDURA E TESTE
- ************************************************************/
-
-function executarLoteVarreduraFiscalCosmos() {
-  processarLoteCosmos(50);
-}
-
-/************************************************************
- * CONSULTA À API COSMOS POR TEXTO/DESCRIÇÃO
+ * HELPERS DE API E ESCRITA
  ************************************************************/
 
 function rfcConsultarCosmosPorDescricao_(descricaoOriginal) {
@@ -273,14 +285,33 @@ function rfcExtrairPalavrasSignificativas_(texto) {
     .filter(function(p) { return RFC_STOPWORDS.indexOf(p) === -1; });
 }
 
-function rfcEscreverResultado_(aba, linha, idx, resultado) {
-  rfcSetCell_(aba, linha, idx, 'SUGESTAO_DESCRICAO_COSMOS', resultado.descricao);
-  rfcSetCell_(aba, linha, idx, 'SUGESTAO_NCM_COSMOS', resultado.ncm);
-  rfcSetCell_(aba, linha, idx, 'SUGESTAO_EAN_COSMOS', resultado.ean);
-  rfcSetCell_(aba, linha, idx, 'SUGESTAO_MARCA_COSMOS', resultado.marca);
-  rfcSetCell_(aba, linha, idx, 'STATUS_CONSULTA_COSMOS', resultado.status);
-  rfcSetCell_(aba, linha, idx, 'FONTE_COSMOS_URL', resultado.url);
-  rfcSetCell_(aba, linha, idx, 'DATA_CONSULTA_COSMOS', resultado.data);
+function rfcEscreverResultadoIndividual_(aba, linha, idx, resultado) {
+  const colunas = [
+    'SUGESTAO_DESCRICAO_COSMOS',
+    'SUGESTAO_NCM_COSMOS',
+    'SUGESTAO_EAN_COSMOS',
+    'SUGESTAO_MARCA_COSMOS',
+    'STATUS_CONSULTA_COSMOS',
+    'FONTE_COSMOS_URL',
+    'DATA_CONSULTA_COSMOS'
+  ];
+
+  const valores = [
+    resultado.descricao,
+    resultado.ncm,
+    resultado.ean,
+    resultado.marca,
+    resultado.status,
+    resultado.url,
+    resultado.data
+  ];
+
+  colunas.forEach((nome, i) => {
+    const pos = idx[nome];
+    if (pos !== undefined) {
+      aba.getRange(linha, pos + 1).setValue(valores[i]);
+    }
+  });
 }
 
 function rfcGarantirColunas_(aba) {
@@ -318,12 +349,6 @@ function rfcGetCell_(row, idx, nomeColuna) {
   return row[pos];
 }
 
-function rfcSetCell_(aba, linha, idx, nomeColuna, valor) {
-  const pos = idx[nomeColuna];
-  if (pos === undefined || pos === null || pos < 0) return;
-  aba.getRange(linha, pos + 1).setValue(valor);
-}
-
 function rfcUpper_(valor) {
   return String(valor || '').trim().toUpperCase();
 }
@@ -351,4 +376,8 @@ function rfcNormalizarTexto_(valor) {
 function resetarVarreduraFiscalCosmos() {
   PropertiesService.getScriptProperties().deleteProperty(RFC_PROP_ULTIMA_LINHA);
   SpreadsheetApp.getUi().alert('Ponteiro de retomada zerado.');
+}
+
+function executarLoteVarreduraFiscalCosmos() {
+  processarLoteCosmos(50);
 }
