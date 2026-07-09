@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+
+  <style>
+    :root {
+      --azul: #002e56;
+      --azul2: #005c85;
+      --vermelho: #d80024;
+      --verde: #087334;
+      --cinza-bg: #f4f6f8;
+      --cinza-card: #eef1f4;
+      --cinza-borda: #d6dce2;
+      --amarelo: #fff5c7;
+      --texto: #1b1f24;
+      --branco: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--cinza-bg);
+      color: var(--texto);
+      overflow: hidden;
+    }
+
+    .app {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      background: linear-gradient(90deg, var(--azul), #003c68);
+      color: white;
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 5px solid var(--vermelho);
+    }
+
+    .top-title {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .top-title h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: 0.3px;
+    }
+
+    .top-title span {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .logo {
+      text-align: right;
+      font-weight: 700;
+      font-size: 22px;
+    }
+
+    .logo small {
+      display: block;
+      font-size: 11px;
+      font-weight: 400;
+      opacity: 0.9;
+    }
+
+    .content {
+      padding: 14px;
+      overflow: auto;
+      height: calc(100vh - 78px);
+    }
+
+    .grid-top {
+      display: grid;
+      grid-template-columns: minmax(720px, 1fr) 330px;
+      gap: 12px;
+    }
+
+    .panel {
+      background: white;
+      border: 1px solid var(--cinza-borda);
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      background: var(--vermelho);
+      color: white;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 9px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-body {
+      padding: 12px;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .filters-row2 {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: 1.1fr 1fr 1.3fr 1.2fr 0.8fr;
+      gap: 10px;
+    }
+
+    label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--azul);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    input, select {
+      width: 100%;
+      height: 34px;
+      border: 1px solid #c8d0d8;
+      border-radius: 7px;
+      padding: 6px 9px;
+      font-size: 13px;
+      background: var(--amarelo);
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--azul2);
+      box-shadow: 0 0 0 2px rgba(0,92,133,0.12);
+    }
+
+    .actions {
+      display: grid;
+      gap: 10px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 13px;
+      transition: 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+    }
+
+    .btn-primary {
+      background: var(--verde);
+      color: white;
+      height: 44px;
+      font-size: 15px;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: var(--azul);
+      border: 1px solid var(--cinza-borda);
+    }
+
+    .status {
+      padding: 9px 10px;
+      background: #f8fafc;
+      border: 1px solid var(--cinza-borda);
+      border-radius: 8px;
+      font-size: 12px;
+      color: #3d4752;
+      min-height: 36px;
+    }
+
+    .cards {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .card {
+      background: white;
+      border: 1px solid var(--cinza-borda);
+      border-radius: 10px;
+      padding: 13px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .card-title {
+      color: var(--azul);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+
+    .card-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--azul);
+    }
+
+    .card-sub {
+      margin-top: 4px;
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    .middle {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 12px;
+    }
+
+    .help-list {
+      font-size: 12px;
+      line-height: 1.55;
+      color: #394553;
+    }
+
+    .suggestions-table, .result-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    th {
+      background: var(--azul);
+      color: white;
+      text-align: left;
+      padding: 8px;
+      border: 1px solid #0b416a;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    td {
+      padding: 7px 8px;
+      border: 1px solid #e1e6eb;
+      vertical-align: top;
+      background: white;
+    }
+
+    tr:nth-child(even) td {
+      background: #fafbfd;
+    }
+
+    .results-panel {
+      margin-top: 12px;
+    }
+
+    .table-wrap {
+      max-height: 360px;
+      overflow: auto;
+      border: 1px solid var(--cinza-borda);
+      border-radius: 0 0 10px 10px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 7px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .badge-ok {
+      background: #e6f4ea;
+      color: #137333;
+    }
+
+    .badge-warn {
+      background: #fff3cd;
+      color: #8a5a00;
+    }
+
+    .badge-danger {
+      background: #fde7e9;
+      color: #b00020;
+    }
+
+    .money {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .small {
+      font-size: 11px;
+      color: #687587;
+    }
+
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .footer {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #687587;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    @media (max-width: 1100px) {
+      .grid-top, .middle {
+        grid-template-columns: 1fr;
+      }
+
+      .filters, .filters-row2, .cards {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app" id="app">
+    <div class="topbar">
+      <div class="top-title">
+        <h1>MEDBOX | MAPA CLIENTES 2026 | BUSCA AVANÇADA</h1>
+        <span>Consulta de consumo, preço, cliente, SKU, fabricante e simulação por markup</span>
+      </div>
+
+      <div class="logo">
+        MedBox
+        <small>inteligência comercial</small>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="grid-top">
+        <div class="panel">
+          <div class="panel-header">
+            <span>🔎 FILTROS DE PESQUISA</span>
+            <span class="small" style="color:white;">AUX_BUSCA + MAPA_ERP</span>
+          </div>
+
+          <div class="panel-body">
+            <div class="filters">
+              <div>
+                <label>Termo 1</label>
+                <input id="termo1" placeholder="Ex.: SORO">
+              </div>
+              <div>
+                <label>Termo 2</label>
+                <input id="termo2" placeholder="Ex.: CLORETO">
+              </div>
+              <div>
+                <label>Termo 3</label>
+                <input id="termo3" placeholder="Ex.: 100ML">
+              </div>
+              <div>
+                <label>Termo 4</label>
+                <input id="termo4" placeholder="Opcional">
+              </div>
+            </div>
+
+            <div class="filters-row2">
+              <div>
+                <label>Categoria</label>
+                <select id="categoria">
+                  <option value="">Todas</option>
+                </select>
+              </div>
+
+              <div>
+                <label>Cliente</label>
+                <select id="cliente">
+                  <option value="">Todos</option>
+                </select>
+              </div>
+
+              <div>
+                <label>SKU Master / Operacional</label>
+                <input id="sku" placeholder="SKU ou parte do SKU">
+              </div>
+
+              <div>
+                <label>Fabricante / Marca</label>
+                <input id="fabricante" placeholder="Ex.: FARMARIN">
+              </div>
+
+              <div>
+                <label>Markup %</label>
+                <input id="markup" value="80">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">AÇÕES</div>
+
+          <div class="panel-body actions">
+            <button class="btn btn-primary" onclick="pesquisar()">
+              🔎 PESQUISAR
+            </button>
+
+            <button class="btn btn-secondary" onclick="limparFiltros()">
+              🧹 LIMPAR FILTROS
+            </button>
+
+            <button class="btn btn-secondary" onclick="carregarOpcoes()">
+              🔄 ATUALIZAR OPÇÕES
+            </button>
+
+            <button class="btn btn-secondary" onclick="exportarCsv()">
+              📤 EXPORTAR CSV
+            </button>
+
+            <div class="status" id="status">
+              Carregando opções...
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <div class="card-title">Resultados</div>
+          <div class="card-value" id="cardResultados">0</div>
+          <div class="card-sub" id="cardExibidos">0 exibidos</div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Clientes no mapa</div>
+          <div class="card-value" id="cardClientes">0</div>
+          <div class="card-sub">detectados no MAPA_ERP</div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Produtos no mapa</div>
+          <div class="card-value" id="cardProdutos">0</div>
+          <div class="card-sub">base consolidada</div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Última atualização</div>
+          <div class="card-value" id="cardAtualizado" style="font-size:16px;">--</div>
+          <div class="card-sub">horário da consulta</div>
+        </div>
+      </div>
+
+      <div class="middle">
+        <div class="panel">
+          <div class="panel-header">COMO USAR</div>
+          <div class="panel-body help-list">
+            <div>1) Digite um ou mais termos. Ex.: <b>SORO</b> + <b>100ML</b>.</div>
+            <div>2) Use categoria, cliente, SKU e fabricante para refinar.</div>
+            <div>3) Altere o <b>Markup %</b> para simular seu preço de venda.</div>
+            <div>4) A coluna <b>Preço Venda c/ Markup</b> será recalculada automaticamente.</div>
+            <div>5) Volumes são tratados com cuidado: <b>100ML</b> não deve puxar <b>1000ML</b>.</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">SUGESTÕES DE SKU MASTER / SKU OPERACIONAL</div>
+          <div class="panel-body" style="padding:0;">
+            <table class="suggestions-table">
+              <thead>
+                <tr>
+                  <th>SKU sugerido</th>
+                  <th>Tipo</th>
+                  <th>Produto exemplo</th>
+                  <th>Score</th>
+                </tr>
+              </thead>
+              <tbody id="sugestoesBody">
+                <tr>
+                  <td colspan="4">Nenhuma pesquisa executada ainda.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel results-panel">
+        <div class="panel-header">
+          <span>RESULTADOS DA PESQUISA</span>
+          <span id="resultInfo" class="small" style="color:white;">Aguardando pesquisa</span>
+        </div>
+
+        <div class="table-wrap">
+          <table class="result-table">
+            <thead>
+              <tr>
+                <th>Categoria</th>
+                <th>SKU Master</th>
+                <th>Produto</th>
+                <th>Quant. total</th>
+                <th>Preço Médio Cliente</th>
+                <th>Menor Unit.</th>
+                <th>Maior Unit.</th>
+                <th>Preço Venda c/ Markup</th>
+                <th>Custo 2026</th>
+                <th>Status</th>
+                <th>Fornecedor</th>
+                <th>Fabricante</th>
+                <th>Clientes</th>
+              </tr>
+            </thead>
+
+            <tbody id="resultadosBody">
+              <tr>
+                <td colspan="13">Nenhuma pesquisa executada ainda.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>MEDBOX ERP | Interface HTML via Apps Script</span>
+        <span>MAPA_ERP + AUX_BUSCA</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let resultadosAtuais = [];
+
+    document.addEventListener('DOMContentLoaded', carregarOpcoes);
+
+    function setLoading(ativo, mensagem) {
+      const app = document.getElementById('app');
+      const status = document.getElementById('status');
+
+      if (ativo) {
+        app.classList.add('loading');
+      } else {
+        app.classList.remove('loading');
+      }
+
+      if (mensagem) {
+        status.textContent = mensagem;
+      }
+    }
+
+    function carregarOpcoes() {
+      setLoading(true, 'Carregando opções...');
+
+      google.script.run
+        .withSuccessHandler(function(data) {
+          preencherSelect('categoria', data.categorias || [], 'Todas');
+          preencherSelect('cliente', data.clientes || [], 'Todos');
+
+          document.getElementById('cardClientes').textContent = data.clientes.length || 0;
+          document.getElementById('cardProdutos').textContent = data.totalProdutosMapa || 0;
+          document.getElementById('cardAtualizado').textContent = data.atualizadoEm || '--';
+
+          setLoading(false, 'Pronto para pesquisar.');
+        })
+        .withFailureHandler(function(err) {
+          setLoading(false, 'Erro: ' + err.message);
+        })
+        .obterOpcoesPainel();
+    }
+
+    function preencherSelect(id, opcoes, labelVazio) {
+      const select = document.getElementById(id);
+      const atual = select.value;
+
+      select.innerHTML = '';
+
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = labelVazio || 'Todos';
+      select.appendChild(opt);
+
+      opcoes.forEach(function(item) {
+        const o = document.createElement('option');
+        o.value = item;
+        o.textContent = item;
+        select.appendChild(o);
+      });
+
+      if (atual) {
+        select.value = atual;
+      }
+    }
+
+    function coletarFiltros() {
+      return {
+        termo1: document.getElementById('termo1').value,
+        termo2: document.getElementById('termo2').value,
+        termo3: document.getElementById('termo3').value,
+        termo4: document.getElementById('termo4').value,
+        categoria: document.getElementById('categoria').value,
+        cliente: document.getElementById('cliente').value,
+        sku: document.getElementById('sku').value,
+        fabricante: document.getElementById('fabricante').value,
+        markup: document.getElementById('markup').value
+      };
+    }
+
+    function pesquisar() {
+      const filtros = coletarFiltros();
+
+      setLoading(true, 'Pesquisando...');
+
+      google.script.run
+        .withSuccessHandler(function(data) {
+          resultadosAtuais = data.resultados || [];
+
+          renderResultados(data);
+          renderSugestoes(data.sugestoes || []);
+
+          document.getElementById('cardResultados').textContent = data.totalEncontrado || 0;
+          document.getElementById('cardExibidos').textContent = (data.exibidos || 0) + ' exibidos';
+          document.getElementById('cardAtualizado').textContent = data.atualizadoEm || '--';
+          document.getElementById('resultInfo').textContent =
+            (data.totalEncontrado || 0) + ' encontrados | ' +
+            (data.exibidos || 0) + ' exibidos | Markup ' +
+            Math.round((data.markupUsado || 0) * 100) + '%';
+
+          setLoading(false, 'Pesquisa concluída.');
+        })
+        .withFailureHandler(function(err) {
+          setLoading(false, 'Erro: ' + err.message);
+        })
+        .pesquisarPainel(filtros);
+    }
+
+    function renderSugestoes(sugestoes) {
+      const body = document.getElementById('sugestoesBody');
+      body.innerHTML = '';
+
+      if (!sugestoes.length) {
+        body.innerHTML = '<tr><td colspan="4">Nenhuma sugestão encontrada.</td></tr>';
+        return;
+      }
+
+      sugestoes.forEach(function(s) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(s.sku || '')}</td>
+          <td>${escapeHtml(s.tipo || '')}</td>
+          <td>${escapeHtml(s.produto || '')}</td>
+          <td>${escapeHtml(String(s.score || ''))}</td>
+        `;
+        body.appendChild(tr);
+      });
+    }
+
+    function renderResultados(data) {
+      const body = document.getElementById('resultadosBody');
+      body.innerHTML = '';
+
+      const resultados = data.resultados || [];
+
+      if (!resultados.length) {
+        body.innerHTML = '<tr><td colspan="13">Nenhum resultado encontrado.</td></tr>';
+        return;
+      }
+
+      resultados.forEach(function(r) {
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td>${escapeHtml(r.categoria)}</td>
+          <td>${escapeHtml(r.skuMaster)}</td>
+          <td>${escapeHtml(r.produto)}</td>
+          <td class="money">${formatNumero(r.quantTotal)}</td>
+          <td class="money">${formatMoeda(r.precoMedioClientes)}</td>
+          <td class="money">${formatMoeda(r.menorValorUnit)}</td>
+          <td class="money">${formatMoeda(r.maiorValorUnit)}</td>
+          <td class="money"><b>${formatMoeda(r.precoVendaMarkup)}</b></td>
+          <td class="money">${formatMoeda(r.custoCompra2026)}</td>
+          <td>${badgeStatus(r.statusComercial)}</td>
+          <td>${escapeHtml(r.fornecedorCompra2026)}</td>
+          <td>${escapeHtml(r.fabricanteCompra2026)}</td>
+          <td>${escapeHtml(r.clientesComConsumo)}</td>
+        `;
+
+        body.appendChild(tr);
+      });
+    }
+
+    function badgeStatus(status) {
+      const s = status || '';
+
+      let classe = 'badge-warn';
+
+      if (s === 'COMPETITIVO') classe = 'badge-ok';
+      if (s === 'ACIMA DO CLIENTE') classe = 'badge-danger';
+      if (s === 'SEM CUSTO') classe = 'badge-warn';
+
+      return `<span class="badge ${classe}">${escapeHtml(s)}</span>`;
+    }
+
+    function limparFiltros() {
+      ['termo1', 'termo2', 'termo3', 'termo4', 'sku', 'fabricante'].forEach(function(id) {
+        document.getElementById(id).value = '';
+      });
+
+      document.getElementById('categoria').value = '';
+      document.getElementById('cliente').value = '';
+      document.getElementById('markup').value = '80';
+
+      document.getElementById('status').textContent = 'Filtros limpos.';
+    }
+
+    function exportarCsv() {
+      if (!resultadosAtuais.length) {
+        document.getElementById('status').textContent = 'Nada para exportar.';
+        return;
+      }
+
+      const headers = [
+        'Categoria',
+        'SKU Master',
+        'Produto',
+        'Quant. total',
+        'Preço Médio Cliente',
+        'Menor Valor Unit',
+        'Maior Valor Unit',
+        'Preço Venda c/ Markup',
+        'Custo Compra 2026',
+        'Status',
+        'Fornecedor',
+        'Fabricante',
+        'Clientes'
+      ];
+
+      const rows = resultadosAtuais.map(r => [
+        r.categoria,
+        r.skuMaster,
+        r.produto,
+        r.quantTotal,
+        r.precoMedioClientes,
+        r.menorValorUnit,
+        r.maiorValorUnit,
+        r.precoVendaMarkup,
+        r.custoCompra2026,
+        r.statusComercial,
+        r.fornecedorCompra2026,
+        r.fabricanteCompra2026,
+        r.clientesComConsumo
+      ]);
+
+      const csv = [headers].concat(rows)
+        .map(row => row.map(csvCell).join(';'))
+        .join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'medbox_busca_avancada.csv';
+      a.click();
+
+      URL.revokeObjectURL(url);
+
+      document.getElementById('status').textContent = 'CSV exportado.';
+    }
+
+    function csvCell(v) {
+      const txt = v === null || v === undefined ? '' : String(v);
+      return '"' + txt.replace(/"/g, '""') + '"';
+    }
+
+    function formatMoeda(v) {
+      if (v === null || v === undefined || v === '') return '';
+
+      const n = Number(v);
+      if (isNaN(n)) return '';
+
+      return n.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      });
+    }
+
+    function formatNumero(v) {
+      if (v === null || v === undefined || v === '') return '';
+
+      const n = Number(v);
+      if (isNaN(n)) return '';
+
+      return n.toLocaleString('pt-BR');
+    }
+
+    function escapeHtml(value) {
+      if (value === null || value === undefined) return '';
+
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>

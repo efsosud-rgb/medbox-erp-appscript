@@ -1,0 +1,2054 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+
+  <style>
+    :root {
+      --azul: #002e56;
+      --azul2: #005c85;
+      --vermelho: #d80024;
+      --verde: #087334;
+      --cinza-bg: #f4f6f8;
+      --cinza-borda: #d6dce2;
+      --amarelo: #fff5c7;
+      --texto: #1b1f24;
+      --cliente-1: #fff2cc;
+      --cliente-2: #d9ead3;
+      --cliente-3: #cfe2f3;
+      --cliente-4: #eadcf8;
+      --cliente-5: #fce4d6;
+      --cliente-6: #d0e0e3;
+      --cliente-7: #f4cccc;
+      --cliente-8: #d9d2e9;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--cinza-bg);
+      color: var(--texto);
+      font-size: 12px;
+      overflow: hidden;
+      text-transform: uppercase;
+    }
+
+    .app {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--cinza-bg);
+    }
+
+    .topbar {
+      background: linear-gradient(90deg, var(--azul), #003c68);
+      color: white;
+      padding: 7px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 4px solid var(--vermelho);
+      flex: 0 0 auto;
+    }
+
+    .top-title h1 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .top-title span {
+      display: block;
+      font-size: 10px;
+      margin-top: 2px;
+      opacity: 0.9;
+    }
+
+    .logo {
+      text-align: right;
+      font-weight: 800;
+      font-size: 20px;
+    }
+
+    .logo small {
+      display: block;
+      font-size: 10px;
+      font-weight: 400;
+    }
+
+    .tabs {
+      background: white;
+      border-bottom: 1px solid var(--cinza-borda);
+      display: flex;
+      gap: 6px;
+      padding: 6px 8px 0 8px;
+      flex: 0 0 auto;
+      overflow-x: auto;
+    }
+
+    .tab {
+      border: 1px solid var(--cinza-borda);
+      border-bottom: none;
+      background: #f8fafc;
+      color: var(--azul);
+      padding: 7px 12px;
+      border-radius: 9px 9px 0 0;
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .tab.active {
+      background: var(--azul);
+      color: white;
+      border-color: var(--azul);
+    }
+
+    .content {
+      padding: 7px 8px;
+      overflow: auto;
+      height: calc(100vh - 88px);
+      flex: 1 1 auto;
+    }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    .grid-top {
+      display: grid;
+      grid-template-columns: minmax(1050px, 1fr) 300px;
+      gap: 7px;
+    }
+
+    .grid-form {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+    }
+
+    .grid-form-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+    }
+
+    .grid-form-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 7px;
+    }
+
+    .panel {
+      background: white;
+      border: 1px solid var(--cinza-borda);
+      border-radius: 9px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      background: var(--vermelho);
+      color: white;
+      font-weight: 800;
+      font-size: 12px;
+      padding: 7px 9px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-header.blue { background: var(--azul); }
+
+    .panel-body { padding: 8px; }
+
+    label {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--azul);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid #c8d0d8;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 12px;
+      background: var(--amarelo);
+      outline: none;
+      text-transform: uppercase;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    input, select { height: 30px; }
+    textarea { min-height: 68px; resize: vertical; }
+
+    input[type="file"] {
+      height: auto;
+      padding: 8px;
+      background: white;
+      text-transform: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--azul2);
+      box-shadow: 0 0 0 2px rgba(0,92,133,0.12);
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .filters-row2 {
+      margin-top: 6px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.4fr 1.2fr 0.65fr;
+      gap: 6px;
+    }
+
+    .filters-mapa {
+      margin-top: 6px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.35fr 1.2fr 1.1fr 0.65fr 0.55fr;
+      gap: 6px;
+    }
+
+    .actions {
+      display: grid;
+      gap: 6px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 32px;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+    }
+
+    .btn-primary {
+      background: var(--verde);
+      color: white;
+      min-height: 40px;
+      font-size: 14px;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: var(--azul);
+      border: 1px solid var(--cinza-borda);
+    }
+
+    .btn-danger {
+      background: var(--vermelho);
+      color: white;
+    }
+
+    .status {
+      padding: 7px 9px;
+      background: #f8fafc;
+      border: 1px solid var(--cinza-borda);
+      border-radius: 8px;
+      font-size: 11px;
+      color: #3d4752;
+      min-height: 32px;
+    }
+
+    .cards {
+      margin-top: 7px;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 7px;
+    }
+
+    .cards4 {
+      margin-top: 7px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+    }
+
+    .card {
+      background: white;
+      border: 1px solid var(--cinza-borda);
+      border-radius: 9px;
+      padding: 8px 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      min-height: 64px;
+    }
+
+    .card-title {
+      color: var(--azul);
+      font-size: 10px;
+      font-weight: 800;
+      margin-bottom: 3px;
+    }
+
+    .card-value {
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--azul);
+      white-space: nowrap;
+    }
+
+    .card-sub {
+      margin-top: 2px;
+      font-size: 10px;
+      color: #64748b;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    th {
+      background: var(--azul);
+      color: white;
+      text-align: left;
+      padding: 5px 6px;
+      border: 1px solid #0b416a;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 4px 6px;
+      border: 1px solid #e1e6eb;
+      vertical-align: top;
+      background: white;
+    }
+
+    tr:nth-child(even) td { background: #fafbfd; }
+
+    .results-panel { margin-top: 7px; }
+
+    .table-wrap {
+      height: calc(100vh - 505px);
+      min-height: 260px;
+      overflow: auto;
+      border: 1px solid var(--cinza-borda);
+      border-radius: 0 0 9px 9px;
+    }
+
+    .table-wrap.mapa {
+      height: calc(100vh - 350px);
+      min-height: 420px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 7px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .badge-ok { background: #e6f4ea; color: #137333; }
+    .badge-warn { background: #fff3cd; color: #8a5a00; }
+    .badge-danger { background: #fde7e9; color: #b00020; }
+
+    .money {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .small {
+      font-size: 10px;
+      color: #687587;
+    }
+
+    .loading {
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    .footer {
+      margin-top: 5px;
+      font-size: 10px;
+      color: #687587;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .col-produto { min-width: 360px; }
+    .col-sku { min-width: 190px; }
+    .col-fornecedor { min-width: 180px; }
+    .col-fabricante { min-width: 160px; }
+    .col-cliente { min-width: 120px; text-align: right; white-space: nowrap; }
+
+    .client-th {
+      color: #123;
+      font-weight: 900;
+      text-align: center;
+      border-color: #aab7c4;
+    }
+
+    .client-td {
+      text-align: right;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .client-color-0 { background: var(--cliente-1) !important; }
+    .client-color-1 { background: var(--cliente-2) !important; }
+    .client-color-2 { background: var(--cliente-3) !important; }
+    .client-color-3 { background: var(--cliente-4) !important; }
+    .client-color-4 { background: var(--cliente-5) !important; }
+    .client-color-5 { background: var(--cliente-6) !important; }
+    .client-color-6 { background: var(--cliente-7) !important; }
+    .client-color-7 { background: var(--cliente-8) !important; }
+
+    .mapa-table thead tr:nth-child(1) th { top: 0; z-index: 4; }
+    .mapa-table thead tr:nth-child(2) th { top: 26px; z-index: 3; }
+
+    .form-page {
+      display: grid;
+      grid-template-columns: minmax(900px, 1fr) 330px;
+      gap: 8px;
+    }
+
+    .result-box {
+      background: #eef7ee;
+      border: 1px solid #b8dfba;
+      border-radius: 8px;
+      padding: 10px;
+      font-weight: 800;
+      color: #115522;
+      min-height: 60px;
+      line-height: 1.5;
+    }
+
+    .warn-box {
+      background: #fff7df;
+      border: 1px solid #e6c15a;
+      color: #6b4a00;
+      border-radius: 8px;
+      padding: 10px;
+      font-weight: 800;
+      line-height: 1.5;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .upload-box {
+      border: 2px dashed #8aa6bf;
+      border-radius: 10px;
+      background: #f8fbff;
+      padding: 14px;
+      text-align: center;
+      min-height: 110px;
+    }
+
+    .upload-box strong {
+      color: var(--azul);
+      display: block;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .progress-line {
+      width: 100%;
+      height: 10px;
+      background: #e5e9ef;
+      border-radius: 99px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--verde);
+      transition: width 0.3s ease;
+    }
+
+    @media (max-width: 1200px) {
+      .grid-top, .form-page, .dashboard-grid { grid-template-columns: 1fr; }
+      .filters, .filters-row2, .filters-mapa, .grid-form, .grid-form-3, .grid-form-2, .cards, .cards4 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app" id="app">
+    <div class="topbar">
+      <div class="top-title">
+        <h1>MEDBOX ERP | SISTEMA COMERCIAL</h1>
+        <span>BUSCA | MAPA | COTAÇÕES | PREÇOS | IMPORTAÇÃO | SIMULADOR | DASHBOARD</span>
+      </div>
+
+      <div class="logo">
+        MEDBOX
+        <small>INTELIGÊNCIA COMERCIAL</small>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button id="tabBusca" class="tab active" onclick="trocarTela('Busca_Avançada')">🔎 BUSCA_AVANÇADA</button>
+      <button id="tabMapa" class="tab" onclick="trocarTela('Mapa_de_Produtos')">🧭 MAPA_DE_PRODUTOS</button>
+      <button id="tabCotacao" class="tab" onclick="trocarTela('Lancar_Cotacao')">📝 LANÇAR COTAÇÃO</button>
+      <button id="tabPreco" class="tab" onclick="trocarTela('Lancar_Preco')">💰 LANÇAR PREÇO</button>
+      <button id="tabImportar" class="tab" onclick="trocarTela('Importar_Tabela')">📥 IMPORTAR TABELA</button>
+      <button id="tabSimulador" class="tab" onclick="trocarTela('Simulador_Precos')">🧮 SIMULADOR</button>
+      <button id="tabDashboard" class="tab" onclick="trocarTela('Dashboard')">📊 DASHBOARD</button>
+    </div>
+
+    <div class="content">
+
+      <!-- BUSCA AVANÇADA -->
+      <div id="screenBusca" class="screen active">
+        <div class="grid-top">
+          <div class="panel">
+            <div class="panel-header">
+              <span>🔎 FILTROS DE PESQUISA</span>
+              <span class="small" style="color:white;">MAPA_ERP</span>
+            </div>
+
+            <div class="panel-body">
+              <div class="filters">
+                <div><label>Termo 1</label><input id="busca_termo1" placeholder="Ex.: SORO"></div>
+                <div><label>Termo 2</label><input id="busca_termo2" placeholder="Ex.: CLORETO"></div>
+                <div><label>Termo 3</label><input id="busca_termo3" placeholder="Ex.: 100ML"></div>
+                <div><label>Termo 4</label><input id="busca_termo4" placeholder="Opcional"></div>
+              </div>
+
+              <div class="filters-row2">
+                <div><label>Categoria</label><select id="busca_categoria"><option value="">Todas</option></select></div>
+                <div><label>Cliente</label><select id="busca_cliente"><option value="">Todos</option></select></div>
+                <div><label>SKU Master / Operacional</label><input id="busca_sku" placeholder="SKU ou parte do SKU"></div>
+                <div><label>Fabricante / Marca</label><input id="busca_fabricante" placeholder="Ex.: FARMARIN"></div>
+                <div><label>Markup %</label><input id="busca_markup" value="80"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">AÇÕES</div>
+            <div class="panel-body actions">
+              <button class="btn btn-primary" onclick="pesquisarBusca()">🔎 PESQUISAR</button>
+              <button class="btn btn-secondary" onclick="limparBusca()">🧹 LIMPAR FILTROS</button>
+              <button class="btn btn-secondary" onclick="carregarOpcoes()">🔄 ATUALIZAR OPÇÕES</button>
+              <button class="btn btn-secondary" onclick="exportarCsvBusca()">📤 EXPORTAR CSV</button>
+              <div class="status" id="statusBusca">CARREGANDO OPÇÕES...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cards">
+          <div class="card"><div class="card-title">Resultados</div><div class="card-value" id="busca_cardResultados">0</div><div class="card-sub" id="busca_cardExibidos">0 exibidos</div></div>
+          <div class="card"><div class="card-title">Qtde. demandada</div><div class="card-value" id="busca_cardQtdDemandada">0</div><div class="card-sub">soma dos itens exibidos</div></div>
+          <div class="card"><div class="card-title">Valor demandado</div><div class="card-value" id="busca_cardValorDemandado">R$ 0,00</div><div class="card-sub">menor preço × quantidade</div></div>
+          <div class="card"><div class="card-title">Clientes no mapa</div><div class="card-value" id="cardClientes">0</div><div class="card-sub">detectados no MAPA_ERP</div></div>
+          <div class="card"><div class="card-title">Produtos no mapa</div><div class="card-value" id="cardProdutos">0</div><div class="card-sub">base consolidada</div></div>
+          <div class="card"><div class="card-title">Última atualização</div><div class="card-value" id="cardAtualizado" style="font-size:15px;">--</div><div class="card-sub">horário da consulta</div></div>
+        </div>
+
+        <div class="grid-top" style="margin-top:7px;">
+          <div class="panel">
+            <div class="panel-header">COMO USAR</div>
+            <div class="panel-body">
+              1) DIGITE TERMOS COMO SORO, CLORETO, 100ML.<br>
+              2) USE CATEGORIA, CLIENTE, SKU E FABRICANTE PARA REFINAR.<br>
+              3) PREÇO MEDBOX = PREÇO CUSTO × (1 + MARKUP).<br>
+              4) SÓ CALCULA PREÇO MEDBOX QUANDO HOUVER PREÇO CUSTO.
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">SUGESTÕES DE SKU</div>
+            <div class="panel-body" style="padding:0;">
+              <table>
+                <thead><tr><th>SKU sugerido</th><th>Tipo</th><th>Score</th></tr></thead>
+                <tbody id="busca_sugestoesBody"><tr><td colspan="3">NENHUMA PESQUISA EXECUTADA AINDA.</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel results-panel">
+          <div class="panel-header blue">
+            <span>RESULTADOS DA PESQUISA</span>
+            <span id="busca_resultInfo" class="small" style="color:white;">AGUARDANDO PESQUISA</span>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Categoria</th>
+                  <th>SKU Master</th>
+                  <th class="col-produto">Produto</th>
+                  <th>Quant. total</th>
+                  <th>Menor Preço</th>
+                  <th>Preço Médio Cliente</th>
+                  <th>Preço Custo</th>
+                  <th>Preço MedBox</th>
+                  <th>Demanda R$</th>
+                  <th>Status</th>
+                  <th>Fornecedor</th>
+                  <th>Fabricante</th>
+                  <th>Clientes</th>
+                </tr>
+              </thead>
+              <tbody id="busca_resultadosBody"><tr><td colspan="13">NENHUMA PESQUISA EXECUTADA AINDA.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAPA DE PRODUTOS -->
+      <div id="screenMapa" class="screen">
+        <div class="grid-top">
+          <div class="panel">
+            <div class="panel-header">
+              <span>🧭 MAPA_DE_PRODUTOS</span>
+              <span class="small" style="color:white;">VISUALIZAÇÃO AGRUPADA DA BASE MAPA_ERP</span>
+            </div>
+
+            <div class="panel-body">
+              <div class="filters">
+                <div><label>Termo 1</label><input id="mapa_termo1" placeholder="Ex.: SORO"></div>
+                <div><label>Termo 2</label><input id="mapa_termo2" placeholder="Ex.: CLORETO"></div>
+                <div><label>Termo 3</label><input id="mapa_termo3" placeholder="Ex.: 100ML"></div>
+                <div><label>Termo 4</label><input id="mapa_termo4" placeholder="Opcional"></div>
+              </div>
+
+              <div class="filters-mapa">
+                <div><label>Categoria</label><select id="mapa_categoria"><option value="">Todas</option></select></div>
+                <div><label>Cliente</label><select id="mapa_cliente"><option value="">Todos</option></select></div>
+                <div><label>SKU Master / Operacional</label><input id="mapa_sku" placeholder="SKU ou parte do SKU"></div>
+                <div><label>Fabricante / Marca</label><input id="mapa_fabricante" placeholder="Ex.: FARMARIN"></div>
+                <div><label>Fornecedor</label><input id="mapa_fornecedor" placeholder="Fornecedor"></div>
+                <div><label>Markup %</label><input id="mapa_markup" value="80"></div>
+                <div><label>Limite</label><input id="mapa_limite" value="500"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">AÇÕES</div>
+            <div class="panel-body actions">
+              <button class="btn btn-primary" onclick="carregarMapaProdutos()">🧭 CARREGAR MAPA</button>
+              <button class="btn btn-secondary" onclick="limparMapa()">🧹 LIMPAR FILTROS</button>
+              <button class="btn btn-secondary" onclick="carregarOpcoes()">🔄 ATUALIZAR OPÇÕES</button>
+              <button class="btn btn-secondary" onclick="exportarCsvMapa()">📤 EXPORTAR CSV</button>
+              <div class="status" id="statusMapa">AGUARDANDO CARREGAMENTO DO MAPA.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cards">
+          <div class="card"><div class="card-title">Produtos encontrados</div><div class="card-value" id="mapa_cardEncontrados">0</div><div class="card-sub" id="mapa_cardExibidos">0 exibidos</div></div>
+          <div class="card"><div class="card-title">Qtde. demandada</div><div class="card-value" id="mapa_cardQtdDemandada">0</div><div class="card-sub">soma da pesquisa</div></div>
+          <div class="card"><div class="card-title">Valor demandado</div><div class="card-value" id="mapa_cardValorDemandado">R$ 0,00</div><div class="card-sub">menor preço × quantidade</div></div>
+          <div class="card"><div class="card-title">Produtos no MAPA_ERP</div><div class="card-value" id="mapa_cardProdutos">0</div><div class="card-sub">base completa</div></div>
+          <div class="card"><div class="card-title">Clientes</div><div class="card-value" id="mapa_cardClientes">0</div><div class="card-sub">detectados</div></div>
+          <div class="card"><div class="card-title">Atualizado em</div><div class="card-value" id="mapa_cardAtualizado" style="font-size:15px;">--</div><div class="card-sub">última consulta</div></div>
+        </div>
+
+        <div class="panel results-panel">
+          <div class="panel-header blue">
+            <span>TABELA MAPA_DE_PRODUTOS</span>
+            <span id="mapa_resultInfo" class="small" style="color:white;">AGUARDANDO CARREGAMENTO</span>
+          </div>
+
+          <div class="table-wrap mapa">
+            <table class="mapa-table">
+              <thead id="mapa_thead">
+                <tr>
+                  <th>Categoria</th><th>SKU Master</th><th>Produto</th><th>Quant. total</th><th>Menor Preço</th>
+                  <th>Preço Médio</th><th>Preço Custo</th><th>Preço MedBox</th><th>Demanda R$</th>
+                  <th>Status</th><th>Fornecedor</th><th>Fabricante</th><th>Clientes</th>
+                </tr>
+              </thead>
+              <tbody id="mapa_resultadosBody"><tr><td colspan="13">CLIQUE EM CARREGAR MAPA.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- LANÇAR COTAÇÃO -->
+      <div id="screenCotacao" class="screen">
+        <div class="form-page">
+          <div class="panel">
+            <div class="panel-header">📝 LANÇAMENTO DE NOVA COTAÇÃO</div>
+            <div class="panel-body">
+              <div class="grid-form">
+                <div><label>Data da Cotação</label><input id="cot_dataCotacao" type="date"></div>
+                <div><label>Cliente</label><input id="cot_cliente" list="lista_clientes" placeholder="Cliente"></div>
+                <div><label>Responsável</label><input id="cot_responsavel" placeholder="Responsável"></div>
+                <div><label>Categoria</label><input id="cot_categoria" list="lista_categorias" placeholder="Categoria"></div>
+              </div>
+
+              <div style="margin-top:7px;">
+                <label>Descrição do Item</label>
+                <textarea id="cot_descricaoCliente" placeholder="Descrição recebida do cliente"></textarea>
+              </div>
+
+              <div class="grid-form" style="margin-top:7px;">
+                <div><label>Quantidade</label><input id="cot_quantidade" placeholder="Quantidade"></div>
+                <div><label>Unidade</label><input id="cot_unidade" placeholder="UN / CX / FR"></div>
+                <div><label>Preço Referência Cliente</label><input id="cot_precoReferenciaCliente" placeholder="0,00"></div>
+                <div><label>Markup %</label><input id="cot_markupPercentual" value="50"></div>
+              </div>
+
+              <div class="grid-form-3" style="margin-top:7px;">
+                <div><label>SKU Master</label><input id="cot_skuMaster" list="lista_skus" placeholder="SKU Master"></div>
+                <div><label>SKU Operacional</label><input id="cot_skuOperacional" placeholder="SKU Operacional"></div>
+                <div><label>Marca / Fabricante</label><input id="cot_marcaFabricante" list="lista_fabricantes" placeholder="Marca/Fabricante"></div>
+              </div>
+
+              <div class="grid-form-2" style="margin-top:7px;">
+                <div><label>Status Cotação</label><select id="cot_statusCotacao"><option>NOVA</option><option>EM ANÁLISE</option><option>COTADA</option><option>GANHA</option><option>PERDIDA</option><option>NÃO COTAMOS</option></select></div>
+                <div><label>Origem</label><select id="cot_origem"><option>LANÇAMENTO MANUAL</option><option>E-MAIL</option><option>PLANILHA CLIENTE</option><option>WHATSAPP</option></select></div>
+              </div>
+
+              <div style="margin-top:7px;">
+                <label>Observação</label>
+                <textarea id="cot_observacao" placeholder="Observação"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">AÇÕES</div>
+            <div class="panel-body actions">
+              <button class="btn btn-primary" onclick="salvarCotacao()">💾 SALVAR COTAÇÃO</button>
+              <button class="btn btn-secondary" onclick="limparCotacao()">🧹 LIMPAR</button>
+              <button class="btn btn-secondary" onclick="carregarOpcoesFase2()">🔄 ATUALIZAR LISTAS</button>
+              <div class="status" id="statusCotacao">PRONTO PARA LANÇAR COTAÇÃO.</div>
+              <div class="result-box" id="resultadoCotacao">A COTAÇÃO SERÁ SALVA EM BD_COTACOES.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LANÇAR PREÇO -->
+      <div id="screenPreco" class="screen">
+        <div class="form-page">
+          <div class="panel">
+            <div class="panel-header">💰 LANÇAMENTO DE PREÇO / TABELA DE FORNECEDOR</div>
+            <div class="panel-body">
+              <div class="grid-form">
+                <div><label>Data Tabela</label><input id="pre_dataTabela" type="date"></div>
+                <div><label>Validade Tabela</label><input id="pre_validadeTabela" type="date"></div>
+                <div><label>Fornecedor</label><input id="pre_fornecedor" list="lista_fornecedores" placeholder="Fornecedor"></div>
+                <div><label>Fabricante / Marca</label><input id="pre_fabricanteMarca" list="lista_fabricantes" placeholder="Fabricante"></div>
+              </div>
+
+              <div style="margin-top:7px;">
+                <label>Descrição Produto Fornecedor</label>
+                <textarea id="pre_descricaoFornecedor" placeholder="Descrição da tabela ou lançamento avulso"></textarea>
+              </div>
+
+              <div class="grid-form" style="margin-top:7px;">
+                <div><label>SKU Master</label><input id="pre_skuMaster" list="lista_skus" placeholder="SKU Master"></div>
+                <div><label>SKU Operacional</label><input id="pre_skuOperacional" placeholder="SKU Operacional"></div>
+                <div><label>Unidade</label><input id="pre_unidade" placeholder="UN / CX / FR"></div>
+                <div><label>Preço Custo</label><input id="pre_precoCusto" placeholder="0,00"></div>
+              </div>
+
+              <div class="grid-form" style="margin-top:7px;">
+                <div><label>NCM</label><input id="pre_ncm" placeholder="NCM"></div>
+                <div><label>EAN</label><input id="pre_ean" placeholder="EAN"></div>
+                <div><label>CST</label><input id="pre_cst" placeholder="CST"></div>
+                <div><label>Origem</label><select id="pre_origem"><option>LANÇAMENTO AVULSO</option><option>TABELA FORNECEDOR</option><option>XML NF-E</option><option>COTAÇÃO FORNECEDOR</option></select></div>
+              </div>
+
+              <div class="grid-form" style="margin-top:7px;">
+                <div><label>IPI %</label><input id="pre_ipiPercentual" placeholder="0"></div>
+                <div><label>ICMS %</label><input id="pre_icmsPercentual" placeholder="0"></div>
+                <div><label>Frete %</label><input id="pre_fretePercentual" placeholder="0"></div>
+                <div><label>Outras Despesas %</label><input id="pre_outrasDespesasPercentual" placeholder="0"></div>
+              </div>
+
+              <div style="margin-top:7px;">
+                <label>Observação</label>
+                <textarea id="pre_observacao" placeholder="Observação"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">AÇÕES</div>
+            <div class="panel-body actions">
+              <button class="btn btn-primary" onclick="salvarPreco()">💾 SALVAR PREÇO</button>
+              <button class="btn btn-secondary" onclick="limparPreco()">🧹 LIMPAR</button>
+              <button class="btn btn-secondary" onclick="carregarOpcoesFase2()">🔄 ATUALIZAR LISTAS</button>
+              <div class="status" id="statusPreco">PRONTO PARA LANÇAR PREÇO.</div>
+              <div class="result-box" id="resultadoPreco">O PREÇO SERÁ SALVO EM BD_PRECOS.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IMPORTAR TABELA -->
+      <div id="screenImportar" class="screen">
+        <div class="form-page">
+          <div class="panel">
+            <div class="panel-header">📥 IMPORTADOR UNIVERSAL DE TABELAS DE PREÇO</div>
+            <div class="panel-body">
+              <div class="grid-form">
+                <div><label>Fornecedor</label><input id="imp_fornecedor" list="lista_fornecedores" placeholder="Ex.: NOVA LINEA"></div>
+                <div><label>Fabricante padrão</label><input id="imp_fabricantePadrao" list="lista_fabricantes" placeholder="Opcional"></div>
+                <div><label>Origem</label><select id="imp_origem"><option>TABELA FORNECEDOR</option><option>PROPOSTA FORNECEDOR</option><option>PEDIDO FORNECEDOR</option><option>PDF OCR</option><option>PLANILHA XLSX</option><option>LANÇAMENTO IMPORTADO</option></select></div>
+                <div><label>Data da Tabela</label><input id="imp_dataTabela" type="date"></div>
+              </div>
+
+              <div class="grid-form-2" style="margin-top:7px;">
+                <div><label>Validade da Tabela</label><input id="imp_validadeTabela" type="date"></div>
+                <div><label>Tipo de preço principal</label><select id="imp_tipoPreco"><option>PREÇO CUSTO</option><option>PREÇO VENDA FORNECEDOR</option><option>PREÇO COM ICMS/ST</option><option>MENOR PREÇO DA TABELA</option></select></div>
+              </div>
+
+              <div style="margin-top:10px;" class="upload-box">
+                <strong>ANEXAR ARQUIVO DA TABELA</strong>
+                <input id="imp_arquivo" type="file" accept=".xlsx,.xls,.csv,.txt,.pdf,.doc,.docx,.jpg,.jpeg,.png">
+                <div class="small" style="margin-top:8px;">
+                  FORMATOS: XLSX, XLS, CSV, TXT, PDF, DOC, DOCX, JPEG, PNG.
+                </div>
+                <div class="progress-line"><div class="progress-bar" id="imp_progressBar"></div></div>
+              </div>
+
+              <div style="margin-top:10px;">
+                <label>Observação da importação</label>
+                <textarea id="imp_observacao" placeholder="Ex.: tabela recebida por e-mail, preço válido para cotação, revisar OCR etc."></textarea>
+              </div>
+
+              <div class="warn-box" style="margin-top:8px;">
+                REGRA DE SEGURANÇA: O ARQUIVO SERÁ IMPORTADO PRIMEIRO PARA A ABA
+                REVISAO_IMPORTACAO_PRECOS. SOMENTE LINHAS MARCADAS COMO APROVAR/APROVADO
+                SERÃO ENVIADAS PARA BD_PRECOS.
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">AÇÕES</div>
+            <div class="panel-body actions">
+              <button class="btn btn-primary" onclick="importarTabelaPreco()">📥 IMPORTAR PARA REVISÃO</button>
+              <button class="btn btn-secondary" onclick="aprovarRevisaoPrecos()">✅ APROVAR REVISÃO PARA BD_PRECOS</button>
+              <button class="btn btn-secondary" onclick="limparImportacao()">🧹 LIMPAR</button>
+              <button class="btn btn-secondary" onclick="carregarOpcoesFase2()">🔄 ATUALIZAR LISTAS</button>
+              <div class="status" id="statusImportar">PRONTO PARA IMPORTAR TABELA.</div>
+              <div class="result-box" id="resultadoImportar">
+                O ARQUIVO SERÁ SALVO NO DRIVE E OS ITENS EXTRAÍDOS IRÃO PARA REVISAO_IMPORTACAO_PRECOS.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SIMULADOR -->
+      <div id="screenSimulador" class="screen">
+        <div class="form-page">
+          <div class="panel">
+            <div class="panel-header">🧮 SIMULADOR DE PREÇOS COM FRETE E IMPOSTOS</div>
+            <div class="panel-body">
+              <div class="grid-form-2">
+                <div><label>SKU Master / Produto</label><input id="sim_skuMaster" list="lista_skus" placeholder="SKU Master ou descrição"></div>
+                <div><label>Produto</label><input id="sim_produto" placeholder="Produto"></div>
+              </div>
+
+              <div class="grid-form" style="margin-top:7px;">
+                <div><label>Preço Custo</label><input id="sim_precoCusto" placeholder="Vazio = busca por SKU"></div>
+                <div><label>Markup %</label><input id="sim_markupPercentual" value="50"></div>
+                <div><label>Preço Cliente</label><input id="sim_precoCliente" placeholder="0,00"></div>
+                <div><label>Status</label><input id="sim_status" readonly></div>
+              </div>
+
+              <div class="grid-form" style="margin-top:7px;">
+                <div><label>Frete %</label><input id="sim_fretePercentual" placeholder="0"></div>
+                <div><label>Frete R$</label><input id="sim_freteValor" placeholder="0,00"></div>
+                <div><label>Imposto %</label><input id="sim_impostoPercentual" placeholder="0"></div>
+                <div><label>Imposto R$</label><input id="sim_impostoValor" placeholder="0,00"></div>
+              </div>
+
+              <div class="grid-form" style="margin-top:7px;">
+                <div><label>Outras Despesas %</label><input id="sim_outrasDespesasPercentual" placeholder="0"></div>
+                <div><label>Outras Despesas R$</label><input id="sim_outrasDespesasValor" placeholder="0,00"></div>
+                <div><label>Custo Total</label><input id="sim_custoTotal" readonly></div>
+                <div><label>Preço MedBox</label><input id="sim_precoMedbox" readonly></div>
+              </div>
+
+              <div class="grid-form-2" style="margin-top:7px;">
+                <div><label>Diferença R$</label><input id="sim_diferenca" readonly></div>
+                <div><label>Mensagem</label><input id="sim_mensagem" readonly></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">AÇÕES</div>
+            <div class="panel-body actions">
+              <button class="btn btn-primary" onclick="simularPreco()">🧮 SIMULAR</button>
+              <button class="btn btn-secondary" onclick="buscarCustoSku()">🔍 BUSCAR CUSTO POR SKU/DESCRIÇÃO</button>
+              <button class="btn btn-secondary" onclick="limparSimulador()">🧹 LIMPAR</button>
+              <div class="status" id="statusSimulador">PRONTO PARA SIMULAR.</div>
+              <div class="warn-box">
+                FÓRMULA: CUSTO TOTAL = CUSTO + FRETE + IMPOSTOS + OUTRAS DESPESAS.<br>
+                PREÇO MEDBOX = CUSTO TOTAL × (1 + MARKUP).
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div id="screenDashboard" class="screen">
+        <div class="panel">
+          <div class="panel-header">📊 DASHBOARD COMERCIAL</div>
+          <div class="panel-body">
+            <div class="cards">
+              <div class="card"><div class="card-title">Produtos no Mapa</div><div class="card-value" id="dash_produtos">0</div><div class="card-sub">MAPA_ERP</div></div>
+              <div class="card"><div class="card-title">Clientes</div><div class="card-value" id="dash_clientes">0</div><div class="card-sub">detectados</div></div>
+              <div class="card"><div class="card-title">Categorias</div><div class="card-value" id="dash_categorias">0</div><div class="card-sub">detectadas</div></div>
+              <div class="card"><div class="card-title">Com custo</div><div class="card-value" id="dash_fornecedores">0</div><div class="card-sub">produtos precificados</div></div>
+              <div class="card"><div class="card-title">Sem custo</div><div class="card-value" id="dash_fabricantes">0</div><div class="card-sub">precisam cotação</div></div>
+              <div class="card"><div class="card-title">Atualizado</div><div class="card-value" id="dash_atualizado" style="font-size:15px;">--</div><div class="card-sub">consulta</div></div>
+            </div>
+
+            <div class="dashboard-grid">
+              <div class="panel">
+                <div class="panel-header blue">STATUS DO DASHBOARD</div>
+                <div class="panel-body" id="dash_status">
+                  CLIQUE NA ABA DASHBOARD PARA CARREGAR OS RANKINGS.
+                </div>
+              </div>
+
+              <div class="panel">
+                <div class="panel-header blue">PRÓXIMAS ANÁLISES</div>
+                <div class="panel-body">
+                  ✅ TOP 30 SKU MASTER POR VALOR DEMANDADO<br>
+                  ✅ TOP 30 SKU MASTER POR QUANTIDADE<br>
+                  ✅ PRODUTOS SEM CUSTO<br>
+                  ✅ PRODUTOS SEM SKU MASTER<br>
+                  ✅ CLIENTES COM MAIOR DEMANDA<br>
+                  ✅ CATEGORIAS COM MAIOR DEMANDA
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <datalist id="lista_clientes"></datalist>
+      <datalist id="lista_categorias"></datalist>
+      <datalist id="lista_skus"></datalist>
+      <datalist id="lista_fornecedores"></datalist>
+      <datalist id="lista_fabricantes"></datalist>
+
+      <div class="footer">
+        <span>MEDBOX ERP | APPS SCRIPT HTML</span>
+        <span>MAPA_ERP + AUX_BUSCA + BD_PRECOS + IMPORTADOR UNIVERSAL</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TELA_INICIAL = '<?= typeof telaInicial !== "undefined" ? telaInicial : "Busca_Avançada" ?>';
+
+    let resultadosBuscaAtuais = [];
+    let resultadosMapaAtuais = [];
+    let clientesSistema = [];
+
+    document.addEventListener('DOMContentLoaded', function() {
+      ativarMaiusculas();
+      carregarOpcoes();
+      carregarOpcoesFase2();
+      trocarTela(TELA_INICIAL || 'Busca_Avançada');
+      setHoje();
+    });
+
+    function ativarMaiusculas() {
+      document.querySelectorAll('input, textarea').forEach(function(input) {
+        input.addEventListener('input', function() {
+          if (input.type === 'date' || input.type === 'file') return;
+
+          const inicio = input.selectionStart;
+          const fim = input.selectionEnd;
+          input.value = input.value.toUpperCase();
+
+          try { input.setSelectionRange(inicio, fim); } catch (e) {}
+        });
+      });
+    }
+
+    function setHoje() {
+      const hoje = new Date().toISOString().slice(0, 10);
+      ['cot_dataCotacao', 'pre_dataTabela', 'imp_dataTabela'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.value) el.value = hoje;
+      });
+    }
+
+    function upper(value) {
+      if (value === null || value === undefined) return '';
+      return String(value).toUpperCase();
+    }
+
+    function trocarTela(tela) {
+      const telas = {
+        'Busca_Avançada': ['tabBusca', 'screenBusca'],
+        'Mapa_de_Produtos': ['tabMapa', 'screenMapa'],
+        'Lancar_Cotacao': ['tabCotacao', 'screenCotacao'],
+        'Lancar_Preco': ['tabPreco', 'screenPreco'],
+        'Importar_Tabela': ['tabImportar', 'screenImportar'],
+        'Simulador_Precos': ['tabSimulador', 'screenSimulador'],
+        'Dashboard': ['tabDashboard', 'screenDashboard']
+      };
+
+      Object.values(telas).forEach(([tab, screen]) => {
+        document.getElementById(tab).classList.remove('active');
+        document.getElementById(screen).classList.remove('active');
+      });
+
+      const alvo = telas[tela] || telas['Busca_Avançada'];
+      document.getElementById(alvo[0]).classList.add('active');
+      document.getElementById(alvo[1]).classList.add('active');
+
+      if (tela === 'Dashboard') carregarDashboardReal();
+    }
+
+    function setLoading(ativo, mensagem, alvo) {
+      const app = document.getElementById('app');
+      if (ativo) app.classList.add('loading');
+      else app.classList.remove('loading');
+
+      if (alvo && mensagem) document.getElementById(alvo).textContent = mensagem;
+    }
+
+    function carregarOpcoes() {
+      setLoading(true, 'CARREGANDO OPÇÕES...', 'statusBusca');
+
+      google.script.run
+        .withSuccessHandler(function(data) {
+          clientesSistema = data.clientes || [];
+
+          preencherSelect('busca_categoria', data.categorias || [], 'Todas');
+          preencherSelect('mapa_categoria', data.categorias || [], 'Todas');
+          preencherSelect('busca_cliente', data.clientes || [], 'Todos');
+          preencherSelect('mapa_cliente', data.clientes || [], 'Todos');
+
+          setText('cardClientes', (data.clientes || []).length);
+          setText('cardProdutos', data.totalProdutosMapa || 0);
+          setText('cardAtualizado', data.atualizadoEm || '--');
+
+          setText('mapa_cardProdutos', data.totalProdutosMapa || 0);
+          setText('mapa_cardClientes', (data.clientes || []).length);
+          setText('mapa_cardAtualizado', data.atualizadoEm || '--');
+
+          setText('dash_produtos', data.totalProdutosMapa || 0);
+          setText('dash_clientes', (data.clientes || []).length);
+          setText('dash_categorias', (data.categorias || []).length);
+          setText('dash_atualizado', data.atualizadoEm || '--');
+
+          setText('statusBusca', 'PRONTO PARA PESQUISAR.');
+          setText('statusMapa', 'OPÇÕES CARREGADAS. CLIQUE EM CARREGAR MAPA.');
+
+          setLoading(false);
+        })
+        .withFailureHandler(function(err) {
+          setLoading(false);
+          setText('statusBusca', 'ERRO: ' + err.message);
+          setText('statusMapa', 'ERRO: ' + err.message);
+        })
+        .obterOpcoesSistema();
+    }
+
+    function carregarOpcoesFase2() {
+      google.script.run
+        .withSuccessHandler(function(data) {
+          preencherDatalist('lista_clientes', data.clientes || []);
+          preencherDatalist('lista_categorias', data.categorias || []);
+          preencherDatalist('lista_skus', data.skuMasters || []);
+          preencherDatalist('lista_fornecedores', data.fornecedores || []);
+          preencherDatalist('lista_fabricantes', data.fabricantes || []);
+        })
+        .withFailureHandler(function(err) {
+          console.log(err);
+        })
+        .obterOpcoesFase2();
+    }
+
+    function preencherSelect(id, opcoes, labelVazio) {
+      const select = document.getElementById(id);
+      if (!select) return;
+
+      const atual = select.value;
+      select.innerHTML = '';
+
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = labelVazio || 'TODOS';
+      select.appendChild(opt);
+
+      opcoes.forEach(function(item) {
+        const o = document.createElement('option');
+        o.value = item;
+        o.textContent = item;
+        select.appendChild(o);
+      });
+
+      if (atual) select.value = atual;
+    }
+
+    function preencherDatalist(id, opcoes) {
+      const dl = document.getElementById(id);
+      if (!dl) return;
+
+      dl.innerHTML = '';
+
+      opcoes.slice(0, 1000).forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item;
+        dl.appendChild(opt);
+      });
+    }
+
+    function setText(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }
+
+    /************************************************************
+     * BUSCA
+     ************************************************************/
+
+    function coletarFiltrosBusca() {
+      return {
+        termo1: val('busca_termo1'),
+        termo2: val('busca_termo2'),
+        termo3: val('busca_termo3'),
+        termo4: val('busca_termo4'),
+        categoria: val('busca_categoria'),
+        cliente: val('busca_cliente'),
+        sku: val('busca_sku'),
+        fabricante: val('busca_fabricante'),
+        markup: val('busca_markup')
+      };
+    }
+
+    function pesquisarBusca() {
+      setLoading(true, 'PESQUISANDO...', 'statusBusca');
+
+      google.script.run
+        .withSuccessHandler(function(data) {
+          resultadosBuscaAtuais = data.resultados || [];
+          renderBuscaResultados(data);
+          renderBuscaSugestoes(data.sugestoes || []);
+
+          setText('busca_cardResultados', data.totalEncontrado || 0);
+          setText('busca_cardExibidos', (data.exibidos || 0) + ' EXIBIDOS');
+          setText('busca_cardQtdDemandada', formatNumero(data.quantidadeTotalDemandada || 0));
+          setText('busca_cardValorDemandado', formatMoeda(data.valorTotalDemandado || 0));
+          setText('cardAtualizado', data.atualizadoEm || '--');
+
+          setText('busca_resultInfo',
+            (data.totalEncontrado || 0) + ' ENCONTRADOS | ' +
+            (data.exibidos || 0) + ' EXIBIDOS | MARKUP ' +
+            Math.round((data.markupUsado || 0) * 100) + '%'
+          );
+
+          setLoading(false, 'PESQUISA CONCLUÍDA.', 'statusBusca');
+        })
+        .withFailureHandler(function(err) {
+          setLoading(false, 'ERRO: ' + err.message, 'statusBusca');
+        })
+        .pesquisarBuscaAvancada(coletarFiltrosBusca());
+    }
+
+    function renderBuscaSugestoes(sugestoes) {
+      const body = document.getElementById('busca_sugestoesBody');
+      body.innerHTML = '';
+
+      if (!sugestoes.length) {
+        body.innerHTML = '<tr><td colspan="3">NENHUMA SUGESTÃO ENCONTRADA.</td></tr>';
+        return;
+      }
+
+      sugestoes.forEach(function(s) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(upper(s.sku || ''))}</td>
+          <td>${escapeHtml(upper(s.tipo || ''))}</td>
+          <td>${escapeHtml(String(s.score || ''))}</td>
+        `;
+        body.appendChild(tr);
+      });
+    }
+
+    function renderBuscaResultados(data) {
+      const body = document.getElementById('busca_resultadosBody');
+      body.innerHTML = '';
+
+      const resultados = data.resultados || [];
+
+      if (!resultados.length) {
+        body.innerHTML = '<tr><td colspan="13">NENHUM RESULTADO ENCONTRADO.</td></tr>';
+        return;
+      }
+
+      resultados.forEach(function(r) {
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td>${escapeHtml(upper(r.categoria))}</td>
+          <td>${escapeHtml(upper(r.skuMaster))}</td>
+          <td>${escapeHtml(upper(r.produto))}</td>
+          <td class="money">${formatNumero(r.quantTotal)}</td>
+          <td class="money">${formatMoeda(r.menorValorUnit)}</td>
+          <td class="money">${formatMoeda(r.precoMedioClientes)}</td>
+          <td class="money">${formatMoeda(r.precoCusto)}</td>
+          <td class="money"><b>${formatMoeda(r.precoMedBox)}</b></td>
+          <td class="money">${formatMoeda(r.demandaR)}</td>
+          <td>${badgeStatus(r.statusComercial)}</td>
+          <td>${escapeHtml(upper(r.fornecedorCompra2026))}</td>
+          <td>${escapeHtml(upper(r.fabricanteCompra2026))}</td>
+          <td>${escapeHtml(upper(r.clientesComConsumo))}</td>
+        `;
+
+        body.appendChild(tr);
+      });
+    }
+
+    function limparBusca() {
+      ['busca_termo1','busca_termo2','busca_termo3','busca_termo4','busca_sku','busca_fabricante'].forEach(id => setVal(id, ''));
+      setVal('busca_categoria', '');
+      setVal('busca_cliente', '');
+      setVal('busca_markup', '80');
+      setText('statusBusca', 'FILTROS LIMPOS.');
+    }
+
+    /************************************************************
+     * MAPA
+     ************************************************************/
+
+    function coletarFiltrosMapa() {
+      return {
+        termo1: val('mapa_termo1'),
+        termo2: val('mapa_termo2'),
+        termo3: val('mapa_termo3'),
+        termo4: val('mapa_termo4'),
+        categoria: val('mapa_categoria'),
+        cliente: val('mapa_cliente'),
+        sku: val('mapa_sku'),
+        fabricante: val('mapa_fabricante'),
+        fornecedor: val('mapa_fornecedor'),
+        markup: val('mapa_markup'),
+        limite: val('mapa_limite')
+      };
+    }
+
+    function carregarMapaProdutos() {
+      setLoading(true, 'CARREGANDO MAPA_DE_PRODUTOS...', 'statusMapa');
+
+      google.script.run
+        .withSuccessHandler(function(data) {
+          resultadosMapaAtuais = data.produtos || [];
+          clientesSistema = data.clientes || clientesSistema || [];
+
+          renderMapaProdutos(data);
+
+          setText('mapa_cardEncontrados', data.totalEncontrado || 0);
+          setText('mapa_cardExibidos', (data.exibidos || 0) + ' EXIBIDOS');
+          setText('mapa_cardQtdDemandada', formatNumero(data.quantidadeTotalDemandada || 0));
+          setText('mapa_cardValorDemandado', formatMoeda(data.valorTotalDemandado || 0));
+          setText('mapa_cardAtualizado', data.atualizadoEm || '--');
+
+          setText('mapa_resultInfo',
+            (data.totalEncontrado || 0) + ' ENCONTRADOS | ' +
+            (data.exibidos || 0) + ' EXIBIDOS | MARKUP ' +
+            Math.round((data.markupUsado || 0) * 100) + '%'
+          );
+
+          setLoading(false, 'MAPA_DE_PRODUTOS CARREGADO.', 'statusMapa');
+        })
+        .withFailureHandler(function(err) {
+          setLoading(false, 'ERRO: ' + err.message, 'statusMapa');
+        })
+        .obterMapaDeProdutos(coletarFiltrosMapa());
+    }
+
+    function renderMapaProdutos(data) {
+      const clientes = data.clientes || clientesSistema || [];
+      renderMapaHeader(clientes);
+
+      const body = document.getElementById('mapa_resultadosBody');
+      body.innerHTML = '';
+
+      const produtos = data.produtos || [];
+      const colCount = 13 + (clientes.length * 3);
+
+      if (!produtos.length) {
+        body.innerHTML = `<tr><td colspan="${colCount}">NENHUM PRODUTO ENCONTRADO.</td></tr>`;
+        return;
+      }
+
+      produtos.forEach(function(r) {
+        const tr = document.createElement('tr');
+
+        let html = `
+          <td>${escapeHtml(upper(r.categoria))}</td>
+          <td>${escapeHtml(upper(r.skuMaster))}</td>
+          <td>${escapeHtml(upper(r.produto))}</td>
+          <td class="money">${formatNumero(r.quantTotal)}</td>
+          <td class="money">${formatMoeda(r.menorValorUnit)}</td>
+          <td class="money">${formatMoeda(r.precoMedioClientes)}</td>
+          <td class="money">${formatMoeda(r.precoCusto)}</td>
+          <td class="money"><b>${formatMoeda(r.precoMedBox)}</b></td>
+          <td class="money">${formatMoeda(r.demandaR)}</td>
+          <td>${badgeStatus(r.statusComercial)}</td>
+          <td>${escapeHtml(upper(r.fornecedorCompra2026))}</td>
+          <td>${escapeHtml(upper(r.fabricanteCompra2026))}</td>
+          <td>${escapeHtml(upper(r.clientesComConsumo))}</td>
+        `;
+
+        clientes.forEach(function(cliente, idx) {
+          const c = (r.clientesValores && r.clientesValores[cliente])
+            ? r.clientesValores[cliente]
+            : { quant: 0, valorUnit: null, demandaR: 0 };
+
+          const colorClass = 'client-color-' + (idx % 8);
+
+          html += `
+            <td class="client-td ${colorClass}">${formatNumero(c.quant || '')}</td>
+            <td class="client-td ${colorClass}">${formatMoeda(c.valorUnit)}</td>
+            <td class="client-td ${colorClass}">${formatMoeda(c.demandaR || '')}</td>
+          `;
+        });
+
+        tr.innerHTML = html;
+        body.appendChild(tr);
+      });
+    }
+
+    function renderMapaHeader(clientes) {
+      const thead = document.getElementById('mapa_thead');
+
+      let row1 = `
+        <tr>
+          <th rowspan="2">Categoria</th>
+          <th rowspan="2">SKU Master</th>
+          <th rowspan="2">Produto</th>
+          <th rowspan="2">Quant. total</th>
+          <th rowspan="2">Menor Preço</th>
+          <th rowspan="2">Preço Médio</th>
+          <th rowspan="2">Preço Custo</th>
+          <th rowspan="2">Preço MedBox</th>
+          <th rowspan="2">Demanda R$</th>
+          <th rowspan="2">Status</th>
+          <th rowspan="2">Fornecedor</th>
+          <th rowspan="2">Fabricante</th>
+          <th rowspan="2">Clientes</th>
+      `;
+
+      clientes.forEach(function(cliente, idx) {
+        const colorClass = 'client-color-' + (idx % 8);
+        row1 += `<th colspan="3" class="client-th ${colorClass}">${escapeHtml(upper(cliente))}</th>`;
+      });
+
+      row1 += '</tr>';
+
+      let row2 = '<tr>';
+
+      clientes.forEach(function(cliente, idx) {
+        const colorClass = 'client-color-' + (idx % 8);
+        row2 += `
+          <th class="${colorClass}">Qtd</th>
+          <th class="${colorClass}">Valor Unit</th>
+          <th class="${colorClass}">Demanda R$</th>
+        `;
+      });
+
+      row2 += '</tr>';
+
+      thead.innerHTML = row1 + row2;
+    }
+
+    function limparMapa() {
+      ['mapa_termo1','mapa_termo2','mapa_termo3','mapa_termo4','mapa_sku','mapa_fabricante','mapa_fornecedor'].forEach(id => setVal(id, ''));
+      setVal('mapa_categoria', '');
+      setVal('mapa_cliente', '');
+      setVal('mapa_markup', '80');
+      setVal('mapa_limite', '500');
+      setText('statusMapa', 'FILTROS DO MAPA LIMPOS.');
+    }
+
+    /************************************************************
+     * LANÇAMENTO COTAÇÃO
+     ************************************************************/
+
+    function salvarCotacao() {
+      const dados = {
+        dataCotacao: val('cot_dataCotacao'),
+        cliente: val('cot_cliente'),
+        responsavel: val('cot_responsavel'),
+        categoria: val('cot_categoria'),
+        descricaoCliente: val('cot_descricaoCliente'),
+        quantidade: val('cot_quantidade'),
+        unidade: val('cot_unidade'),
+        precoReferenciaCliente: val('cot_precoReferenciaCliente'),
+        markupPercentual: val('cot_markupPercentual'),
+        skuMaster: val('cot_skuMaster'),
+        skuOperacional: val('cot_skuOperacional'),
+        marcaFabricante: val('cot_marcaFabricante'),
+        statusCotacao: val('cot_statusCotacao'),
+        origem: val('cot_origem'),
+        observacao: val('cot_observacao')
+      };
+
+      if (!dados.cliente || !dados.descricaoCliente || !dados.quantidade) {
+        setText('statusCotacao', 'PREENCHA CLIENTE, DESCRIÇÃO E QUANTIDADE.');
+        return;
+      }
+
+      setLoading(true, 'SALVANDO COTAÇÃO...', 'statusCotacao');
+
+      google.script.run
+        .withSuccessHandler(function(resp) {
+          setLoading(false, 'COTAÇÃO SALVA.', 'statusCotacao');
+          document.getElementById('resultadoCotacao').innerHTML =
+            'ID: ' + escapeHtml(resp.idCotacao) + '<br>' +
+            'STATUS: ' + escapeHtml(resp.statusComercial || '') + '<br>' +
+            'PREÇO CUSTO: ' + formatMoeda(resp.precoCusto) + '<br>' +
+            'PREÇO MEDBOX: ' + formatMoeda(resp.precoMedbox);
+          carregarOpcoesFase2();
+        })
+        .withFailureHandler(function(err) {
+          setLoading(false, 'ERRO: ' + err.message, 'statusCotacao');
+        })
+        .salvarCotacaoFase2(dados);
+    }
+
+    function limparCotacao() {
+      [
+        'cot_cliente','cot_responsavel','cot_categoria','cot_descricaoCliente','cot_quantidade','cot_unidade',
+        'cot_precoReferenciaCliente','cot_skuMaster','cot_skuOperacional','cot_marcaFabricante','cot_observacao'
+      ].forEach(id => setVal(id, ''));
+
+      setVal('cot_markupPercentual', '50');
+      setVal('cot_statusCotacao', 'NOVA');
+      setVal('cot_origem', 'LANÇAMENTO MANUAL');
+      setHoje();
+      setText('statusCotacao', 'FORMULÁRIO LIMPO.');
+      document.getElementById('resultadoCotacao').textContent = 'A COTAÇÃO SERÁ SALVA EM BD_COTACOES.';
+    }
+
+    /************************************************************
+     * LANÇAMENTO PREÇO
+     ************************************************************/
+
+    function salvarPreco() {
+      const dados = {
+        dataTabela: val('pre_dataTabela'),
+        validadeTabela: val('pre_validadeTabela'),
+        fornecedor: val('pre_fornecedor'),
+        fabricanteMarca: val('pre_fabricanteMarca'),
+        descricaoFornecedor: val('pre_descricaoFornecedor'),
+        skuMaster: val('pre_skuMaster'),
+        skuOperacional: val('pre_skuOperacional'),
+        unidade: val('pre_unidade'),
+        precoCusto: val('pre_precoCusto'),
+        ncm: val('pre_ncm'),
+        ean: val('pre_ean'),
+        cst: val('pre_cst'),
+        origem: val('pre_origem'),
+        ipiPercentual: val('pre_ipiPercentual'),
+        icmsPercentual: val('pre_icmsPercentual'),
+        fretePercentual: val('pre_fretePercentual'),
+        outrasDespesasPercentual: val('pre_outrasDespesasPercentual'),
+        observacao: val('pre_observacao')
+      };
+
+      if (!dados.fornecedor || !dados.descricaoFornecedor || !dados.precoCusto) {
+        setText('statusPreco', 'PREENCHA FORNECEDOR, DESCRIÇÃO E PREÇO CUSTO.');
+        return;
+      }
+
+      setLoading(true, 'SALVANDO PREÇO...', 'statusPreco');
+
+      google.script.run
+        .withSuccessHandler(function(resp) {
+          setLoading(false, 'PREÇO SALVO.', 'statusPreco');
+          document.getElementById('resultadoPreco').innerHTML =
+            'ID: ' + escapeHtml(resp.idPreco) + '<br>' +
+            'CUSTO TOTAL ESTIMADO: ' + formatMoeda(resp.custoTotalEstimado);
+          carregarOpcoesFase2();
+        })
+        .withFailureHandler(function(err) {
+          setLoading(false, 'ERRO: ' + err.message, 'statusPreco');
+        })
+        .salvarPrecoFase2(dados);
+    }
+
+    function limparPreco() {
+      [
+        'pre_validadeTabela','pre_fornecedor','pre_fabricanteMarca','pre_descricaoFornecedor','pre_skuMaster',
+        'pre_skuOperacional','pre_unidade','pre_precoCusto','pre_ncm','pre_ean','pre_cst',
+        'pre_ipiPercentual','pre_icmsPercentual','pre_fretePercentual','pre_outrasDespesasPercentual','pre_observacao'
+      ].forEach(id => setVal(id, ''));
+
+      setVal('pre_origem', 'LANÇAMENTO AVULSO');
+      setHoje();
+      setText('statusPreco', 'FORMULÁRIO LIMPO.');
+      document.getElementById('resultadoPreco').textContent = 'O PREÇO SERÁ SALVO EM BD_PRECOS.';
+    }
+
+    /************************************************************
+     * IMPORTADOR UNIVERSAL
+     ************************************************************/
+
+    function importarTabelaPreco() {
+      const fileInput = document.getElementById('imp_arquivo');
+      const file = fileInput && fileInput.files && fileInput.files[0];
+
+      if (!file) {
+        setText('statusImportar', 'SELECIONE UM ARQUIVO PARA IMPORTAR.');
+        return;
+      }
+
+      const fornecedor = val('imp_fornecedor');
+
+      if (!fornecedor) {
+        setText('statusImportar', 'PREENCHA O FORNECEDOR ANTES DE IMPORTAR.');
+        return;
+      }
+
+      setProgressImportacao(5);
+      setLoading(true, 'LENDO ARQUIVO...', 'statusImportar');
+
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        setProgressImportacao(35);
+
+        const payload = {
+          nomeArquivo: file.name,
+          mimeType: file.type || detectarMimePorNome(file.name),
+          base64: e.target.result,
+          fornecedor: fornecedor,
+          fabricantePadrao: val('imp_fabricantePadrao'),
+          origem: val('imp_origem'),
+          dataTabela: val('imp_dataTabela'),
+          validadeTabela: val('imp_validadeTabela'),
+          tipoPreco: val('imp_tipoPreco'),
+          observacao: val('imp_observacao')
+        };
+
+        setText('statusImportar', 'ENVIANDO PARA O IMPORTADOR...');
+        setProgressImportacao(60);
+
+        google.script.run
+          .withSuccessHandler(function(resp) {
+            setLoading(false, 'IMPORTAÇÃO ENVIADA PARA REVISÃO.', 'statusImportar');
+            setProgressImportacao(100);
+
+            document.getElementById('resultadoImportar').innerHTML =
+              'IMPORTAÇÃO CONCLUÍDA.<br>' +
+              'ID: ' + escapeHtml(resp.idImportacao || '') + '<br>' +
+              'ARQUIVO: ' + escapeHtml(resp.nomeArquivo || '') + '<br>' +
+              'LINHAS LIDAS: ' + formatNumero(resp.linhasLidas || 0) + '<br>' +
+              'LINHAS EXTRAÍDAS: ' + formatNumero(resp.linhasExtraidas || 0) + '<br>' +
+              'LINHAS VÁLIDAS: ' + formatNumero(resp.linhasValidas || 0) + '<br>' +
+              'LINHAS IGNORADAS: ' + formatNumero(resp.linhasIgnoradas || 0) + '<br>' +
+              'DESTINO: REVISAO_IMPORTACAO_PRECOS';
+
+            carregarOpcoesFase2();
+          })
+          .withFailureHandler(function(err) {
+            setLoading(false, 'ERRO NA IMPORTAÇÃO: ' + err.message, 'statusImportar');
+            setProgressImportacao(0);
+
+            document.getElementById('resultadoImportar').innerHTML =
+              'ERRO NA IMPORTAÇÃO.<br>' +
+              escapeHtml(err.message || String(err));
+          })
+          .importarArquivoTabelaPrecoFase2H(payload);
+      };
+
+      reader.onerror = function() {
+        setLoading(false, 'ERRO AO LER O ARQUIVO.', 'statusImportar');
+        setProgressImportacao(0);
+      };
+
+      reader.readAsDataURL(file);
+    }
+
+    function aprovarRevisaoPrecos() {
+      setLoading(true, 'APROVANDO LINHAS MARCADAS COMO APROVAR...', 'statusImportar');
+
+      google.script.run
+        .withSuccessHandler(function(resp) {
+          setLoading(false, 'APROVAÇÃO CONCLUÍDA.', 'statusImportar');
+
+          document.getElementById('resultadoImportar').innerHTML =
+            'APROVAÇÃO CONCLUÍDA.<br>' +
+            'ENVIADAS PARA BD_PRECOS: ' + formatNumero(resp.aprovadas || 0) + '<br>' +
+            'DUPLICADAS IGNORADAS: ' + formatNumero(resp.duplicadas || 0) + '<br>' +
+            'IGNORADAS: ' + formatNumero(resp.ignoradas || 0);
+
+          carregarOpcoesFase2();
+        })
+        .withFailureHandler(function(err) {
+          setLoading(false, 'ERRO AO APROVAR: ' + err.message, 'statusImportar');
+
+          document.getElementById('resultadoImportar').innerHTML =
+            'ERRO AO APROVAR REVISÃO.<br>' +
+            escapeHtml(err.message || String(err));
+        })
+        .aprovarRevisaoImportacaoPrecosFase2H();
+    }
+
+    function limparImportacao() {
+      [
+        'imp_fornecedor',
+        'imp_fabricantePadrao',
+        'imp_validadeTabela',
+        'imp_observacao'
+      ].forEach(id => setVal(id, ''));
+
+      setVal('imp_origem', 'TABELA FORNECEDOR');
+      setVal('imp_tipoPreco', 'PREÇO CUSTO');
+      setHoje();
+
+      const fileInput = document.getElementById('imp_arquivo');
+      if (fileInput) fileInput.value = '';
+
+      setProgressImportacao(0);
+      setText('statusImportar', 'FORMULÁRIO DE IMPORTAÇÃO LIMPO.');
+      document.getElementById('resultadoImportar').textContent =
+        'O ARQUIVO SERÁ SALVO NO DRIVE E OS ITENS EXTRAÍDOS IRÃO PARA REVISAO_IMPORTACAO_PRECOS.';
+    }
+
+    function setProgressImportacao(percent) {
+      const bar = document.getElementById('imp_progressBar');
+      if (bar) bar.style.width = String(percent || 0) + '%';
+    }
+
+    function detectarMimePorNome(nome) {
+      const n = String(nome || '').toLowerCase();
+
+      if (n.endsWith('.xlsx')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      if (n.endsWith('.xls')) return 'application/vnd.ms-excel';
+      if (n.endsWith('.csv')) return 'text/csv';
+      if (n.endsWith('.txt')) return 'text/plain';
+      if (n.endsWith('.pdf')) return 'application/pdf';
+      if (n.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      if (n.endsWith('.doc')) return 'application/msword';
+      if (n.endsWith('.jpg') || n.endsWith('.jpeg')) return 'image/jpeg';
+      if (n.endsWith('.png')) return 'image/png';
+
+      return 'application/octet-stream';
+    }
+
+    /************************************************************
+     * SIMULADOR
+     ************************************************************/
+
+    function buscarCustoSku() {
+      const sku = val('sim_skuMaster') || val('sim_produto');
+
+      if (!sku) {
+        setText('statusSimulador', 'INFORME O SKU MASTER OU PRODUTO.');
+        return;
+      }
+
+      setLoading(true, 'BUSCANDO CUSTO...', 'statusSimulador');
+
+      google.script.run
+        .withSuccessHandler(function(resp) {
+          setLoading(false, 'BUSCA CONCLUÍDA.', 'statusSimulador');
+
+          if (resp.encontrado) {
+            setVal('sim_precoCusto', String(resp.precoCusto).replace('.', ','));
+            setVal('sim_mensagem', 'CUSTO ENCONTRADO.');
+          } else {
+            setVal('sim_mensagem', 'SEM CUSTO PARA ESTE SKU/DESCRIÇÃO.');
+          }
+        })
+        .withFailureHandler(function(err) {
+          setLoading(false, 'ERRO: ' + err.message, 'statusSimulador');
+        })
+        .buscarPrecoCustoPorSkuFase2(sku);
+    }
+
+    function simularPreco() {
+      const dados = {
+        skuMaster: val('sim_skuMaster'),
+        produto: val('sim_produto'),
+        precoCusto: val('sim_precoCusto'),
+        markupPercentual: val('sim_markupPercentual'),
+        fretePercentual: val('sim_fretePercentual'),
+        freteValor: val('sim_freteValor'),
+        impostoPercentual: val('sim_impostoPercentual'),
+        impostoValor: val('sim_impostoValor'),
+        outrasDespesasPercentual: val('sim_outrasDespesasPercentual'),
+        outrasDespesasValor: val('sim_outrasDespesasValor'),
+        precoCliente: val('sim_precoCliente')
+      };
+
+      setLoading(true, 'SIMULANDO...', 'statusSimulador');
+
+      google.script.run
+        .withSuccessHandler(function(resp) {
+          setLoading(false, 'SIMULAÇÃO CONCLUÍDA.', 'statusSimulador');
+
+          if (!resp.ok) {
+            setVal('sim_status', resp.status || 'SEM CUSTO');
+            setVal('sim_mensagem', resp.mensagem || '');
+            return;
+          }
+
+          setVal('sim_precoCusto', formatDecimal(resp.precoCusto));
+          setVal('sim_custoTotal', formatMoeda(resp.custoTotal));
+          setVal('sim_precoMedbox', formatMoeda(resp.precoMedbox));
+          setVal('sim_diferenca', formatMoeda(resp.diferenca));
+          setVal('sim_status', resp.status || '');
+          setVal('sim_mensagem', 'SIMULAÇÃO OK.');
+        })
+        .withFailureHandler(function(err) {
+          setLoading(false, 'ERRO: ' + err.message, 'statusSimulador');
+        })
+        .simularPrecoFase2(dados);
+    }
+
+    function limparSimulador() {
+      [
+        'sim_skuMaster','sim_produto','sim_precoCusto','sim_fretePercentual','sim_freteValor','sim_impostoPercentual',
+        'sim_impostoValor','sim_outrasDespesasPercentual','sim_outrasDespesasValor','sim_precoCliente',
+        'sim_status','sim_custoTotal','sim_precoMedbox','sim_diferenca','sim_mensagem'
+      ].forEach(id => setVal(id, ''));
+
+      setVal('sim_markupPercentual', '50');
+      setText('statusSimulador', 'FORMULÁRIO LIMPO.');
+    }
+
+    /************************************************************
+     * DASHBOARD REAL
+     ************************************************************/
+
+    function carregarDashboardReal() {
+      setText('dash_status', 'CARREGANDO DASHBOARD REAL...');
+
+      google.script.run
+        .withSuccessHandler(function(data) {
+          const resumo = data.resumo || {};
+
+          setText('dash_produtos', resumo.totalProdutos || 0);
+          setText('dash_clientes', resumo.clientesAtivos || 0);
+          setText('dash_categorias', resumo.categoriasAtivas || 0);
+          setText('dash_fornecedores', resumo.produtosComCusto || 0);
+          setText('dash_fabricantes', resumo.produtosSemCusto || 0);
+          setText('dash_atualizado', data.atualizadoEm || '--');
+
+          const html = `
+            <div class="cards" style="margin-bottom:8px;">
+              <div class="card">
+                <div class="card-title">SKU AGRUPADOS</div>
+                <div class="card-value">${formatNumero(resumo.totalSkuAgrupados || 0)}</div>
+                <div class="card-sub">por SKU Master / operacional</div>
+              </div>
+
+              <div class="card">
+                <div class="card-title">QTDE. DEMANDADA</div>
+                <div class="card-value">${formatNumero(resumo.totalQuantidadeDemandada || 0)}</div>
+                <div class="card-sub">soma geral</div>
+              </div>
+
+              <div class="card">
+                <div class="card-title">VALOR DEMANDADO</div>
+                <div class="card-value">${formatMoeda(resumo.totalValorDemandado || 0)}</div>
+                <div class="card-sub">menor preço × quantidade</div>
+              </div>
+
+              <div class="card">
+                <div class="card-title">SEM SKU MASTER</div>
+                <div class="card-value">${formatNumero(resumo.produtosSemSku || 0)}</div>
+                <div class="card-sub">precisam cadastro</div>
+              </div>
+
+              <div class="card">
+                <div class="card-title">SEM PREÇO CUSTO</div>
+                <div class="card-value">${formatNumero(resumo.produtosSemCusto || 0)}</div>
+                <div class="card-sub">precisam cotação fornecedor</div>
+              </div>
+
+              <div class="card">
+                <div class="card-title">COM CUSTO</div>
+                <div class="card-value">${formatNumero(resumo.produtosComCusto || 0)}</div>
+                <div class="card-sub">base precificada</div>
+              </div>
+            </div>
+
+            <div class="dashboard-grid">
+              ${renderTabelaDashboard(
+                'TOP 30 SKU MASTER POR VALOR DEMANDADO',
+                data.topValor || [],
+                ['SKU MASTER', 'VALOR DEMANDADO', 'QUANTIDADE'],
+                function(item) {
+                  return [
+                    escapeHtml(item.skuMaster || ''),
+                    formatMoeda(item.valorDemandado || 0),
+                    formatNumero(item.quantidade || 0)
+                  ];
+                }
+              )}
+
+              ${renderTabelaDashboard(
+                'TOP 30 SKU MASTER POR QUANTIDADE',
+                data.topQuantidade || [],
+                ['SKU MASTER', 'QUANTIDADE', 'VALOR DEMANDADO'],
+                function(item) {
+                  return [
+                    escapeHtml(item.skuMaster || ''),
+                    formatNumero(item.quantidade || 0),
+                    formatMoeda(item.valorDemandado || 0)
+                  ];
+                }
+              )}
+            </div>
+
+            <div class="dashboard-grid" style="margin-top:8px;">
+              ${renderTabelaDashboard(
+                'TOP PRODUTOS SEM PREÇO CUSTO',
+                data.semCusto || [],
+                ['SKU / PRODUTO', 'VALOR DEMANDADO', 'QUANTIDADE'],
+                function(item) {
+                  return [
+                    escapeHtml(item.skuMaster || item.produtoExemplo || ''),
+                    formatMoeda(item.valorDemandado || 0),
+                    formatNumero(item.quantidade || 0)
+                  ];
+                }
+              )}
+
+              ${renderTabelaDashboard(
+                'TOP PRODUTOS SEM SKU MASTER',
+                data.semSku || [],
+                ['PRODUTO', 'VALOR DEMANDADO', 'QUANTIDADE'],
+                function(item) {
+                  return [
+                    escapeHtml(item.produtoExemplo || item.skuMaster || ''),
+                    formatMoeda(item.valorDemandado || 0),
+                    formatNumero(item.quantidade || 0)
+                  ];
+                }
+              )}
+            </div>
+          `;
+
+          document.getElementById('dash_status').innerHTML = html;
+        })
+        .withFailureHandler(function(err) {
+          setText('dash_status', 'ERRO AO CARREGAR DASHBOARD: ' + err.message);
+        })
+        .calcularDashboardFase2();
+    }
+
+    function renderTabelaDashboard(titulo, lista, headers, rowBuilder) {
+      let html = `
+        <div class="panel">
+          <div class="panel-header blue">${escapeHtml(titulo)}</div>
+          <div class="panel-body" style="padding:0; max-height:360px; overflow:auto;">
+            <table>
+              <thead>
+                <tr>
+                  ${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+      `;
+
+      if (!lista || !lista.length) {
+        html += `<tr><td colspan="${headers.length}">SEM DADOS.</td></tr>`;
+      } else {
+        lista.slice(0, 30).forEach(function(item) {
+          const cols = rowBuilder(item);
+          html += `
+            <tr>
+              ${cols.map(c => `<td>${c}</td>`).join('')}
+            </tr>
+          `;
+        });
+      }
+
+      html += `
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+
+      return html;
+    }
+
+    /************************************************************
+     * EXPORTAÇÃO
+     ************************************************************/
+
+    function exportarCsvBusca() {
+      if (!resultadosBuscaAtuais.length) {
+        setText('statusBusca', 'NADA PARA EXPORTAR.');
+        return;
+      }
+
+      const headers = ['Categoria','SKU Master','Produto','Quant. total','Menor Preço','Preço Médio Cliente','Preço Custo','Preço MedBox','Demanda R$','Status','Fornecedor','Fabricante','Clientes'];
+
+      const rows = resultadosBuscaAtuais.map(r => [
+        upper(r.categoria), upper(r.skuMaster), upper(r.produto), r.quantTotal, r.menorValorUnit,
+        r.precoMedioClientes, r.precoCusto, r.precoMedBox, r.demandaR, upper(r.statusComercial),
+        upper(r.fornecedorCompra2026), upper(r.fabricanteCompra2026), upper(r.clientesComConsumo)
+      ]);
+
+      baixarCsv('medbox_busca_avancada.csv', headers, rows);
+      setText('statusBusca', 'CSV EXPORTADO.');
+    }
+
+    function exportarCsvMapa() {
+      if (!resultadosMapaAtuais.length) {
+        setText('statusMapa', 'NADA PARA EXPORTAR.');
+        return;
+      }
+
+      const clientes = clientesSistema || [];
+
+      let headers = ['Categoria','SKU Master','Produto','Quant. total','Menor Preço','Preço Médio','Preço Custo','Preço MedBox','Demanda R$','Status','Fornecedor','Fabricante','Clientes'];
+
+      clientes.forEach(c => {
+        headers.push(upper(c) + ' Qtd');
+        headers.push(upper(c) + ' Valor Unit');
+        headers.push(upper(c) + ' Demanda R$');
+      });
+
+      const rows = resultadosMapaAtuais.map(r => {
+        const row = [
+          upper(r.categoria), upper(r.skuMaster), upper(r.produto), r.quantTotal, r.menorValorUnit,
+          r.precoMedioClientes, r.precoCusto, r.precoMedBox, r.demandaR, upper(r.statusComercial),
+          upper(r.fornecedorCompra2026), upper(r.fabricanteCompra2026), upper(r.clientesComConsumo)
+        ];
+
+        clientes.forEach(c => {
+          const obj = r.clientesValores && r.clientesValores[c] ? r.clientesValores[c] : { quant: 0, valorUnit: '', demandaR: 0 };
+          row.push(obj.quant || '');
+          row.push(obj.valorUnit || '');
+          row.push(obj.demandaR || '');
+        });
+
+        return row;
+      });
+
+      baixarCsv('medbox_mapa_de_produtos.csv', headers, rows);
+      setText('statusMapa', 'CSV EXPORTADO.');
+    }
+
+    function baixarCsv(nomeArquivo, headers, rows) {
+      const csv = [headers].concat(rows).map(row => row.map(csvCell).join(';')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = nomeArquivo;
+      a.click();
+
+      URL.revokeObjectURL(url);
+    }
+
+    function csvCell(v) {
+      const txt = v === null || v === undefined ? '' : String(v);
+      return '"' + txt.replace(/"/g, '""') + '"';
+    }
+
+    /************************************************************
+     * FORMATAÇÃO / HELPERS
+     ************************************************************/
+
+    function badgeStatus(status) {
+      const s = upper(status || '');
+      let classe = 'badge-warn';
+
+      if (s === 'GANHANDO ITEM') classe = 'badge-ok';
+      if (s === 'COMPETITIVO') classe = 'badge-ok';
+      if (s === 'ACIMA DO CLIENTE') classe = 'badge-danger';
+      if (s === 'SEM CUSTO') classe = 'badge-warn';
+      if (s === 'SEM REFERÊNCIA') classe = 'badge-warn';
+      if (s === 'SEM PREÇO CLIENTE') classe = 'badge-warn';
+
+      return `<span class="badge ${classe}">${escapeHtml(s)}</span>`;
+    }
+
+    function formatMoeda(v) {
+      if (v === null || v === undefined || v === '') return '';
+      const n = Number(v);
+      if (isNaN(n)) return '';
+      return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    function formatNumero(v) {
+      if (v === null || v === undefined || v === '') return '';
+      const n = Number(v);
+      if (isNaN(n)) return '';
+      return n.toLocaleString('pt-BR');
+    }
+
+    function formatDecimal(v) {
+      if (v === null || v === undefined || v === '') return '';
+      const n = Number(v);
+      if (isNaN(n)) return '';
+      return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+    }
+
+    function escapeHtml(value) {
+      if (value === null || value === undefined) return '';
+
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function val(id) {
+      const el = document.getElementById(id);
+      return el ? el.value : '';
+    }
+
+    function setVal(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.value = value === null || value === undefined ? '' : value;
+    }
+  </script>
+</body>
+</html>
