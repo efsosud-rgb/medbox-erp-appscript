@@ -1,0 +1,22 @@
+REVISÃO DE BACKEND - MÓDULO LANÇAR COTAÇÃO
+
+1. Nome da coluna de preço de referência: PRECO_REFERENCIA_CLIENTE
+   Referência utilizada: Aba BD_COTACOES (conforme definido no arquivo Fase2_Estrutura.js).
+
+2. Nome da coluna de preço custo em BD_PRECOS: PRECO_CUSTO
+
+3. Cálculo de Preços e Lances (ExtrairCotacao.js):
+    const precoMedbox = precoCusto * (1 + markupPadrao / 100);
+    const custoMaxLance80 = precoOsinfo > 0 ? (precoOsinfo - 0.05) / 1.80 : 0;
+    const custoMaxLance50 = precoOsinfo > 0 ? (precoOsinfo - 0.05) / 1.50 : 0;
+
+4. Lógica de "Cliente Novo":
+   A função verifica se a aba "BD_<Nome do Cliente>" existe. Caso não exista, ela cria a aba e copia automaticamente o layout de cabeçalhos da aba "BD_COTACOES" para manter a padronização fiscal/comercial. O novo cliente passa a aparecer nos dropdowns do sistema porque as funções de listagem (como listarClientesComCotacao) varrem dinamicamente todas as abas que começam com o prefixo "BD_", excluindo apenas nomes técnicos específicos.
+
+5. Arquivos alterados/criados neste PR:
+   - RoboSkuMaster.js (Criado)
+   - LancarCotacao.js (Criado)
+   - ExtrairCotacao.js (Criado)
+   - LancarCotacaoTela.html (Criado)
+   - Codigo.js (Modificado)
+   - REVISAO_BACKEND.txt (Criado)
