@@ -51,6 +51,7 @@ function onOpen() {
     .addItem('📊 Abrir Dashboard', 'abrirDashboard')
     .addSeparator()
     .addItem('🔍 Buscar Dados Fiscais (Cosmos)', 'executarLoteVarreduraFiscalCosmos')
+    .addItem('📦 Processar Lote Cosmos (50 produtos)', 'processarLoteCosmos50Manual')
     .addSeparator()
     .addItem('📄 Ir para aba MAPA_ERP', 'abrirAbaMapaErp')
     .addItem('📄 Ir para aba BD_PRECOS', 'abrirAbaBdPrecos')
@@ -137,6 +138,10 @@ function abrirAbaBdPrecos() {
 
 function abrirAbaRevisaoPrecos() {
   abrirAbaPorNome_('REVISAO_IMPORTACAO_PRECOS');
+}
+
+function processarLoteCosmos50Manual() {
+  processarLoteCosmos(50);
 }
 
 function abrirAbaPorNome_(nomeAba) {
