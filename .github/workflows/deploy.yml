@@ -23,5 +23,8 @@ jobs:
       - name: Restore clasp credentials
         run: echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
 
+      - name: Create .clasp.json
+        run: echo '{"scriptId":"${{ secrets.CLASP_SCRIPT_ID }}","rootDir":"."}' > .clasp.json
+
       - name: Push to Apps Script
         run: clasp push --force
