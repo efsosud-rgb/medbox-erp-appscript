@@ -43,28 +43,29 @@ function inspecionarListaCMED() {
 
     if (rowsToRead === 0) {
       Logger.log("Planilha vazia.");
-      return;
-    }
-
-    Logger.log("Lendo cabeçalhos e primeiras " + (rowsToRead - 1) + " linhas...");
-
-    const range = sheet.getRange(1, 1, rowsToRead, lastColumn);
-    const values = range.getValues();
-
-    if (values && values.length > 0) {
-      const headers = values[0];
-      Logger.log("CABEÇALHOS ENCONTRADOS:");
-      Logger.log(JSON.stringify(headers));
-
-      Logger.log("AMOSTRA DE DADOS (5 PRIMEIRAS LINHAS):");
-      for (let i = 1; i < values.length; i++) {
-        Logger.log("Linha " + i + ": " + JSON.stringify(values[i]));
-      }
     } else {
-      Logger.log("Nenhum dado encontrado na primeira aba da planilha.");
+      Logger.log("Lendo cabeçalhos e primeiras " + (rowsToRead - 1) + " linhas...");
+
+      const range = sheet.getRange(1, 1, rowsToRead, lastColumn);
+      const values = range.getValues();
+
+      if (values && values.length > 0) {
+        const headers = values[0];
+        Logger.log("CABEÇALHOS ENCONTRADOS:");
+        Logger.log(JSON.stringify(headers));
+
+        Logger.log("AMOSTRA DE DADOS (5 PRIMEIRAS LINHAS):");
+        for (let i = 1; i < values.length; i++) {
+          Logger.log("Linha " + i + ": " + JSON.stringify(values[i]));
+        }
+      } else {
+        Logger.log("Nenhum dado encontrado na primeira aba da planilha.");
+      }
     }
 
-    // Nota: O arquivo CMED_TEMP.xlsx permanece na raiz do Drive conforme solicitado para inspeção manual se necessário.
+    // Limpeza: move o arquivo temporário para a lixeira após o processamento
+    Logger.log("Limpando arquivo temporário do Drive...");
+    DriveApp.getFileById(spreadsheetId).setTrashed(true);
 
   } catch (error) {
     Logger.log("Erro ao processar lista CMED: " + error.toString());
