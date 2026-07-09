@@ -49,6 +49,7 @@ function onOpen() {
     .addItem('💰 Abrir Lançar Preço', 'abrirLancarPreco')
     .addItem('🧮 Abrir Simulador', 'abrirSimulador')
     .addItem('📊 Abrir Dashboard', 'abrirDashboard')
+    .addItem('🧾 Lançar Cotação', 'abrirLancarCotacao')
     .addSeparator()
     .addItem('🔍 Buscar Dados Fiscais (Cosmos)', 'executarLoteVarreduraFiscalCosmos')
     .addItem('📦 Processar Lote Cosmos (50 produtos)', 'processarLoteCosmos50Manual')
@@ -96,8 +97,15 @@ function abrirImportarTabela() {
   abrirModalMedbox_('Importar_Tabela', 'MEDBOX ERP | Importar Tabela');
 }
 
+/**
+ * Abre a nova tela de Lançar Cotação (LancarCotacaoTela.html)
+ */
 function abrirLancarCotacao() {
-  abrirModalMedbox_('Lancar_Cotacao', 'MEDBOX ERP | Lançar Cotação');
+  const html = HtmlService.createHtmlOutputFromFile('LancarCotacaoTela')
+    .setWidth(1200)
+    .setHeight(900);
+
+  SpreadsheetApp.getUi().showModalDialog(html, 'MEDBOX ERP | Lançar Cotação');
 }
 
 function abrirLancarPreco() {

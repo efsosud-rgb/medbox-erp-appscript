@@ -1,0 +1,26 @@
+REVISÃO DE BACKEND - MÓDULO LANÇAR COTAÇÃO
+
+1. Arquitetura de Dados: CENTRALIZADA
+   As cotações de todos os clientes são armazenadas em uma única aba central chamada "BD_COTACOES".
+   Evidência: O arquivo Fase2_Estrutura.js define os cabeçalhos desta aba incluindo a coluna "CLIENTE". Além disso, o arquivo MedboxERP.html menciona explicitamente: "A COTAÇÃO SERÁ SALVA EM BD_COTACOES."
+
+2. Nome da coluna de preço de referência: PRECO_REFERENCIA_CLIENTE
+   Localizada na aba BD_COTACOES.
+
+3. Nome da coluna de preço custo em BD_PRECOS: PRECO_CUSTO
+
+4. Cálculo de Preços e Lances (ExtrairCotacao.js):
+    const precoMedbox = precoCusto * (1 + markupPadrao / 100);
+    const custoMaxLance80 = precoOsinfo > 0 ? (precoOsinfo - 0.05) / 1.80 : 0;
+    const custoMaxLance50 = precoOsinfo > 0 ? (precoOsinfo - 0.05) / 1.50 : 0;
+
+5. Lógica de Upsert e "Cliente Novo":
+   A lógica de "cliente novo" agora funciona verificando a existência do nome do cliente na coluna "CLIENTE" da aba central BD_COTACOES. O layout de colunas é fixo conforme definido na criação da aba central em Fase2_Estrutura.js. Novos clientes aparecem nos dropdowns porque as funções de listagem (listarClientesComCotacao) realizam um "Set" de valores únicos da coluna "CLIENTE" em tempo real. O SKU_MASTER serve como chave de unicidade para cada cliente dentro desta mesma aba.
+
+6. Arquivos alterados/criados neste PR:
+   - RoboSkuMaster.js (Criado)
+   - LancarCotacao.js (Criado/Corrigido para modelo Central)
+   - ExtrairCotacao.js (Criado/Corrigido para modelo Central)
+   - LancarCotacaoTela.html (Criado)
+   - Codigo.js (Modificado)
+   - REVISAO_BACKEND.txt (Atualizado)
