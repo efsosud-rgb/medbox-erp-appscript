@@ -744,12 +744,53 @@
           <div class="panel">
             <div class="panel-header">AÇÕES</div>
             <div class="panel-body actions">
-              <button class="btn btn-primary" onclick="salvarCotacao()">💾 SALVAR COTAÇÃO</button>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-primary" style="flex:1;" onclick="salvarCotacao()">💾 SALVAR COTAÇÃO</button>
+                <button class="btn btn-secondary" style="flex:1;" onclick="abrirExtrairCotacao()">🔍 EXTRAIR COTAÇÃO</button>
+              </div>
               <button class="btn btn-secondary" onclick="limparCotacao()">🧹 LIMPAR</button>
               <button class="btn btn-secondary" onclick="carregarOpcoesFase2()">🔄 ATUALIZAR LISTAS</button>
               <div class="status" id="statusCotacao">PRONTO PARA LANÇAR COTAÇÃO.</div>
               <div class="result-box" id="resultadoCotacao">A COTAÇÃO SERÁ SALVA EM BD_COTACOES.</div>
             </div>
+          </div>
+        </div>
+
+        <!-- EXTRAIR COTAÇÃO POR CLIENTE -->
+        <div class="panel results-panel" id="painelExtrairCotacao" style="display:none;">
+          <div class="panel-header blue">
+            <span>🔍 EXTRAIR COTAÇÃO POR CLIENTE</span>
+            <span id="ext_resultInfo" class="small" style="color:white;">SELECIONE UM CLIENTE</span>
+          </div>
+
+          <div class="panel-body">
+            <div class="filters-mapa" style="grid-template-columns: 1fr auto;">
+              <div>
+                <label>Cliente</label>
+                <select id="ext_cliente"><option value="">CARREGANDO CLIENTES...</option></select>
+              </div>
+              <div style="display:flex; align-items:flex-end;">
+                <button class="btn btn-primary" onclick="extrairCotacao()">🚀 EXTRAIR COTAÇÃO</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>SKU Master</th>
+                  <th>Descrição</th>
+                  <th>Preço OSINFO</th>
+                  <th>% Markup</th>
+                  <th>Preço Custo</th>
+                  <th>Preço MedBox</th>
+                  <th>Custo Máx. Lance (80%)</th>
+                  <th>Custo Máx. Lance (50%)</th>
+                </tr>
+              </thead>
+              <tbody id="ext_resultadosBody"><tr><td colspan="8">SELECIONE UM CLIENTE E CLIQUE EM EXTRAIR COTAÇÃO.</td></tr></tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -1463,6 +1504,105 @@
       setHoje();
       setText('statusCotacao', 'FORMULÁRIO LIMPO.');
       document.getElementById('resultadoCotacao').textContent = 'A COTAÇÃO SERÁ SALVA EM BD_COTACOES.';
+    }
+
+    /************************************************************
+     * EXTRAIR COTAÇÃO POR CLIENTE
+     ************************************************************/
+
+    function abrirExtrairCotacao() {
+      document.getElementById('painelExtrairCotacao').style.display = 'block';
+      carregarClientesComCotacao();
+    }
+
+    function carregarClientesComCotacao() {
+      const select = document.getElementById('ext_cliente');
+      select.innerHTML = '<option value="">CARREGANDO CLIENTES...</option>';
+
+      google.script.run
+        .withSuccessHandler(function(clientes) {
+          select.innerHTML = '<option value="">SELECIONE UM CLIENTE...</option>';
+
+          (clientes || []).forEach(function(c) {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            select.appendChild(opt);
+          });
+
+          if (!clientes || clientes.length === 0) {
+            select.innerHTML = '<option value="">SEM CLIENTES COM COTAÇÃO</option>';
+          }
+        })
+        .withFailureHandler(function(err) {
+          select.innerHTML = '<option value="">ERRO AO CARREGAR CLIENTES</option>';
+          setText('ext_resultInfo', 'ERRO: ' + err.message);
+        })
+        .listarClientesComCotacao();
+    }
+
+    function extrairCotacao() {
+      const cliente = val('ext_cliente');
+      if (!cliente) {
+        alert('SELECIONE UM CLIENTE.');
+        return;
+      }
+
+      setText('ext_resultInfo', 'CARREGANDO...');
+      setLoading(true);
+
+      google.script.run
+        .withSuccessHandler(function(itens) {
+          setLoading(false);
+          renderResultadosExtrairCotacao(itens);
+        })
+        .withFailureHandler(function(err) {
+          setLoading(false);
+          setText('ext_resultInfo', 'ERRO: ' + err.message);
+        })
+        .extrairCotacaoCliente(cliente);
+    }
+
+    function renderResultadosExtrairCotacao(itens) {
+      const body = document.getElementById('ext_resultadosBody');
+      body.innerHTML = '';
+
+      if (!itens || itens.length === 0) {
+        body.innerHTML = '<tr><td colspan="8">NENHUM ITEM COTADO ENCONTRADO PARA ESTE CLIENTE.</td></tr>';
+        setText('ext_resultInfo', '0 ITENS ENCONTRADOS');
+        return;
+      }
+
+      itens.forEach(function(item) {
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td>${escapeHtml(upper(item.skuMaster))}</td>
+          <td>${escapeHtml(upper(item.descricao))}</td>
+          <td class="money">${formatMoeda(item.precoOsinfo)}</td>
+          <td><input type="number" class="table-input ext-markup" value="${item.markupPercent}" data-custo="${item.precoCusto || 0}" oninput="recalcularMedboxLinha(this)"></td>
+          <td class="money ext-custo">${formatMoeda(item.precoCusto)}</td>
+          <td class="money"><b class="ext-medbox">${formatMoeda(item.precoMedbox)}</b></td>
+          <td class="money">${formatMoeda(item.custoMax80)}</td>
+          <td class="money">${formatMoeda(item.custoMax50)}</td>
+        `;
+
+        body.appendChild(tr);
+      });
+
+      setText('ext_resultInfo', itens.length + ' ITENS ENCONTRADOS');
+    }
+
+    function recalcularMedboxLinha(input) {
+      const precoCusto = parseFloat(input.getAttribute('data-custo')) || 0;
+      const markupPercent = parseFloat(input.value) || 0;
+      const tr = input.closest('tr');
+
+      google.script.run
+        .withSuccessHandler(function(precoMedbox) {
+          tr.querySelector('.ext-medbox').textContent = formatMoeda(precoMedbox);
+        })
+        .recalcularPrecoMedbox(precoCusto, markupPercent);
     }
 
     /************************************************************
