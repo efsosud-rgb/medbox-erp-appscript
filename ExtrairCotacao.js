@@ -2,51 +2,57 @@
  * MEDBOX ERP | MÓDULO EXTRAIR COTAÇÃO
  *
  * Lógica para listagem de clientes e extração de cotações com cruzamento de custos.
+ * Arquitetura: Centralizada na aba BD_COTACOES.
  */
 
 /**
- * Lista todos os clientes que possuem uma aba de banco de dados (BD_NomeCliente).
- * Filtra abas técnicas conhecidas.
+ * Lista todos os nomes únicos de clientes presentes na aba BD_COTACOES.
  */
 function listarClientesComCotacao() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheets = ss.getSheets();
-  const abasTecnicas = [
-    'BD_PRECOS', 'BD_COTACOES', 'BD_SKU_MASTER_SEFAZ',
-    'BD_IMPORTACOES_ARQUIVOS', 'BD_CONSOLIDADO', 'BD_INTS',
-    'MAPA_ERP', 'AUX_BUSCA', 'LOG_PROCESSAMENTO', 'DASHBOARD'
-  ];
+  const ws = ss.getSheetByName("BD_COTACOES");
 
-  const clientes = sheets
-    .map(s => s.getName())
-    .filter(nome => nome.startsWith("BD_") && !abasTecnicas.includes(nome))
-    .map(nome => nome.replace("BD_", ""));
+  if (!ws) return [];
 
-  return clientes.sort();
+  const data = ws.getDataRange().getValues();
+  const headers = data[0];
+  const idxCliente = headers.indexOf("CLIENTE");
+
+  if (idxCliente === -1) return [];
+
+  const clientesSet = new Set();
+  for (let i = 1; i < data.length; i++) {
+    const nome = String(data[i][idxCliente]).trim();
+    if (nome) clientesSet.add(nome.toUpperCase());
+  }
+
+  return Array.from(clientesSet).sort();
 }
 
 /**
- * Extrai os itens da aba do cliente e cruza com BD_PRECOS para obter o custo.
+ * Extrai os itens de um cliente da aba BD_COTACOES e cruza com BD_PRECOS para obter o custo.
  *
  * @param {string} nomeCliente
  * @return {Array} Lista de objetos com os dados da cotação e cálculos.
  */
 function extrairCotacaoCliente(nomeCliente) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const nomeAba = "BD_" + nomeCliente;
-  const sheetCliente = ss.getSheetByName(nomeAba);
+  const wsCot = ss.getSheetByName("BD_COTACOES");
   const sheetPrecos = ss.getSheetByName("BD_PRECOS");
 
-  if (!sheetCliente) throw new Error("Aba do cliente não encontrada: " + nomeAba);
+  if (!wsCot) throw new Error("Aba BD_COTACOES não encontrada.");
   if (!sheetPrecos) throw new Error("Aba BD_PRECOS não encontrada.");
 
-  const dataCliente = sheetCliente.getDataRange().getValues();
-  const headersCliente = dataCliente[0];
-  const idxSkuCli = headersCliente.indexOf("SKU_MASTER");
-  const idxDescCli = headersCliente.indexOf("DESCRICAO_CLIENTE");
-  const idxValorCli = headersCliente.indexOf("PRECO_REFERENCIA_CLIENTE");
+  const dataCot = wsCot.getDataRange().getValues();
+  const headersCot = dataCot[0];
+  const idxCli = headersCot.indexOf("CLIENTE");
+  const idxSkuCot = headersCot.indexOf("SKU_MASTER");
+  const idxDescCot = headersCot.indexOf("DESCRICAO_CLIENTE");
+  const idxValorCot = headersCot.indexOf("PRECO_REFERENCIA_CLIENTE");
 
-  // Mapa de Custos (Menor preço por SKU)
+  const filtroCliente = nomeCliente.trim().toUpperCase();
+
+  // Mapa de Custos (Menor preço por SKU na BD_PRECOS)
   const dataPrecos = sheetPrecos.getDataRange().getValues();
   const headersPrecos = dataPrecos[0];
   const idxSkuPre = headersPrecos.indexOf("SKU_MASTER");
@@ -54,7 +60,7 @@ function extrairCotacaoCliente(nomeCliente) {
 
   const mapaCustos = {};
   for (let i = 1; i < dataPrecos.length; i++) {
-    const sku = String(dataPrecos[i][idxSkuPre]).trim();
+    const sku = String(dataPrecos[i][idxSkuPre]).trim().toUpperCase();
     const custo = parseFloat(dataPrecos[i][idxCustoPre]);
     if (sku && !isNaN(custo)) {
       if (!mapaCustos[sku] || custo < mapaCustos[sku]) {
@@ -66,10 +72,13 @@ function extrairCotacaoCliente(nomeCliente) {
   const resultados = [];
   const markupPadrao = 80;
 
-  for (let i = 1; i < dataCliente.length; i++) {
-    const sku = String(dataCliente[i][idxSkuCli]).trim();
-    const desc = dataCliente[i][idxDescCli] || "";
-    const precoOsinfo = parseFloat(dataCliente[i][idxValorCli]) || 0;
+  for (let i = 1; i < dataCot.length; i++) {
+    const cliRow = String(dataCot[i][idxCli]).trim().toUpperCase();
+    if (cliRow !== filtroCliente) continue;
+
+    const sku = String(dataCot[i][idxSkuCot]).trim().toUpperCase();
+    const desc = dataCot[i][idxDescCot] || "";
+    const precoOsinfo = parseFloat(dataCot[i][idxValorCot]) || 0;
     const precoCusto = mapaCustos[sku] || 0;
 
     // Cálculos
