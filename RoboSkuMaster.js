@@ -38,9 +38,15 @@ function inspecionarListaCMED() {
 
     // Define o limite de leitura: cabeçalho + 5 linhas de dados
     const lastColumn = sheet.getLastColumn();
-    const rowsToRead = 6; // 1 (header) + 5 (data)
+    const lastRow = sheet.getLastRow();
+    const rowsToRead = Math.min(6, lastRow); // 1 (header) + 5 (data) ou menos se o arquivo for pequeno
 
-    Logger.log("Lendo cabeçalhos e primeiras 5 linhas...");
+    if (rowsToRead === 0) {
+      Logger.log("Planilha vazia.");
+      return;
+    }
+
+    Logger.log("Lendo cabeçalhos e primeiras " + (rowsToRead - 1) + " linhas...");
 
     const range = sheet.getRange(1, 1, rowsToRead, lastColumn);
     const values = range.getValues();

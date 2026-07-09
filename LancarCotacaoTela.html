@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --azul: #002e56;
+      --azul2: #005c85;
+      --vermelho: #d80024;
+      --verde: #087334;
+      --cinza-bg: #f4f6f8;
+      --cinza-borda: #d6dce2;
+      --amarelo: #fff5c7;
+      --texto: #1b1f24;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--cinza-bg);
+      color: var(--texto);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      background: linear-gradient(90deg, var(--azul), #003c68);
+      color: white;
+      padding: 7px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 4px solid var(--vermelho);
+      flex: 0 0 auto;
+    }
+
+    .top-title h1 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .top-title span {
+      display: block;
+      font-size: 10px;
+      margin-top: 2px;
+      opacity: 0.9;
+    }
+
+    .logo {
+      text-align: right;
+      font-weight: 800;
+      font-size: 20px;
+    }
+
+    .logo small {
+      display: block;
+      font-size: 10px;
+      font-weight: 400;
+    }
+
+    .content {
+      padding: 15px;
+      flex: 1 1 auto;
+      overflow: auto;
+    }
+
+    .panel {
+      background: white;
+      border: 1px solid var(--cinza-borda);
+      border-radius: 9px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      overflow: hidden;
+      margin-bottom: 15px;
+    }
+
+    .panel-header {
+      background: var(--vermelho);
+      color: white;
+      font-weight: 800;
+      font-size: 12px;
+      padding: 7px 9px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-header.blue { background: var(--azul); }
+
+    .panel-body { padding: 12px; }
+
+    label {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--azul);
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    input, select {
+      width: 100%;
+      border: 1px solid #c8d0d8;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 12px;
+      background: var(--amarelo);
+      outline: none;
+      text-transform: uppercase;
+      height: 30px;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--azul2);
+      box-shadow: 0 0 0 2px rgba(0,92,133,0.12);
+    }
+
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      min-height: 32px;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+    }
+
+    .btn-primary {
+      background: var(--verde);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: var(--azul);
+      border: 1px solid var(--cinza-borda);
+    }
+
+    .btn-danger {
+      background: var(--vermelho);
+      color: white;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      margin-top: 10px;
+    }
+
+    th {
+      background: var(--azul);
+      color: white;
+      text-align: left;
+      padding: 6px;
+      border: 1px solid #0b416a;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 4px 6px;
+      border: 1px solid #e1e6eb;
+      background: white;
+    }
+
+    .money { text-align: right; }
+
+    .table-input {
+      width: 100%;
+      border: none;
+      background: transparent;
+      font-size: 11px;
+      text-transform: uppercase;
+      outline: none;
+      padding: 4px;
+    }
+
+    .table-input:focus {
+      background: #fff;
+      box-shadow: inset 0 0 0 1px var(--azul2);
+      border-radius: 4px;
+    }
+
+    .result-box {
+      background: #eef7ee;
+      border: 1px solid #b8dfba;
+      border-radius: 8px;
+      padding: 10px;
+      font-weight: 800;
+      color: #115522;
+      margin-top: 10px;
+      display: none;
+      line-height: 1.4;
+    }
+
+    .loading {
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    .actions-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: flex-end;
+    }
+
+    .flex-1 { flex: 1; }
+
+    .footer {
+      margin-top: 5px;
+      padding: 10px;
+      font-size: 10px;
+      color: #687587;
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <div class="topbar">
+      <div class="top-title">
+        <h1>MEDBOX ERP | LANÇAR COTAÇÃO</h1>
+        <span>MÓDULO DE ENTRADA E EXTRAÇÃO DE COTAÇÕES</span>
+      </div>
+      <div class="logo">
+        MEDBOX
+        <small>INTELIGÊNCIA COMERCIAL</small>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- SEÇÃO 1: LANÇAR COTAÇÃO -->
+      <div class="panel">
+        <div class="panel-header">📝 SEÇÃO 1 — LANÇAR COTAÇÃO</div>
+        <div class="panel-body">
+          <div class="actions-row">
+            <div class="flex-1">
+              <label>Cliente</label>
+              <input type="text" id="cot_cliente" placeholder="DIGITE O NOME DO CLIENTE">
+            </div>
+            <button class="btn btn-secondary" onclick="adicionarLinhaCotacao()">+ ADICIONAR ITEM</button>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 20%;">SKU_MASTER</th>
+                  <th style="width: 45%;">DESCRIÇÃO</th>
+                  <th style="width: 15%;">QUANTIDADE</th>
+                  <th style="width: 15%;">VALOR UNITÁRIO</th>
+                  <th style="width: 5%;">AÇÃO</th>
+                </tr>
+              </thead>
+              <tbody id="cot_itens_body">
+                <!-- Linhas dinâmicas -->
+              </tbody>
+            </table>
+          </div>
+
+          <div style="margin-top: 15px; display: flex; justify-content: flex-end;">
+            <button class="btn btn-primary" style="min-height: 40px; font-size: 14px;" onclick="salvarCotacao()">💾 SALVAR COTAÇÃO</button>
+          </div>
+
+          <div id="cot_resultado" class="result-box"></div>
+        </div>
+      </div>
+
+      <!-- SEÇÃO 2: EXTRAIR COTAÇÃO POR CLIENTE -->
+      <div class="panel">
+        <div class="panel-header blue">🔍 SEÇÃO 2 — EXTRAIR COTAÇÃO POR CLIENTE</div>
+        <div class="panel-body">
+          <div class="actions-row">
+            <div class="flex-1">
+              <label>Selecionar Cliente</label>
+              <select id="ext_cliente">
+                <option value="">CARREGANDO CLIENTES...</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" onclick="extrairCotacao()">🚀 EXTRAIR COTAÇÃO</button>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>SKU_MASTER</th>
+                  <th>DESCRIÇÃO</th>
+                  <th>PREÇO OSINFO</th>
+                  <th>% MARKUP</th>
+                  <th>PREÇO CUSTO</th>
+                  <th>PREÇO MEDBOX</th>
+                  <th>CUSTO MÁX (80%)</th>
+                  <th>CUSTO MÁX (50%)</th>
+                </tr>
+              </thead>
+              <tbody id="ext_resultados_body">
+                <tr><td colspan="8" style="text-align:center; padding: 20px;">SELECIONE UM CLIENTE E CLIQUE EM EXTRAIR COTAÇÃO.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span>MEDBOX ERP | LANÇAR COTAÇÃO</span>
+        <span>SISTEMA DE APOIO À DECISÃO COMERCIAL</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      adicionarLinhaCotacao();
+      carregarClientesComCotacao();
+    });
+
+    function setLoading(ativo) {
+      const app = document.getElementById('app');
+      if (ativo) app.classList.add('loading');
+      else app.classList.remove('loading');
+    }
+
+    /************************************************************
+     * SEÇÃO 1: LANÇAR COTAÇÃO
+     ************************************************************/
+
+    function adicionarLinhaCotacao() {
+      const tbody = document.getElementById('cot_itens_body');
+      const tr = document.createElement('tr');
+
+      tr.innerHTML = `
+        <td><input type="text" class="table-input cot-sku" placeholder="SKU"></td>
+        <td><input type="text" class="table-input cot-desc" placeholder="DESCRIÇÃO DO ITEM"></td>
+        <td><input type="number" class="table-input cot-qtd" placeholder="0"></td>
+        <td><input type="number" step="0.01" class="table-input cot-valor" placeholder="0.00"></td>
+        <td style="text-align:center;"><button class="btn btn-danger" onclick="removerLinha(this)" style="padding: 4px 8px; min-height: 24px;">X</button></td>
+      `;
+
+      tbody.appendChild(tr);
+    }
+
+    function removerLinha(btn) {
+      const tr = btn.parentNode.parentNode;
+      tr.parentNode.removeChild(tr);
+      if (document.getElementById('cot_itens_body').children.length === 0) {
+        adicionarLinhaCotacao();
+      }
+    }
+
+    function salvarCotacao() {
+      const cliente = document.getElementById('cot_cliente').value.trim();
+      if (!cliente) {
+        alert('INFORME O NOME DO CLIENTE.');
+        return;
+      }
+
+      const rows = document.querySelectorAll('#cot_itens_body tr');
+      const itens = [];
+
+      rows.forEach(row => {
+        const sku = row.querySelector('.cot-sku').value.trim();
+        const desc = row.querySelector('.cot-desc').value.trim();
+        const qtd = parseFloat(row.querySelector('.cot-qtd').value);
+        const valor = parseFloat(row.querySelector('.cot-valor').value);
+
+        if (sku || desc) {
+          itens.push({
+            skuMaster: sku,
+            descricao: desc,
+            quantidade: isNaN(qtd) ? 0 : qtd,
+            valorUnit: isNaN(valor) ? 0 : valor
+          });
+        }
+      });
+
+      if (itens.length === 0) {
+        alert('ADICIONE AO MENOS UM ITEM VÁLIDO.');
+        return;
+      }
+
+      const payload = {
+        cliente: cliente,
+        itens: itens
+      };
+
+      setLoading(true);
+      google.script.run
+        .withSuccessHandler(function(res) {
+          setLoading(false);
+          const box = document.getElementById('cot_resultado');
+          box.style.display = 'block';
+          box.innerHTML = `
+            <strong>SUCESSO!</strong><br>
+            CLIENTE: ${res.clienteNovo ? 'CADASTRADO' : 'EXISTENTE'}<br>
+            ATUALIZADOS: ${res.atualizados}<br>
+            NOVOS ITENS: ${res.novos}<br>
+            TOTAL PROCESSADO: ${res.total}
+          `;
+          carregarClientesComCotacao(); // Atualiza lista se for novo cliente
+        })
+        .withFailureHandler(function(err) {
+          setLoading(false);
+          alert('ERRO: ' + err.message);
+        })
+        .salvarCotacaoLote(payload);
+    }
+
+    /************************************************************
+     * SEÇÃO 2: EXTRAIR COTAÇÃO
+     ************************************************************/
+
+    function carregarClientesComCotacao() {
+      google.script.run
+        .withSuccessHandler(function(clientes) {
+          const select = document.getElementById('ext_cliente');
+          select.innerHTML = '<option value="">SELECIONE UM CLIENTE...</option>';
+
+          if (clientes && clientes.length > 0) {
+            clientes.forEach(c => {
+              const opt = document.createElement('option');
+              opt.value = c;
+              opt.textContent = c;
+              select.appendChild(opt);
+            });
+          } else {
+            select.innerHTML = '<option value="">SEM CLIENTES COM COTAÇÃO</option>';
+          }
+        })
+        .withFailureHandler(function(err) {
+          console.error('ERRO AO LISTAR CLIENTES:', err);
+        })
+        .listarClientesComCotacao();
+    }
+
+    function extrairCotacao() {
+      const cliente = document.getElementById('ext_cliente').value;
+      if (!cliente) {
+        alert('SELECIONE UM CLIENTE.');
+        return;
+      }
+
+      setLoading(true);
+      google.script.run
+        .withSuccessHandler(function(itens) {
+          setLoading(false);
+          renderResultadosExtrair(itens);
+        })
+        .withFailureHandler(function(err) {
+          setLoading(false);
+          alert('ERRO AO EXTRAIR: ' + err.message);
+        })
+        .extrairCotacaoCliente(cliente);
+    }
+
+    function renderResultadosExtrair(itens) {
+      const tbody = document.getElementById('ext_resultados_body');
+      tbody.innerHTML = '';
+
+      if (!itens || itens.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">NENHUM DADO ENCONTRADO PARA ESTE CLIENTE.</td></tr>';
+        return;
+      }
+
+      itens.forEach(item => {
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+          <td>${item.skuMaster || ''}</td>
+          <td>${item.descricao || ''}</td>
+          <td class="money">${formatMoeda(item.precoOsinfo)}</td>
+          <td><input type="number" class="table-input ext-markup" value="${item.markupPercent}" oninput="recalcularLocal(this, ${item.precoCusto || 0})"></td>
+          <td class="money">${formatMoeda(item.precoCusto)}</td>
+          <td class="money"><strong class="ext-medbox">${formatMoeda(item.precoMedbox)}</strong></td>
+          <td class="money">${formatMoeda(item.custoMax80)}</td>
+          <td class="money">${formatMoeda(item.custoMax50)}</td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function recalcularLocal(input, custo) {
+      const markup = parseFloat(input.value) || 0;
+      const precoMedbox = custo * (1 + (markup / 100));
+      const tr = input.parentNode.parentNode;
+      tr.querySelector('.ext-medbox').textContent = formatMoeda(precoMedbox);
+    }
+
+    function formatMoeda(v) {
+      if (v === null || v === undefined || v === '' || isNaN(v)) return 'R$ 0,00';
+      return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+  </script>
+</body>
+</html>
