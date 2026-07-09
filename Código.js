@@ -1,3 +1,4 @@
+// Este repositório está conectado ao Jules e ao GitHub.
 /************************************************************
  * MEDBOX ERP | Google Sheets + Apps Script + HTML
  *
