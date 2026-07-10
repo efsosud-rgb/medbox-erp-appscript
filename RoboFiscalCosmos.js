@@ -211,6 +211,17 @@ function configurarTokenCosmos() {
   ui.alert('Token salvo com sucesso nas Propriedades do Script.');
 }
 
+function verificarTokenCosmosConfigurado() {
+  const token = PropertiesService.getScriptProperties().getProperty(RFC_PROP_TOKEN);
+  const configurado = Boolean(token && String(token).trim());
+
+  return {
+    ok: configurado,
+    propriedade: RFC_PROP_TOKEN,
+    configurado: configurado
+  };
+}
+
 /************************************************************
  * CONSULTA À API COSMOS POR TEXTO/DESCRIÇÃO
  ************************************************************/
