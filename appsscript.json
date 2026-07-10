@@ -22,7 +22,7 @@
     "https://www.googleapis.com/auth/userinfo.email"
   ],
   "executionApi": {
-    "access": "MYSELF"
+    "access": "ANYONE"
   },
   "webapp": {
     "executeAs": "USER_DEPLOYING",
