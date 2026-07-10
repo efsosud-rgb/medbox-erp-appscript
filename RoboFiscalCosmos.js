@@ -222,11 +222,96 @@ function verificarTokenCosmosConfigurado() {
   };
 }
 
+function testarConexaoCosmosSomenteLeitura() {
+  const endpoint = 'products_query';
+  const metodo = 'GET';
+  const token = PropertiesService.getScriptProperties().getProperty(RFC_PROP_TOKEN);
+  let tokenSeguro = token ? String(token).trim() : '';
+
+  if ((tokenSeguro.charAt(0) === '"' && tokenSeguro.charAt(tokenSeguro.length - 1) === '"') ||
+      (tokenSeguro.charAt(0) === "'" && tokenSeguro.charAt(tokenSeguro.length - 1) === "'")) {
+    tokenSeguro = tokenSeguro.substring(1, tokenSeguro.length - 1).trim();
+  }
+
+  if (!tokenSeguro) {
+    return {
+      ok: false,
+      autenticado: false,
+      erro: 'TOKEN_NAO_CONFIGURADO'
+    };
+  }
+
+  const url = 'https://api.cosmos.bluesoft.com.br/products?query=' +
+    encodeURIComponent('DIPIRONA') +
+    '&per_page=1';
+
+  const opcoes = {
+    method: 'get',
+    headers: {
+      'X-Cosmos-Token': tokenSeguro,
+      'User-Agent': 'Cosmos-API-Request',
+      'Accept': 'application/json'
+    },
+    muteHttpExceptions: true
+  };
+
+  try {
+    const resposta = UrlFetchApp.fetch(url, opcoes);
+    const codigoStatus = resposta.getResponseCode();
+
+    if (codigoStatus === 200) {
+      return {
+        ok: true,
+        autenticado: true,
+        httpStatus: codigoStatus,
+        endpoint: endpoint,
+        metodo: metodo
+      };
+    }
+
+    if (codigoStatus === 401 || codigoStatus === 403) {
+      return {
+        ok: false,
+        autenticado: false,
+        httpStatus: codigoStatus,
+        endpoint: endpoint,
+        metodo: metodo,
+        erro: 'NAO_AUTORIZADO',
+        orientacao: 'VALIDAR_TOKEN_NO_PORTAL_COSMOS'
+      };
+    }
+
+    return {
+      ok: false,
+      autenticado: true,
+      httpStatus: codigoStatus,
+      endpoint: endpoint,
+      metodo: metodo,
+      erro: 'ERRO_HTTP'
+    };
+  } catch (erro) {
+    return {
+      ok: false,
+      autenticado: false,
+      endpoint: endpoint,
+      metodo: metodo,
+      erro: 'ERRO_CONEXAO'
+    };
+  }
+}
+
 /************************************************************
  * CONSULTA À API COSMOS POR TEXTO/DESCRIÇÃO
  ************************************************************/
 
 function rfcConsultarCosmosPorDescricao_(descricaoOriginal, token) {
+  let tokenSeguro = token ? String(token).trim() : '';
+
+  if ((tokenSeguro.charAt(0) === '"' && tokenSeguro.charAt(tokenSeguro.length - 1) === '"') ||
+      (tokenSeguro.charAt(0) === "'" && tokenSeguro.charAt(tokenSeguro.length - 1) === "'")) {
+    tokenSeguro = tokenSeguro.substring(1, tokenSeguro.length - 1).trim();
+  }
+
   const url = 'https://api.cosmos.bluesoft.com.br/products?query=' +
     encodeURIComponent(descricaoOriginal) +
     '&per_page=' + RFC_RESULTADOS_POR_BUSCA;
@@ -234,9 +319,9 @@ function rfcConsultarCosmosPorDescricao_(descricaoOriginal, token) {
   const opcoes = {
     method: 'get',
     headers: {
-      'X-Cosmos-Token': token,
-      'User-Agent': RFC_COSMOS_USER_AGENT,
-      'Content-Type': 'application/json;charset=UTF-8'
+      'X-Cosmos-Token': tokenSeguro,
+      'User-Agent': 'Cosmos-API-Request',
+      'Accept': 'application/json'
     },
     muteHttpExceptions: true
   };
