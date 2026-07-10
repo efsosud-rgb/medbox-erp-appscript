@@ -5,34 +5,47 @@
  * Arquivo: RoboFiscalCosmos.js
  *
  * NÃO altera Código.gs, RoboFiscal.gs ou qualquer outro arquivo.
- * NÃO sobrescreve SKU_MASTER, NCM, EAN ou CST diretamente se já preenchidos.
- * Grava em colunas de SUGESTÃO e atualiza NCM/EAN oficiais quando vazios.
+ * NÃO sobrescreve SKU_MASTER, NCM, EAN ou CST diretamente.
+ * Grava apenas em colunas de SUGESTÃO. Revisão e aplicação
+ * em campos oficiais são SEMPRE manuais — nunca automáticas.
+ *
+ * SEGURANÇA: o token da API Cosmos NÃO fica neste arquivo.
+ * É lido via PropertiesService.getScriptProperties(), chave
+ * 'RFC_COSMOS_TOKEN'. Configure rodando configurarTokenCosmos()
+ * uma vez, manualmente, pelo editor do Apps Script.
+ *
+ * NÃO possui gatilho automático (trigger onChange). O robô só
+ * roda quando chamado manualmente pelo menu ou pelo Codex/CLI —
+ * nunca disparado sozinho por edição da planilha.
  *
  * Estratégia:
  * - Lê DESCRICAO_FORNECEDOR (coluna G) de cada linha.
  * - Consulta a API Cosmos por texto: /products?query=...
  * - Compara palavras da descrição original com a do resultado,
  *   IGNORANDO tokens numéricos/dosagem (ex.: "3ML", "0,9%"),
- *   que geram falso positivo entre produtos diferentes do mesmo
- *   fabricante/volume.
+ *   que geram falso positivo entre produtos diferentes do
+ *   mesmo fabricante/volume.
  * - EXIGE que a primeira palavra significativa da descrição
  *   original (normalmente o nome do produto/princípio ativo)
- *   apareça no candidato. Sem isso, nunca marca ENCONTRADO,
- *   mesmo que outras palavras (marca, embalagem) batam.
+ *   apareça no candidato. Sem isso, nunca marca ENCONTRADO.
+ * - Sinaliza ALERTA_NCM_FORA_CAPITULO_30 quando o NCM sugerido
+ *   não começa em "30", para revisão manual extra.
  *
- * Processa em lotes e permite acionamento automático por trigger.
+ * Processa em lotes (respeita limite de 6 min do Apps Script) e
+ * retoma de onde parou usando PropertiesService.
  ************************************************************/
 
 const RFC_ABA_BD_PRECOS = 'BD_PRECOS';
 
-const RFC_COSMOS_TOKEN = '-2xvD0ybVF4HdsR8MDVDsQ';
 const RFC_COSMOS_USER_AGENT = 'Cosmos-API-Request';
 
 const RFC_LIMITE_TEMPO_MS = 4.5 * 60 * 1000;
 const RFC_PAUSA_MS = 1200;
 const RFC_PROP_ULTIMA_LINHA = 'RFC_ULTIMA_LINHA_PROCESSADA';
+const RFC_PROP_TOKEN = 'RFC_COSMOS_TOKEN';
 const RFC_RESULTADOS_POR_BUSCA = 5;
 const RFC_MIN_PALAVRAS_COINCIDENTES = 2;
+const RFC_PREFIXO_NCM_FARMACEUTICO = '30';
 
 const RFC_COLUNAS_NOVAS = [
   'SUGESTAO_DESCRICAO_COSMOS',
@@ -40,6 +53,7 @@ const RFC_COLUNAS_NOVAS = [
   'SUGESTAO_EAN_COSMOS',
   'SUGESTAO_MARCA_COSMOS',
   'STATUS_CONSULTA_COSMOS',
+  'ALERTA_NCM_FORA_CAPITULO_30',
   'FONTE_COSMOS_URL',
   'DATA_CONSULTA_COSMOS'
 ];
@@ -52,18 +66,20 @@ const RFC_STOPWORDS = [
 ];
 
 /************************************************************
- * PROCESSAMENTO EM LOTE
+ * FUNÇÃO PRINCIPAL — chamada pelo menu (executarLoteVarreduraFiscalCosmos)
  ************************************************************/
+
+function executarLoteVarreduraFiscalCosmos() {
+  processarLoteCosmos(50);
+}
 
 /**
  * Processa um lote de produtos da BD_PRECOS na API Cosmos.
- * @param {number|Object} tamanhoLoteOuEvento Quantidade de linhas ou objeto de evento do trigger.
+ * NUNCA escreve em SKU_MASTER, NCM, EAN ou CST oficiais —
+ * apenas nas colunas SUGESTAO_*, para revisão manual.
  */
-function processarLoteCosmos(tamanhoLoteOuEvento) {
-  let tamanhoLote = 50;
-  if (typeof tamanhoLoteOuEvento === 'number') {
-    tamanhoLote = tamanhoLoteOuEvento;
-  }
+function processarLoteCosmos(tamanhoLote) {
+  tamanhoLote = tamanhoLote || 50;
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const aba = ss.getSheetByName(RFC_ABA_BD_PRECOS);
@@ -73,17 +89,18 @@ function processarLoteCosmos(tamanhoLoteOuEvento) {
     return;
   }
 
-  if (!RFC_COSMOS_TOKEN || RFC_COSMOS_TOKEN.includes('SEU_TOKEN')) {
-    const msg = 'Configure RFC_COSMOS_TOKEN no início de RoboFiscalCosmos.js.';
-    if (typeof tamanhoLoteOuEvento === 'number') SpreadsheetApp.getUi().alert(msg);
+  const token = PropertiesService.getScriptProperties().getProperty(RFC_PROP_TOKEN);
+
+  if (!token) {
+    const msg = 'Token da API Cosmos não configurado. Rode configurarTokenCosmos() primeiro.';
     Logger.log(msg);
+    try { SpreadsheetApp.getUi().alert(msg); } catch (e) {}
     return;
   }
 
   const headers = rfcGarantirColunas_(aba);
   const idx = rfcCriarIndice_(headers);
 
-  // Validação defensiva de colunas críticas
   const colunasCriticas = ['DESCRICAO_FORNECEDOR', 'NCM', 'EAN', 'STATUS_CONSULTA_COSMOS'];
   for (const col of colunasCriticas) {
     if (idx[col] === undefined) {
@@ -93,98 +110,112 @@ function processarLoteCosmos(tamanhoLoteOuEvento) {
   }
 
   const inicio = Date.now();
+  const props = PropertiesService.getScriptProperties();
   const ultimaLinha = aba.getLastRow();
   if (ultimaLinha < 2) return;
 
-  const totalDados = aba.getRange(2, 1, ultimaLinha - 1, headers.length).getValues();
+  let linhaInicial = Number(props.getProperty(RFC_PROP_ULTIMA_LINHA)) || 1;
+  linhaInicial = Math.max(linhaInicial + 1, 2);
+  if (linhaInicial > ultimaLinha) linhaInicial = 2;
 
   let processados = 0;
   let encontradas = 0;
+  let baixaConfianca = 0;
   let naoEncontradas = 0;
+  let semDescricao = 0;
+  let alertasNcm = 0;
   let erros = 0;
 
-  for (let i = 0; i < totalDados.length && processados < tamanhoLote; i++) {
-    if (Date.now() - inicio > RFC_LIMITE_TEMPO_MS) break;
+  for (let linha = linhaInicial; linha <= ultimaLinha && processados < tamanhoLote; linha++) {
 
-    const linhaData = totalDados[i];
-    const linhaNum = i + 2;
+    if (Date.now() - inicio > RFC_LIMITE_TEMPO_MS) {
+      props.setProperty(RFC_PROP_ULTIMA_LINHA, String(linha - 1));
+      break;
+    }
+
+    const linhaData = aba.getRange(linha, 1, 1, headers.length).getValues()[0];
 
     const status = rfcUpper_(rfcGetCell_(linhaData, idx, 'STATUS_CONSULTA_COSMOS'));
-    if (status === 'ENCONTRADO' || status === 'NAO_ENCONTRADO' || status === 'SEM_DESCRICAO') continue;
-
-    const ncmOficial = rfcGetCell_(linhaData, idx, 'NCM');
-    const eanOficial = rfcGetCell_(linhaData, idx, 'EAN');
-    if (ncmOficial && eanOficial) continue;
+    if (status) continue; // já processada antes
 
     const descricao = rfcLimpar_(rfcGetCell_(linhaData, idx, 'DESCRICAO_FORNECEDOR'));
+
     if (!descricao || descricao.length < 5) {
-      rfcEscreverResultadoIndividual_(aba, linhaNum, idx, {
-        status: 'SEM_DESCRICAO',
-        descricao: '', ncm: '', ean: '', marca: '', url: '', data: new Date()
+      rfcEscreverResultado_(aba, linha, idx, {
+        status: 'SEM_DESCRICAO', descricao: '', ncm: '', ean: '', marca: '', url: '', data: new Date()
       });
+      semDescricao++;
       continue;
     }
 
     try {
-      const resultado = rfcConsultarCosmosPorDescricao_(descricao);
-      rfcEscreverResultadoIndividual_(aba, linhaNum, idx, resultado);
+      const resultado = rfcConsultarCosmosPorDescricao_(descricao, token);
+      rfcEscreverResultado_(aba, linha, idx, resultado);
 
-      if (resultado.status === 'ENCONTRADO') {
-        encontradas++;
-        if (!ncmOficial && resultado.ncm) {
-          aba.getRange(linhaNum, idx['NCM'] + 1).setValue(resultado.ncm);
-        }
-        if (!eanOficial && resultado.ean) {
-          aba.getRange(linhaNum, idx['EAN'] + 1).setValue(resultado.ean);
-        }
-      } else if (resultado.status === 'NAO_ENCONTRADO') {
-        naoEncontradas++;
-      }
+      if (resultado.status === 'ENCONTRADO') encontradas++;
+      if (resultado.status === 'ENCONTRADO_BAIXA_CONFIANCA') baixaConfianca++;
+      if (resultado.status === 'NAO_ENCONTRADO') naoEncontradas++;
+      if (rfcNcmForaCapituloFarmaceutico_(resultado.ncm)) alertasNcm++;
 
       processados++;
       Utilities.sleep(RFC_PAUSA_MS);
 
     } catch (e) {
-      Logger.log('Erro na linha ' + linhaNum + ': ' + e.message);
-      aba.getRange(linhaNum, idx['STATUS_CONSULTA_COSMOS'] + 1).setValue('ERRO');
+      Logger.log('Erro na linha ' + linha + ': ' + e.message);
+      rfcSetCell_(aba, linha, idx, 'STATUS_CONSULTA_COSMOS', 'ERRO');
       erros++;
-      continue;
     }
   }
 
-  const resumo = 'Processamento Cosmos concluído.\n\n' +
-                 'Lote processado: ' + processados + '\n' +
-                 'Encontrados: ' + encontradas + '\n' +
-                 'Não encontrados: ' + naoEncontradas + '\n' +
-                 'Erros: ' + erros;
+  if (processados < tamanhoLote) {
+    props.deleteProperty(RFC_PROP_ULTIMA_LINHA); // percorreu tudo disponível no lote
+  }
+
+  const resumo =
+    'Processamento Cosmos concluído.\n\n' +
+    'Processados: ' + processados + '\n' +
+    'Encontrados (alta confiança): ' + encontradas + '\n' +
+    'Encontrados (baixa confiança): ' + baixaConfianca + '\n' +
+    'Não encontrados: ' + naoEncontradas + '\n' +
+    'Sem descrição: ' + semDescricao + '\n' +
+    'Alertas NCM fora capítulo 30: ' + alertasNcm + '\n' +
+    'Erros: ' + erros + '\n\n' +
+    'Nada foi aplicado em SKU_MASTER/NCM/EAN/CST oficiais — revise as colunas SUGESTAO_* manualmente.';
 
   Logger.log(resumo);
-  if (typeof tamanhoLoteOuEvento === 'number') {
-    SpreadsheetApp.getUi().alert(resumo);
-  }
+  try { SpreadsheetApp.getUi().alert(resumo); } catch (e) {}
 }
 
 /************************************************************
- * TRIGGER AUTOMÁTICO
+ * CONFIGURAR TOKEN (rode uma vez, manualmente, pelo editor)
  ************************************************************/
 
-function rfcTriggerOnChange(e) {
-  if (!e) return;
-  const tipo = e.changeType;
-  if (tipo === 'INSERT_ROW' || tipo === 'EDIT' || tipo === 'OTHER') {
-    const triggers = ScriptApp.getProjectTriggers();
-    const jaTemTrigger = triggers.some(t => t.getHandlerFunction() === 'processarLoteCosmos');
-    if (!jaTemTrigger) {
-      ScriptApp.newTrigger('processarLoteCosmos').timeBased().after(30 * 1000).create();
-    }
+function configurarTokenCosmos() {
+  const ui = SpreadsheetApp.getUi();
+  const resposta = ui.prompt(
+    'Configurar Token Cosmos',
+    'Cole aqui o token gerado em cosmos.bluesoft.com.br/api:',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (resposta.getSelectedButton() !== ui.Button.OK) return;
+
+  const token = resposta.getResponseText().trim();
+
+  if (!token) {
+    ui.alert('Nenhum token informado. Nada foi salvo.');
+    return;
   }
+
+  PropertiesService.getScriptProperties().setProperty(RFC_PROP_TOKEN, token);
+  ui.alert('Token salvo com sucesso nas Propriedades do Script.');
 }
 
 /************************************************************
- * HELPERS DE API E ESCRITA
+ * CONSULTA À API COSMOS POR TEXTO/DESCRIÇÃO
  ************************************************************/
 
-function rfcConsultarCosmosPorDescricao_(descricaoOriginal) {
+function rfcConsultarCosmosPorDescricao_(descricaoOriginal, token) {
   const url = 'https://api.cosmos.bluesoft.com.br/products?query=' +
     encodeURIComponent(descricaoOriginal) +
     '&per_page=' + RFC_RESULTADOS_POR_BUSCA;
@@ -192,7 +223,7 @@ function rfcConsultarCosmosPorDescricao_(descricaoOriginal) {
   const opcoes = {
     method: 'get',
     headers: {
-      'X-Cosmos-Token': RFC_COSMOS_TOKEN,
+      'X-Cosmos-Token': token,
       'User-Agent': RFC_COSMOS_USER_AGENT,
       'Content-Type': 'application/json;charset=UTF-8'
     },
@@ -203,8 +234,8 @@ function rfcConsultarCosmosPorDescricao_(descricaoOriginal) {
     const resposta = UrlFetchApp.fetch(url, opcoes);
     const codigoStatus = resposta.getResponseCode();
 
-    if (codigoStatus === 401 || codigoStatus === 403) return rfcResultadoVazio_('TOKEN_INVALIDO', url);
-    if (codigoStatus === 429) return rfcResultadoVazio_('LIMITE_API', url);
+    if (codigoStatus === 401 || codigoStatus === 403) return rfcResultadoVazio_('TOKEN_INVALIDO_OU_EXPIRADO', url);
+    if (codigoStatus === 429) return rfcResultadoVazio_('LIMITE_API_ATINGIDO', url);
     if (codigoStatus !== 200) return rfcResultadoVazio_('ERRO_HTTP_' + codigoStatus, url);
 
     const dados = JSON.parse(resposta.getContentText());
@@ -285,34 +316,30 @@ function rfcExtrairPalavrasSignificativas_(texto) {
     .filter(function(p) { return RFC_STOPWORDS.indexOf(p) === -1; });
 }
 
-function rfcEscreverResultadoIndividual_(aba, linha, idx, resultado) {
-  const colunas = [
-    'SUGESTAO_DESCRICAO_COSMOS',
-    'SUGESTAO_NCM_COSMOS',
-    'SUGESTAO_EAN_COSMOS',
-    'SUGESTAO_MARCA_COSMOS',
-    'STATUS_CONSULTA_COSMOS',
-    'FONTE_COSMOS_URL',
-    'DATA_CONSULTA_COSMOS'
-  ];
-
-  const valores = [
-    resultado.descricao,
-    resultado.ncm,
-    resultado.ean,
-    resultado.marca,
-    resultado.status,
-    resultado.url,
-    resultado.data
-  ];
-
-  colunas.forEach((nome, i) => {
-    const pos = idx[nome];
-    if (pos !== undefined) {
-      aba.getRange(linha, pos + 1).setValue(valores[i]);
-    }
-  });
+function rfcNcmForaCapituloFarmaceutico_(ncm) {
+  const limpo = String(ncm || '').replace(/\D/g, '');
+  if (!limpo) return false;
+  return limpo.substring(0, 2) !== RFC_PREFIXO_NCM_FARMACEUTICO;
 }
+
+/************************************************************
+ * ESCRITA SEGURA — só nas colunas de sugestão
+ ************************************************************/
+
+function rfcEscreverResultado_(aba, linha, idx, resultado) {
+  rfcSetCell_(aba, linha, idx, 'SUGESTAO_DESCRICAO_COSMOS', resultado.descricao);
+  rfcSetCell_(aba, linha, idx, 'SUGESTAO_NCM_COSMOS', resultado.ncm);
+  rfcSetCell_(aba, linha, idx, 'SUGESTAO_EAN_COSMOS', resultado.ean);
+  rfcSetCell_(aba, linha, idx, 'SUGESTAO_MARCA_COSMOS', resultado.marca);
+  rfcSetCell_(aba, linha, idx, 'STATUS_CONSULTA_COSMOS', resultado.status);
+  rfcSetCell_(aba, linha, idx, 'ALERTA_NCM_FORA_CAPITULO_30', rfcNcmForaCapituloFarmaceutico_(resultado.ncm) ? 'SIM' : '');
+  rfcSetCell_(aba, linha, idx, 'FONTE_COSMOS_URL', resultado.url);
+  rfcSetCell_(aba, linha, idx, 'DATA_CONSULTA_COSMOS', resultado.data);
+}
+
+/************************************************************
+ * GARANTIR COLUNAS NOVAS (sem apagar nada existente)
+ ************************************************************/
 
 function rfcGarantirColunas_(aba) {
   const headers = aba.getRange(1, 1, 1, aba.getLastColumn()).getValues()[0].map(String);
@@ -337,6 +364,10 @@ function rfcGarantirColunas_(aba) {
   return headers;
 }
 
+/************************************************************
+ * HELPERS
+ ************************************************************/
+
 function rfcCriarIndice_(headers) {
   const idx = {};
   headers.forEach((h, i) => { idx[String(h).trim()] = i; });
@@ -347,6 +378,12 @@ function rfcGetCell_(row, idx, nomeColuna) {
   const pos = idx[nomeColuna];
   if (pos === undefined || pos === null || pos < 0) return '';
   return row[pos];
+}
+
+function rfcSetCell_(aba, linha, idx, nomeColuna, valor) {
+  const pos = idx[nomeColuna];
+  if (pos === undefined || pos === null || pos < 0) return;
+  aba.getRange(linha, pos + 1).setValue(valor);
 }
 
 function rfcUpper_(valor) {
@@ -373,11 +410,11 @@ function rfcNormalizarTexto_(valor) {
     .trim();
 }
 
+/************************************************************
+ * RESET MANUAL (opcional) — zera o ponteiro de retomada
+ ************************************************************/
+
 function resetarVarreduraFiscalCosmos() {
   PropertiesService.getScriptProperties().deleteProperty(RFC_PROP_ULTIMA_LINHA);
-  SpreadsheetApp.getUi().alert('Ponteiro de retomada zerado.');
-}
-
-function executarLoteVarreduraFiscalCosmos() {
-  processarLoteCosmos(50);
+  SpreadsheetApp.getUi().alert('Ponteiro de retomada zerado. Próxima execução começa do início.');
 }
