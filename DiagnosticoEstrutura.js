@@ -81,6 +81,71 @@ function diagnosticarEstruturaCompleta() {
   return texto;
 }
 
+function diagnosticarEstruturaCompletaParaAba() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const nomeRelatorio = 'RELATORIO_DIAGNOSTICO_ESTRUTURA';
+  let abaRelatorio = ss.getSheetByName(nomeRelatorio);
+
+  if (!abaRelatorio) {
+    abaRelatorio = ss.insertSheet(nomeRelatorio);
+  }
+
+  const sheets = ss.getSheets().filter(function(sheet) {
+    return sheet.getName() !== nomeRelatorio;
+  });
+
+  const diagnosticos = sheets.map(function(sheet) {
+    return deDiagnosticarAba_(sheet, sheets);
+  });
+
+  const headers = [
+    'NOME_ABA',
+    'LINHAS_COM_DADOS',
+    'COLUNAS_COM_DADOS',
+    'VAZIA',
+    'TECNICA_AUXILIAR_PELO_NOME',
+    'POSSIVEIS_DUPLICATAS',
+    'FORMULAS',
+    'VALORES_ESTATICOS',
+    'MENOS_DE_5_LINHAS',
+    'CLASSIFICACAO_AUTOMATICA',
+    'CABECALHOS_RESUMIDOS'
+  ];
+
+  const rows = diagnosticos.map(function(info) {
+    const cabecalhos = info.cabecalhos.join(' | ');
+
+    return [
+      info.nome,
+      info.linhasComDados,
+      info.colunasComDados,
+      info.vazia ? 'SIM' : 'NAO',
+      info.tecnicaOuAuxiliar ? 'SIM' : 'NAO',
+      info.possiveisDuplicatas.join(', '),
+      info.formulas,
+      info.valoresEstaticos,
+      info.menosDeCincoLinhas ? 'SIM' : 'NAO',
+      info.motivos.length ? info.motivos.join('; ') : 'sem alerta estrutural',
+      cabecalhos.substring(0, 200)
+    ];
+  });
+
+  abaRelatorio.clear();
+  abaRelatorio.getRange(1, 1, 1, headers.length).setValues([headers]);
+
+  if (rows.length > 0) {
+    abaRelatorio.getRange(2, 1, rows.length, headers.length).setValues(rows);
+  }
+
+  abaRelatorio.setFrozenRows(1);
+  abaRelatorio.autoResizeColumns(1, headers.length);
+
+  return {
+    ok: true,
+    abaRelatorio: nomeRelatorio,
+    abasAnalisadas: diagnosticos.length
+  };
+}
 function deDiagnosticarAba_(sheet, todasAsAbas) {
   const nome = sheet.getName();
   const linhasComDados = sheet.getLastRow();
