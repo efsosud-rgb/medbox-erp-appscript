@@ -3,3 +3,4 @@ client_secret.json
 .clasprc.json.*
 credentials.json
 token.json
+.clasp.nondev.json
