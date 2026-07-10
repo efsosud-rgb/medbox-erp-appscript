@@ -63,6 +63,19 @@ const LBF_ABAS_ARQUIVADAS_CONFIRMADAS_REMOVER = [
   'BACKUP_BD_INTS_20260707_171642',
   'RELATORIO_DIAGNOSTICO_ESTRUTURA'
 ];
+
+const LBF_ABAS_GRUPO_INCERTO_ARQUIVAR_REMOVER = [
+  'AUX_BUSCA',
+  'BD_CONSOLIDADO',
+  'MAPA_BASE_ORIGINAL',
+  'BUSCA_AVANCADA',
+  'PAINEL_ERP',
+  'LANCAMENTO_COTACOES',
+  'LANCAMENTO_PRECOS',
+  'CADASTRO_SKU_MASTER',
+  'SIMULADOR_PRECOS',
+  'DIAGNOSTICO_ROBO_FISCAL'
+];
 const LBF_TAMANHO_BLOCO_LINHAS = 500;
 
 function arquivarBackupsAntigos() {
@@ -284,6 +297,86 @@ function removerAbasArquivadasConfirmadas() {
     ok: true,
     removidas: removidas,
     puladas: puladas
+  };
+}
+function arquivarERemoverGrupoIncerto() {
+  const ssOrigem = SpreadsheetApp.getActiveSpreadsheet();
+  const ssArquivo = SpreadsheetApp.openById(LBF_ID_ARQUIVO_BACKUPS_CONFIRMADO);
+  const logs = [];
+  const removidas = [];
+  const puladas = [];
+
+  logs.push('MEDBOX ERP | ARQUIVAR E REMOVER GRUPO INCERTO');
+  logs.push('Origem: ' + ssOrigem.getName());
+  logs.push('Arquivo: ' + ssArquivo.getUrl());
+  logs.push('------------------------------------------------------------');
+
+  LBF_ABAS_GRUPO_INCERTO_ARQUIVAR_REMOVER.forEach(function(nomeAba) {
+    const abaOrigem = ssOrigem.getSheetByName(nomeAba);
+
+    if (!abaOrigem) {
+      const msgAusente = nomeAba + ' | AUSENTE NA PLANILHA ATIVA | removida NAO';
+      logs.push(msgAusente);
+      puladas.push(nomeAba + ' | ausente na planilha ativa');
+      return;
+    }
+
+    const linhasOrigem = abaOrigem.getLastRow();
+    const colunasOrigem = abaOrigem.getLastColumn();
+    const abaArquivo = lbfObterOuCriarAbaNoArquivo_(ssArquivo, nomeAba);
+
+    abaArquivo.clear();
+
+    if (linhasOrigem > 0 && colunasOrigem > 0) {
+      lbfGarantirTamanhoAba_(abaArquivo, linhasOrigem, colunasOrigem);
+      lbfCopiarDisplayValuesEmBlocos_(abaOrigem, abaArquivo, linhasOrigem, colunasOrigem);
+    }
+
+    SpreadsheetApp.flush();
+
+    const linhasArquivo = abaArquivo.getLastRow();
+    const colunasArquivo = abaArquivo.getLastColumn();
+    const ok = linhasOrigem === linhasArquivo && colunasOrigem === colunasArquivo;
+
+    if (!ok) {
+      const motivoDivergente =
+        'DIVERGENTE origem ' + linhasOrigem + '/' + colunasOrigem +
+        ' vs arquivo ' + linhasArquivo + '/' + colunasArquivo;
+
+      logs.push(
+        nomeAba +
+        ' | linhas copiadas ' + linhasOrigem +
+        ' | validacao DIVERGENTE' +
+        ' | removida NAO | ' + motivoDivergente
+      );
+      puladas.push(nomeAba + ' | ' + motivoDivergente);
+      return;
+    }
+
+    ssOrigem.deleteSheet(abaOrigem);
+    removidas.push(nomeAba);
+    logs.push(
+      nomeAba +
+      ' | linhas copiadas ' + linhasOrigem +
+      ' | validacao OK' +
+      ' | removida SIM'
+    );
+  });
+
+  logs.push('------------------------------------------------------------');
+  logs.push('REMOVIDAS');
+  logs.push(removidas.length ? removidas.join('\n') : 'Nenhuma aba removida.');
+  logs.push('------------------------------------------------------------');
+  logs.push('PULADAS');
+  logs.push(puladas.length ? puladas.join('\n') : 'Nenhuma aba pulada.');
+
+  Logger.log(logs.join('\n'));
+
+  return {
+    ok: true,
+    removidas: removidas,
+    puladas: puladas,
+    arquivoUrl: ssArquivo.getUrl()
   };
 }
 function lbfObterOuCriarArquivoBackups_() {
