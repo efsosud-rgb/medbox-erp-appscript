@@ -744,10 +744,21 @@
           <div class="panel">
             <div class="panel-header">AÇÕES</div>
             <div class="panel-body actions">
+              <div class="upload-box" id="uploadCotacaoPrincipal" data-versao-ui="upload-cotacao-v23-fix" style="display:block; visibility:visible; opacity:1; min-height:132px;">
+                <strong>ARQUIVO DA COTAÇÃO</strong>
+                <div class="small" style="margin-bottom:6px;">UPLOAD DE COTAÇÃO ATIVO</div>
+                <input id="ext_arquivoCotacao" type="file" accept=".xlsx,.xls,.csv,.txt,.pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="atualizarArquivoCotacaoSelecionado()">
+                <div class="small" id="ext_arquivoInfo" style="margin-top:8px;">NENHUM ARQUIVO SELECIONADO.</div>
+                <div style="display:flex; gap:6px; align-items:center; margin-top:8px; flex-wrap:wrap;">
+                  <button type="button" class="btn btn-secondary" id="ext_removerArquivoBtn" style="flex:1;" onclick="removerArquivoCotacao()" disabled>REMOVER ARQUIVO</button>
+                  <button type="button" class="btn btn-primary" id="ext_extrairArquivoBtn" style="flex:1;" onclick="extrairCotacaoArquivoSelecionado()" disabled>🔍 EXTRAIR COTAÇÃO</button>
+                </div>
+              </div>
+
               <div style="display:flex; gap:6px;">
                 <button class="btn btn-primary" style="flex:1;" onclick="salvarCotacao()">💾 SALVAR COTAÇÃO</button>
-                <button class="btn btn-secondary" style="flex:1;" onclick="abrirExtrairCotacao()">🔍 EXTRAIR COTAÇÃO</button>
               </div>
+              <button class="btn btn-secondary" onclick="abrirExtrairCotacao()">📂 CONSULTAR COTAÇÕES JÁ CADASTRADAS</button>
               <button class="btn btn-secondary" onclick="limparCotacao()">🧹 LIMPAR</button>
               <button class="btn btn-secondary" onclick="carregarOpcoesFase2()">🔄 ATUALIZAR LISTAS</button>
               <div class="status" id="statusCotacao">PRONTO PARA LANÇAR COTAÇÃO.</div>
@@ -756,11 +767,11 @@
           </div>
         </div>
 
-        <!-- EXTRAIR COTAÇÃO POR CLIENTE -->
+        <!-- CONSULTAR COTAÇÕES JÁ CADASTRADAS -->
         <div class="panel results-panel" id="painelExtrairCotacao" style="display:none;">
           <div class="panel-header blue">
-            <span>🔍 EXTRAIR COTAÇÃO POR CLIENTE</span>
-            <span id="ext_resultInfo" class="small" style="color:white;">SELECIONE UM CLIENTE</span>
+            <span id="ext_tituloPainel">📂 CONSULTAR COTAÇÕES JÁ CADASTRADAS</span>
+            <span id="ext_resultInfo" class="small" style="color:white;">SELECIONE UM ARQUIVO OU CLIENTE</span>
           </div>
 
           <div class="panel-body">
@@ -770,10 +781,10 @@
                 <select id="ext_cliente"><option value="">CARREGANDO CLIENTES...</option></select>
               </div>
               <div style="display:flex; align-items:flex-end;">
-                <button class="btn btn-primary" onclick="extrairCotacao()">🚀 EXTRAIR COTAÇÃO</button>
+                <button type="button" class="btn btn-secondary" onclick="extrairCotacao()">CONSULTAR CLIENTE</button>
               </div>
               <div style="display:flex; align-items:flex-end;">
-                <button class="btn btn-secondary" onclick="confirmarImportacaoCotacao()">CONFIRMAR IMPORTAÇÃO</button>
+                <button class="btn btn-secondary" id="ext_confirmarImportacaoBtn" onclick="confirmarImportacaoCotacao()" disabled>CONFIRMAR IMPORTAÇÃO</button>
               </div>
             </div>
           </div>
@@ -1525,6 +1536,8 @@
 
     function abrirExtrairCotacao() {
       document.getElementById('painelExtrairCotacao').style.display = 'block';
+      setText('ext_tituloPainel', '📂 CONSULTAR COTAÇÕES JÁ CADASTRADAS');
+      atualizarArquivoCotacaoSelecionado();
       carregarClientesComCotacao();
     }
 
@@ -1569,12 +1582,117 @@
           setLoading(false);
           itensExtracaoCotacao = itens || [];
           renderResultadosExtrairCotacao(itens);
+          const confirmar = document.getElementById('ext_confirmarImportacaoBtn');
+          if (confirmar) confirmar.disabled = !itensExtracaoCotacao.length;
         })
         .withFailureHandler(function(err) {
           setLoading(false);
           setText('ext_resultInfo', 'ERRO: ' + err.message);
         })
         .extrairCotacaoCliente(cliente);
+    }
+
+    function extrairCotacaoArquivoSelecionado() {
+      const fileInput = document.getElementById('ext_arquivoCotacao');
+      const file = fileInput && fileInput.files && fileInput.files[0];
+      const extrair = document.getElementById('ext_extrairArquivoBtn');
+      const confirmar = document.getElementById('ext_confirmarImportacaoBtn');
+
+      if (!file) {
+        setText('ext_resultInfo', 'SELECIONE UM ARQUIVO DA COTAÇÃO.');
+        return;
+      }
+
+      document.getElementById('painelExtrairCotacao').style.display = 'block';
+      setText('ext_tituloPainel', '🔍 PRÉVIA EXTRAÍDA DO ARQUIVO');
+      setText('ext_resultInfo', 'PROCESSANDO ARQUIVO...');
+      if (extrair) extrair.disabled = true;
+      if (confirmar) confirmar.disabled = true;
+      setLoading(true);
+
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        const payload = {
+          nomeArquivo: file.name,
+          mimeType: file.type || detectarMimePorNome(file.name),
+          base64: e.target.result
+        };
+
+        google.script.run
+          .withSuccessHandler(function(resp) {
+            setLoading(false);
+            if (extrair) extrair.disabled = false;
+
+            const itens = resp && resp.itens ? resp.itens : [];
+            itensExtracaoCotacao = itens;
+            renderResultadosExtrairCotacao(itens);
+
+            if (resp && resp.clienteIdentificado) {
+              setVal('cot_cliente', resp.clienteIdentificado);
+            }
+
+            if (confirmar) confirmar.disabled = itens.length === 0;
+
+            setText(
+              'ext_resultInfo',
+              'ARQUIVO PROCESSADO: ' + itens.length + ' ITENS | CLIENTE: ' +
+                (resp && resp.clienteIdentificado ? resp.clienteIdentificado : 'NÃO IDENTIFICADO')
+            );
+          })
+          .withFailureHandler(function(err) {
+            setLoading(false);
+            if (extrair) extrair.disabled = false;
+            setText('ext_resultInfo', 'ERRO AO EXTRAIR ARQUIVO: ' + (err.message || String(err)));
+          })
+          .extrairCotacaoArquivoSemGravacao(payload);
+      };
+
+      reader.onerror = function() {
+        setLoading(false);
+        if (extrair) extrair.disabled = false;
+        setText('ext_resultInfo', 'ERRO AO LER O ARQUIVO.');
+      };
+
+      reader.readAsDataURL(file);
+    }
+
+    function atualizarArquivoCotacaoSelecionado() {
+      const fileInput = document.getElementById('ext_arquivoCotacao');
+      const file = fileInput && fileInput.files && fileInput.files[0];
+      const info = document.getElementById('ext_arquivoInfo');
+      const remover = document.getElementById('ext_removerArquivoBtn');
+      const extrair = document.getElementById('ext_extrairArquivoBtn');
+
+      if (!file) {
+        if (info) info.textContent = 'NENHUM ARQUIVO SELECIONADO.';
+        if (remover) remover.disabled = true;
+        if (extrair) extrair.disabled = true;
+        return;
+      }
+
+      if (info) info.textContent = file.name + ' | ' + formatTamanhoArquivo(file.size);
+      if (remover) remover.disabled = false;
+      if (extrair) extrair.disabled = false;
+      setText('ext_resultInfo', 'ARQUIVO SELECIONADO. PRONTO PARA EXTRAIR.');
+    }
+
+    function removerArquivoCotacao() {
+      const fileInput = document.getElementById('ext_arquivoCotacao');
+      const info = document.getElementById('ext_arquivoInfo');
+      const remover = document.getElementById('ext_removerArquivoBtn');
+      const extrair = document.getElementById('ext_extrairArquivoBtn');
+      const body = document.getElementById('ext_resultadosBody');
+      const confirmar = document.getElementById('ext_confirmarImportacaoBtn');
+
+      if (fileInput) fileInput.value = '';
+      if (info) info.textContent = 'NENHUM ARQUIVO SELECIONADO.';
+      if (remover) remover.disabled = true;
+      if (extrair) extrair.disabled = true;
+      if (confirmar) confirmar.disabled = true;
+      if (body) body.innerHTML = '<tr><td colspan="12">SELECIONE UM ARQUIVO E CLIQUE EM EXTRAIR COTAÇÃO.</td></tr>';
+      itensExtracaoCotacao = [];
+      setText('ext_resultInfo', 'ARQUIVO REMOVIDO. NENHUMA EXTRAÇÃO EXECUTADA.');
     }
 
     function renderResultadosExtrairCotacao(itens) {

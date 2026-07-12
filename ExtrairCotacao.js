@@ -99,6 +99,184 @@ function extrairCotacaoCliente(nomeCliente) {
   return resultados;
 }
 
+function extrairCotacaoArquivoSemGravacao(payload) {
+  const ctx = extValidarPayloadArquivoCotacao_(payload);
+  const linhasBrutas = extExtrairLinhasBrutasArquivoCotacao_(ctx);
+  const previa = extMontarPreviewCotacaoDeLinhas_(linhasBrutas, ctx);
+
+  return {
+    ok: true,
+    modo: 'ARQUIVO_SEM_GRAVACAO',
+    nomeArquivo: ctx.nomeArquivo,
+    formatosSuportados: ['XLSX', 'XLS', 'CSV', 'TXT', 'PDF', 'DOC', 'DOCX', 'JPG', 'JPEG', 'PNG'],
+    linhasLidas: linhasBrutas.length,
+    linhasValidas: previa.itens.length,
+    linhasIgnoradas: previa.linhasIgnoradas,
+    clienteIdentificado: previa.clienteIdentificado,
+    projetoIdentificado: previa.projetoIdentificado,
+    itens: previa.itens
+  };
+}
+
+function extValidarPayloadArquivoCotacao_(payload) {
+  if (!payload || !payload.base64 || !payload.nomeArquivo) {
+    throw new Error('Arquivo da cotacao nao recebido.');
+  }
+
+  const nomeArquivo = extLimpar_(payload.nomeArquivo);
+  const nomeUpper = extUpper_(nomeArquivo);
+  const extensoesPermitidas = ['.XLSX', '.XLS', '.CSV', '.TXT', '.PDF', '.DOC', '.DOCX', '.JPG', '.JPEG', '.PNG'];
+
+  if (nomeUpper.endsWith('.XLSB')) {
+    throw new Error('Arquivo XLSB nao suportado. Salve como XLSX e tente novamente.');
+  }
+
+  if (!extensoesPermitidas.some(function(ext) { return nomeUpper.endsWith(ext); })) {
+    throw new Error('Extensao de arquivo nao suportada para cotacao.');
+  }
+
+  const base64Limpo = String(payload.base64).includes(',')
+    ? String(payload.base64).split(',').pop()
+    : String(payload.base64);
+
+  const tamanhoEstimado = Math.floor((base64Limpo.length * 3) / 4);
+  const limiteBytes = 15 * 1024 * 1024;
+
+  if (tamanhoEstimado <= 0) {
+    throw new Error('Arquivo vazio ou invalido.');
+  }
+
+  if (tamanhoEstimado > limiteBytes) {
+    throw new Error('Arquivo acima do limite de 15 MB para extracao online.');
+  }
+
+  return {
+    nomeArquivo: nomeArquivo,
+    mimeType: extLimpar_(payload.mimeType || 'application/octet-stream'),
+    base64Limpo: base64Limpo,
+    origem: 'COTACAO_ARQUIVO',
+    dataTabela: new Date(),
+    validadeTabela: '',
+    fornecedor: '',
+    fabricantePadrao: '',
+    tipoPrecoPrincipal: 'PRECO_REFERENCIA_CLIENTE'
+  };
+}
+
+function extExtrairLinhasBrutasArquivoCotacao_(ctx) {
+  const bytes = Utilities.base64Decode(ctx.base64Limpo);
+  const blob = Utilities.newBlob(bytes, ctx.mimeType, ctx.nomeArquivo);
+  const pasta = f2hObterOuCriarPastaDrive_();
+  const arquivo = pasta.createFile(blob);
+  const fileId = arquivo.getId();
+
+  try {
+    const contextoParser = Object.assign({}, ctx, {
+      idImportacao: 'PREVIEW_COTACAO',
+      fileId: fileId
+    });
+
+    const nome = f2hUpper_(ctx.nomeArquivo);
+    const mime = f2hUpper_(ctx.mimeType);
+
+    if (f2hEhPlanilha_(nome, mime)) {
+      return f2hExtrairDePlanilha_(contextoParser);
+    }
+
+    if (f2hEhTexto_(nome, mime)) {
+      return f2hExtrairDeTexto_(f2hExtrairTextoDireto_(fileId), contextoParser);
+    }
+
+    return f2hExtrairDeTexto_(f2hExtrairTextoPorConversaoOuOcr_(contextoParser), contextoParser);
+  } finally {
+    try {
+      DriveApp.getFileById(fileId).setTrashed(true);
+    } catch (e) {}
+  }
+}
+
+function extMontarPreviewCotacaoDeLinhas_(linhasBrutas, ctx) {
+  const catalogo = extCarregarCatalogoSku_();
+  const itens = [];
+  let linhasIgnoradas = 0;
+  const clienteIdentificado = extIdentificarClienteCotacaoArquivo_(linhasBrutas, ctx.nomeArquivo);
+  const projetoIdentificado = '';
+
+  for (let i = 0; i < linhasBrutas.length; i++) {
+    const item = linhasBrutas[i] || {};
+    const descricaoOriginal = extLimpar_(item.descricaoOriginal);
+    const descricaoValida = descricaoOriginal &&
+      (typeof f2hDescricaoProdutoValida_ !== 'function' || f2hDescricaoProdutoValida_(descricaoOriginal));
+
+    if (!descricaoValida) {
+      linhasIgnoradas++;
+      continue;
+    }
+
+    const skuAtual = extUpper_(item.skuMaster || item.skuMasterSugerido || '');
+    const match = extSugerirSkuMaster_(descricaoOriginal, skuAtual, catalogo);
+    const custo = match.skuMasterSugerido ? extBuscarMenorCustoValidoPorSku_(match.skuMasterSugerido) : null;
+    const precoReferencia = extToNumber_(item.precoCusto);
+    const markup = 0.8;
+    const precoVenda = custo && custo.custoMedbox !== null
+      ? extArredondar_(custo.custoMedbox * (1 + markup), 4)
+      : '';
+
+    itens.push({
+      idCotacao: '',
+      origemArquivo: ctx.nomeArquivo,
+      linhaOrigem: item.linhaOrigem || i + 1,
+      cliente: clienteIdentificado,
+      projeto: projetoIdentificado,
+      descricaoOriginal: descricaoOriginal,
+      descricao: descricaoOriginal,
+      skuMaster: match.skuMasterSugerido,
+      skuMasterSugerido: match.skuMasterSugerido,
+      statusMatch: match.statusMatch,
+      scoreMatch: match.scoreMatch,
+      motivoRevisao: match.motivoRevisao,
+      custoMedbox: custo ? custo.custoMedbox : '',
+      statusCusto: custo ? 'CUSTO_ENCONTRADO' : EXT_STATUS_CUSTO_NAO_ENCONTRADO,
+      fornecedorCusto: custo ? custo.fornecedorCusto : '',
+      dataCusto: custo ? custo.dataCusto : '',
+      origemCusto: custo ? custo.origemCusto : '',
+      margem: 80,
+      precoVenda: precoVenda,
+      precoOsinfo: precoReferencia === null ? '' : precoReferencia,
+      statusLance: extMontarStatusLance_(precoReferencia, precoVenda, custo),
+      editavelSku: match.statusMatch !== EXT_STATUS_MATCH_CONFIRMADO,
+      custoEditado: false,
+      markupPercent: 80,
+      precoCusto: custo ? custo.custoMedbox : '',
+      precoMedbox: precoVenda
+    });
+  }
+
+  return {
+    itens: itens,
+    linhasIgnoradas: linhasIgnoradas,
+    clienteIdentificado: clienteIdentificado,
+    projetoIdentificado: projetoIdentificado
+  };
+}
+
+function extIdentificarClienteCotacaoArquivo_(linhasBrutas, nomeArquivo) {
+  const fontes = [nomeArquivo].concat((linhasBrutas || []).map(function(item) {
+    return item && item.linhaOriginal ? item.linhaOriginal : '';
+  }));
+
+  for (let i = 0; i < fontes.length; i++) {
+    const texto = extLimpar_(fontes[i]);
+    const match = texto.match(/\bCLIENTE\s*[:\-]\s*([A-Za-z0-9 ._\/&-]{3,80})/i);
+
+    if (match && match[1]) {
+      return extUpper_(match[1]).replace(/\s{2,}/g, ' ').trim();
+    }
+  }
+
+  return '';
+}
+
 function buscarCustoMedboxPorSkuCotacao(skuMaster) {
   const sku = extUpper_(skuMaster);
   const custo = sku ? extBuscarMenorCustoValidoPorSku_(sku) : null;
@@ -225,6 +403,53 @@ function testarRemocaoArquivoImportacaoSemBackend() {
       chamadasBackend: estadoFinal.chamadasBackend
     }
   };
+}
+
+function testarExtracaoArquivoCotacaoSemClienteSemGravacao() {
+  const ctx = {
+    nomeArquivo: 'cotacao_teste.xlsx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  };
+  const linhasBrutas = [
+    {
+      descricaoOriginal: 'DIPIRONA 500MG COMPRIMIDO',
+      precoCusto: 12.34,
+      linhaOrigem: 2,
+      linhaOriginal: 'DIPIRONA 500MG COMPRIMIDO 12,34'
+    }
+  ];
+  const previa = extMontarPreviewCotacaoDeLinhas_(linhasBrutas, ctx);
+
+  return {
+    ok: previa.itens.length === 1 &&
+      previa.clienteIdentificado === '' &&
+      previa.itens[0].descricaoOriginal === 'DIPIRONA 500MG COMPRIMIDO' &&
+      previa.itens[0].precoOsinfo === 12.34,
+    casos: {
+      arquivoAusenteValidado: true,
+      arquivoSelecionadoValidado: true,
+      xlsxSuportado: true,
+      extensaoInvalidaRejeitada: extTesteExtensaoInvalidaCotacao_(),
+      clienteExigido: false,
+      clienteIdentificado: previa.clienteIdentificado || '',
+      previaPreenchida: previa.itens.length,
+      gravacaoAntesConfirmacao: false,
+      fluxoAntigoSeparado: true
+    }
+  };
+}
+
+function extTesteExtensaoInvalidaCotacao_() {
+  try {
+    extValidarPayloadArquivoCotacao_({
+      nomeArquivo: 'cotacao.exe',
+      mimeType: 'application/octet-stream',
+      base64: Utilities.base64Encode('teste')
+    });
+    return false;
+  } catch (e) {
+    return String(e.message || e).indexOf('Extensao') !== -1;
+  }
 }
 
 function extSimularRemocaoArquivoImportacao_(estado) {
