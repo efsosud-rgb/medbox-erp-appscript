@@ -56,18 +56,28 @@
 ## Extracao e revisao de cotacao
 
 - A extracao por cliente em `BD_COTACOES` preserva `DESCRICAO_CLIENTE` como descricao original, sem sobrescrever esse campo.
-- A grade exibe `SKU_MASTER`, status do match, score, motivo de revisao, custo MedBox, fornecedor/data/origem do custo, margem, preco de venda e status do lance.
+- A grade comercial exibe codigo, descricao original, quantidade, valor unitario de compra do cliente, valor total do cliente, `SKU_MASTER`, custo MedBox, fornecedor/data do custo, Margem %, preco de venda MedBox, valor total MedBox e status do lance.
+- Diagnosticos tecnicos de match (`statusMatch`, score e motivo de revisao) continuam no backend e podem aparecer como detalhe/tooltip, mas nao ocupam colunas permanentes da grade principal.
 - Regra de negocio: o rotulo exibido na grade e `Margem`, mas o calculo interno preserva markup sobre custo.
+- Regra comercial aplicada na grade: `Preco de Venda MedBox = Custo MedBox * (1 + Margem / 100)`.
+- Valor total do cliente e valor total MedBox sao calculados por quantidade; quando o arquivo traz apenas quantidade e valor total, o valor unitario do cliente e derivado por `valor total / quantidade` somente se a quantidade for numerica e maior que zero.
+- O preco total do cliente nao deve ser usado como preco unitario.
+- Status do lance comercial: `LANCE VENCEDOR`, `PRECO IGUAL`, `PRECO ACIMA` ou `DADOS INSUFICIENTES`.
+- Resumo da cotacao exibe totais de itens, SKUs, custos, lances vencedores/precos acima, total cliente, total MedBox, diferenca e competitividade.
 - Status de match implementados: `MATCH_CONFIRMADO`, `REVISAR`, `NAO_ENCONTRADO`, `CONFLITO_TECNICO`.
 - O SKU sugerido usa catalogo existente em `MAPA_ERP` e `BD_SKU_MASTER_SEFAZ`, com normalizacao e validacao de atributos tecnicos como concentracao, volume, quantidade, forma e apresentacao.
 - Custos sao buscados em `BD_PRECOS` apenas por `SKU_MASTER` exato e somente quando positivos; custos vazios, zero ou negativos sao rejeitados.
 - Se nao houver custo valido, a grade mostra `CUSTO_NAO_ENCONTRADO`, deixa o custo vazio e nao calcula preco de venda.
 - Formula de preco de venda reaproveitada: `CUSTO * (1 + MARKUP)`.
 - Alteracoes de SKU, custo ou margem recalculam preco de venda e status do lance na grade antes da gravacao.
-- Nenhum SKU, custo, margem ou preco e gravado antes de `Confirmar Importacao`.
+- Nenhum SKU, custo, margem ou preco e gravado antes de salvamento explicito da cotacao.
+- Nesta etapa, `SALVAR COTACAO` executa `simularSalvarCotacaoExtraida` para validar a operacao sem escrever em `BD_COTACOES`; a gravacao real permanece pendente de autorizacao controlada.
+- `IMPRIMIR COTACAO` e `SALVAR EM PDF` ficam desabilitados ate haver cotacao salva no estado da tela.
+- O documento comercial de impressao/PDF nao exibe custo MedBox, fornecedor de custo, score, motivo de revisao, margem ou preco de compra do cliente.
 - Na confirmacao, `BD_COTACOES` recebe exatamente o SKU, custo, margem e preco revisados; `DESCRICAO_CLIENTE` nao e alterada.
 - Relatorio append-only criado na confirmacao: `RELATORIO_IMPORTACAO_COTACAO`.
 - Teste sem gravacao executado: `testarExtracaoCotacaoSemGravacao`.
+- Testes sem gravacao adicionados: `testarCalculosCotacaoSemGravacao`, `testarDocumentoCotacaoSemDadosInternos` e `simularSalvarCotacaoExtraida`.
 - Teste sem backend para remocao isolada de arquivo: `testarRemocaoArquivoImportacaoSemBackend`.
 - Botao dedicado `REMOVER ARQUIVO` limpa apenas o arquivo selecionado, nome/tamanho, mensagens e previa, sem chamar backend e sem limpar campos manuais.
 - A extracao direta por arquivo usa `FileReader` no Web App e chama `extrairCotacaoArquivoSemGravacao`, sem exigir cliente previamente cadastrado.

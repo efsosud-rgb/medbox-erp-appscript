@@ -783,31 +783,37 @@
               <div style="display:flex; align-items:flex-end;">
                 <button type="button" class="btn btn-secondary" onclick="extrairCotacao()">CONSULTAR CLIENTE</button>
               </div>
-              <div style="display:flex; align-items:flex-end;">
-                <button class="btn btn-secondary" id="ext_confirmarImportacaoBtn" onclick="confirmarImportacaoCotacao()" disabled>CONFIRMAR IMPORTAÇÃO</button>
+              <div style="display:flex; align-items:flex-end; gap:6px; flex-wrap:wrap;">
+                <button class="btn btn-secondary" id="ext_confirmarImportacaoBtn" onclick="salvarCotacaoExtraida()" disabled>SALVAR COTAÇÃO</button>
+                <button class="btn btn-secondary" id="ext_imprimirCotacaoBtn" onclick="imprimirCotacaoSalva()" disabled>IMPRIMIR COTAÇÃO</button>
+                <button class="btn btn-secondary" id="ext_pdfCotacaoBtn" onclick="salvarPdfCotacaoSalva()" disabled>SALVAR EM PDF</button>
+                <button class="btn btn-secondary" id="ext_novaCotacaoBtn" onclick="novaCotacaoExtraida()" disabled>NOVA COTAÇÃO</button>
               </div>
             </div>
           </div>
+
+          <div class="panel-body" id="ext_resumoCotacao" style="display:none; padding-top:0;"></div>
 
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
+                  <th>Código</th>
                   <th>Descrição original</th>
+                  <th>Quantidade</th>
+                  <th>Valor compra cliente</th>
+                  <th>Valor total cliente</th>
                   <th>SKU Master</th>
-                  <th>Status match</th>
-                  <th>Score</th>
-                  <th>Motivo revisão</th>
                   <th>Custo MedBox</th>
                   <th>Fornecedor custo</th>
                   <th>Data custo</th>
-                  <th>Origem custo</th>
                   <th>Margem %</th>
-                  <th>Preço venda</th>
+                  <th>Preço venda MedBox</th>
+                  <th>Valor total MedBox</th>
                   <th>Status lance</th>
                 </tr>
               </thead>
-              <tbody id="ext_resultadosBody"><tr><td colspan="12">SELECIONE UM CLIENTE E CLIQUE EM EXTRAIR COTAÇÃO.</td></tr></tbody>
+              <tbody id="ext_resultadosBody"><tr><td colspan="13">SELECIONE UM CLIENTE E CLIQUE EM EXTRAIR COTAÇÃO.</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -1533,6 +1539,7 @@
      ************************************************************/
 
     let itensExtracaoCotacao = [];
+    let cotacaoSalvaAtual = null;
 
     function abrirExtrairCotacao() {
       document.getElementById('painelExtrairCotacao').style.display = 'block';
@@ -1584,6 +1591,8 @@
           renderResultadosExtrairCotacao(itens);
           const confirmar = document.getElementById('ext_confirmarImportacaoBtn');
           if (confirmar) confirmar.disabled = !itensExtracaoCotacao.length;
+          atualizarResumoExtracaoCotacao();
+          atualizarBotoesCotacaoSalva();
         })
         .withFailureHandler(function(err) {
           setLoading(false);
@@ -1626,6 +1635,7 @@
 
             const itens = resp && resp.itens ? resp.itens : [];
             itensExtracaoCotacao = itens;
+            cotacaoSalvaAtual = null;
             renderResultadosExtrairCotacao(itens);
 
             if (resp && resp.clienteIdentificado) {
@@ -1633,6 +1643,8 @@
             }
 
             if (confirmar) confirmar.disabled = itens.length === 0;
+            atualizarResumoExtracaoCotacao(resp && resp.resumo);
+            atualizarBotoesCotacaoSalva();
 
             setText(
               'ext_resultInfo',
@@ -1693,8 +1705,11 @@
       if (remover) remover.disabled = true;
       if (extrair) extrair.disabled = true;
       if (confirmar) confirmar.disabled = true;
-      if (body) body.innerHTML = '<tr><td colspan="12">SELECIONE UM ARQUIVO E CLIQUE EM EXTRAIR COTAÇÃO.</td></tr>';
+      if (body) body.innerHTML = '<tr><td colspan="13">SELECIONE UM ARQUIVO E CLIQUE EM EXTRAIR COTAÇÃO.</td></tr>';
       itensExtracaoCotacao = [];
+      cotacaoSalvaAtual = null;
+      atualizarResumoExtracaoCotacao();
+      atualizarBotoesCotacaoSalva();
       setText('ext_resultInfo', 'ARQUIVO REMOVIDO. NENHUMA EXTRAÇÃO EXECUTADA.');
     }
 
@@ -1703,29 +1718,37 @@
       body.innerHTML = '';
 
       if (!itens || itens.length === 0) {
-        body.innerHTML = '<tr><td colspan="12">NENHUM ITEM COTADO ENCONTRADO PARA ESTE CLIENTE.</td></tr>';
+        body.innerHTML = '<tr><td colspan="13">NENHUM ITEM COTADO ENCONTRADO PARA ESTE CLIENTE.</td></tr>';
         setText('ext_resultInfo', '0 ITENS ENCONTRADOS');
+        atualizarResumoExtracaoCotacao();
         return;
       }
 
       itens.forEach(function(item, index) {
+        recalcularItemExtracao(item);
         const tr = document.createElement('tr');
         const skuReadOnly = item.editavelSku ? '' : 'readonly';
-        const custo = item.custoMedbox === null || item.custoMedbox === undefined ? '' : item.custoMedbox;
-        const margem = item.margem === null || item.margem === undefined || item.margem === '' ? 80 : item.margem;
+        const custo = item.custoMedBox !== undefined ? item.custoMedBox : item.custoMedbox;
+        const margem = item.margemPercentual !== undefined && item.margemPercentual !== '' ? item.margemPercentual : (item.margem || 80);
+        const detalheMatch = [
+          item.statusMatchInterno || item.statusMatch || '',
+          item.scoreInterno || item.scoreMatch ? 'Score: ' + (item.scoreInterno || item.scoreMatch) : '',
+          item.motivoRevisaoInterno || item.motivoRevisao || ''
+        ].filter(Boolean).join(' | ');
 
         tr.innerHTML = `
+          <td>${escapeHtml(item.codigo || item.codigoFornecedor || '')}</td>
           <td>${escapeHtml(item.descricaoOriginal || '')}</td>
-          <td><input class="table-input ext-sku" value="${escapeHtml(item.skuMaster || '')}" ${skuReadOnly} onchange="alterarSkuExtracao(${index}, this)"></td>
-          <td>${badgeStatus(item.statusMatch || '')}</td>
-          <td>${escapeHtml(String(item.scoreMatch || ''))}</td>
-          <td>${escapeHtml(item.motivoRevisao || '')}</td>
+          <td>${escapeHtml(formatDecimal(item.quantidade || ''))} ${escapeHtml(item.unidade || '')}</td>
+          <td class="money">${formatMoeda(item.valorCompraClienteUnitario)}</td>
+          <td class="money">${formatMoeda(item.valorCompraClienteTotal)}</td>
+          <td><input class="table-input ext-sku" title="${escapeHtml(detalheMatch)}" value="${escapeHtml(item.skuMaster || '')}" ${skuReadOnly} onchange="alterarSkuExtracao(${index}, this)"></td>
           <td><input class="table-input ext-custo-input" value="${escapeHtml(formatDecimal(custo))}" onchange="alterarCustoExtracao(${index}, this)"></td>
           <td class="ext-fornecedor">${escapeHtml(item.fornecedorCusto || '')}</td>
           <td class="ext-data-custo">${escapeHtml(item.dataCusto || '')}</td>
-          <td class="ext-origem-custo">${escapeHtml(item.origemCusto || '')}</td>
           <td><input type="number" class="table-input ext-margem" value="${escapeHtml(margem)}" oninput="alterarMargemExtracao(${index}, this)"></td>
-          <td class="money"><b class="ext-preco-venda">${formatMoeda(item.precoVenda)}</b></td>
+          <td class="money"><b class="ext-preco-venda">${formatMoeda(item.precoVendaMedBox || item.precoVenda)}</b></td>
+          <td class="money"><b>${formatMoeda(item.valorTotalMedBox)}</b></td>
           <td class="ext-status-lance">${badgeStatus(item.statusLance || '')}</td>
         `;
 
@@ -1733,6 +1756,7 @@
       });
 
       setText('ext_resultInfo', itens.length + ' ITENS ENCONTRADOS');
+      atualizarResumoExtracaoCotacao();
     }
 
     function alterarSkuExtracao(index, input) {
@@ -1746,11 +1770,14 @@
         .withSuccessHandler(function(resp) {
           if (!resp || !resp.ok) {
             item.custoMedbox = '';
+            item.custoMedBox = '';
             item.statusCusto = 'CUSTO_NAO_ENCONTRADO';
             item.fornecedorCusto = '';
             item.dataCusto = '';
             item.origemCusto = '';
             item.precoVenda = '';
+            item.precoVendaMedBox = '';
+            item.valorTotalMedBox = '';
             item.statusLance = 'CUSTO_NAO_ENCONTRADO';
             renderResultadosExtrairCotacao(itensExtracaoCotacao);
             return;
@@ -1761,6 +1788,7 @@
           }
 
           item.custoMedbox = resp.custoMedbox;
+          item.custoMedBox = resp.custoMedbox;
           item.statusCusto = resp.statusCusto;
           item.fornecedorCusto = resp.fornecedorCusto || '';
           item.dataCusto = resp.dataCusto || '';
@@ -1780,10 +1808,14 @@
       if (!item) return;
 
       item.custoMedbox = parseNumeroLocal(input.value);
+      item.custoMedBox = item.custoMedbox;
       item.custoEditado = true;
       if (!item.custoMedbox || item.custoMedbox <= 0) {
         item.custoMedbox = '';
+        item.custoMedBox = '';
         item.precoVenda = '';
+        item.precoVendaMedBox = '';
+        item.valorTotalMedBox = '';
         item.statusLance = 'CUSTO_NAO_ENCONTRADO';
       } else {
         recalcularItemExtracao(item);
@@ -1796,50 +1828,222 @@
       if (!item) return;
 
       item.margem = parseNumeroLocal(input.value);
+      item.margemPercentual = item.margem;
       recalcularItemExtracao(item);
       renderResultadosExtrairCotacao(itensExtracaoCotacao);
     }
 
     function recalcularItemExtracao(item) {
-      const custo = Number(item.custoMedbox || 0);
-      const margem = Number(item.margem || 0) / 100;
+      const custo = Number((item.custoMedBox !== undefined ? item.custoMedBox : item.custoMedbox) || 0);
+      const margemValor = item.margemPercentual !== undefined && item.margemPercentual !== '' ? item.margemPercentual : item.margem;
+      const margem = Number(margemValor || 0) / 100;
+      const quantidade = Number(item.quantidade || 0);
+      const valorCliente = Number(item.valorCompraClienteUnitario || item.precoOsinfo || 0);
 
       if (!custo || custo <= 0) {
         item.precoVenda = '';
-        item.statusLance = 'CUSTO_NAO_ENCONTRADO';
+        item.precoVendaMedBox = '';
+        item.valorTotalMedBox = '';
+        item.statusLance = 'DADOS INSUFICIENTES';
         return;
       }
 
       // Regra comercial: o rotulo exibido e "Margem",
       // mas o calculo aplicado e markup sobre o custo.
       item.precoVenda = Math.round((custo * (1 + margem)) * 10000) / 10000;
-      if (!item.precoOsinfo || Number(item.precoOsinfo) <= 0) {
-        item.statusLance = 'SEM PRECO_CLIENTE';
+      item.precoVendaMedBox = item.precoVenda;
+      item.valorTotalMedBox = quantidade > 0 ? Math.round((item.precoVenda * quantidade) * 10000) / 10000 : '';
+      if (!valorCliente || valorCliente <= 0) {
+        item.statusLance = 'DADOS INSUFICIENTES';
       } else {
-        item.statusLance = item.precoVenda <= Number(item.precoOsinfo) ? 'GANHANDO ITEM' : 'ACIMA DO CLIENTE';
+        if (Math.abs(item.precoVenda - valorCliente) < 0.000001) item.statusLance = 'PRECO IGUAL';
+        else item.statusLance = item.precoVenda < valorCliente ? 'LANCE VENCEDOR' : 'PRECO ACIMA';
       }
     }
 
-    function confirmarImportacaoCotacao() {
+    function atualizarResumoExtracaoCotacao(resumoServidor) {
+      const box = document.getElementById('ext_resumoCotacao');
+      if (!box) return;
+
       if (!itensExtracaoCotacao.length) {
-        setText('ext_resultInfo', 'NADA PARA CONFIRMAR.');
+        box.style.display = 'none';
+        box.innerHTML = '';
         return;
       }
 
-      if (!confirm('Confirmar importacao revisada? SKU, custo, margem e preco de venda serao gravados em BD_COTACOES.')) return;
+      const resumo = resumoServidor || calcularResumoExtracaoCotacao();
+      box.style.display = 'block';
+      box.innerHTML = `
+        <div class="cards4">
+          <div class="kpi"><b>${resumo.totalItens || 0}</b><span>Total de itens</span></div>
+          <div class="kpi"><b>${resumo.itensComSku || 0}</b><span>SKU encontrado</span></div>
+          <div class="kpi"><b>${resumo.itensSemSku || 0}</b><span>Sem SKU</span></div>
+          <div class="kpi"><b>${resumo.itensComCusto || 0}</b><span>Com custo</span></div>
+          <div class="kpi"><b>${resumo.itensSemCusto || 0}</b><span>Sem custo</span></div>
+          <div class="kpi"><b>${resumo.lancesVencedores || 0}</b><span>Lances vencedores</span></div>
+          <div class="kpi"><b>${resumo.precosAcima || 0}</b><span>Preços acima</span></div>
+          <div class="kpi"><b>${formatMoeda(resumo.valorTotalCliente || 0)}</b><span>Total cliente</span></div>
+          <div class="kpi"><b>${formatMoeda(resumo.valorTotalMedBox || 0)}</b><span>Total MedBox</span></div>
+          <div class="kpi"><b>${formatMoeda(resumo.diferencaTotal || 0)}</b><span>Diferença</span></div>
+          <div class="kpi"><b>${resumo.competitividadePercentual === '' ? '-' : formatDecimal(resumo.competitividadePercentual) + '%'}</b><span>Competitividade</span></div>
+        </div>
+      `;
+    }
 
-      setLoading(true, 'CONFIRMANDO IMPORTACAO...', 'ext_resultInfo');
+    function calcularResumoExtracaoCotacao() {
+      const resumo = {
+        totalItens: itensExtracaoCotacao.length,
+        itensComSku: 0,
+        itensSemSku: 0,
+        itensComCusto: 0,
+        itensSemCusto: 0,
+        lancesVencedores: 0,
+        precosAcima: 0,
+        valorTotalCliente: 0,
+        valorTotalMedBox: 0,
+        diferencaTotal: 0,
+        competitividadePercentual: ''
+      };
+
+      itensExtracaoCotacao.forEach(function(item) {
+        if (item.skuMaster) resumo.itensComSku++;
+        else resumo.itensSemSku++;
+
+        const custo = Number((item.custoMedBox !== undefined ? item.custoMedBox : item.custoMedbox) || 0);
+        if (custo > 0) resumo.itensComCusto++;
+        else resumo.itensSemCusto++;
+
+        if (item.statusLance === 'LANCE VENCEDOR') resumo.lancesVencedores++;
+        if (item.statusLance === 'PRECO ACIMA') resumo.precosAcima++;
+
+        resumo.valorTotalCliente += Number(item.valorCompraClienteTotal || 0);
+        resumo.valorTotalMedBox += Number(item.valorTotalMedBox || 0);
+      });
+
+      resumo.valorTotalCliente = Math.round(resumo.valorTotalCliente * 100) / 100;
+      resumo.valorTotalMedBox = Math.round(resumo.valorTotalMedBox * 100) / 100;
+      resumo.diferencaTotal = Math.round((resumo.valorTotalMedBox - resumo.valorTotalCliente) * 100) / 100;
+      resumo.competitividadePercentual = resumo.valorTotalCliente > 0
+        ? Math.round(((resumo.valorTotalCliente - resumo.valorTotalMedBox) / resumo.valorTotalCliente) * 10000) / 100
+        : '';
+      return resumo;
+    }
+
+    function atualizarBotoesCotacaoSalva() {
+      const salva = Boolean(cotacaoSalvaAtual && cotacaoSalvaAtual.numeroCotacao);
+      const salvar = document.getElementById('ext_confirmarImportacaoBtn');
+      const imprimir = document.getElementById('ext_imprimirCotacaoBtn');
+      const pdf = document.getElementById('ext_pdfCotacaoBtn');
+      const nova = document.getElementById('ext_novaCotacaoBtn');
+
+      if (salvar) salvar.disabled = salva || !itensExtracaoCotacao.length;
+      if (imprimir) imprimir.disabled = !salva;
+      if (pdf) pdf.disabled = !salva;
+      if (nova) nova.disabled = !itensExtracaoCotacao.length && !salva;
+    }
+
+    function salvarCotacaoExtraida() {
+      if (!itensExtracaoCotacao.length) {
+        setText('ext_resultInfo', 'NADA PARA SALVAR.');
+        return;
+      }
+
+      const resumo = calcularResumoExtracaoCotacao();
+      if (!confirm('Salvar cotação revisada? Itens: ' + resumo.totalItens + ' | Total MedBox: ' + formatMoeda(resumo.valorTotalMedBox) + '.')) return;
+
+      setLoading(true, 'SIMULANDO SALVAMENTO DA COTAÇÃO...', 'ext_resultInfo');
 
       google.script.run
         .withSuccessHandler(function(resp) {
           setLoading(false);
-          setText('ext_resultInfo', 'CONFIRMACAO CONCLUIDA. APLICADOS: ' + (resp.aplicados || 0) + ' | FALHAS: ' + (resp.falhas || 0));
+          if (!resp || !resp.ok) {
+            setText('ext_resultInfo', 'SIMULAÇÃO COM ERROS. FALHAS: ' + ((resp && resp.erros && resp.erros.length) || 0));
+            return;
+          }
+          cotacaoSalvaAtual = {
+            numeroCotacao: resp.numeroCotacaoPrevisto,
+            cliente: val('cot_cliente'),
+            projeto: '',
+            responsavel: '',
+            categoria: '',
+            itens: itensExtracaoCotacao,
+            resumo: resumo
+          };
+          atualizarBotoesCotacaoSalva();
+          setText('ext_resultInfo', 'COTAÇÃO SALVA EM MODO SIMULAÇÃO: ' + resp.numeroCotacaoPrevisto + '. NENHUMA GRAVAÇÃO REAL EXECUTADA.');
         })
         .withFailureHandler(function(err) {
           setLoading(false);
-      setText('ext_resultInfo', 'ERRO AO CONFIRMAR: ' + err.message);
+          setText('ext_resultInfo', 'ERRO AO SIMULAR SALVAMENTO: ' + err.message);
         })
-        .confirmarImportacaoCotacaoRevisada({ itens: itensExtracaoCotacao });
+        .simularSalvarCotacaoExtraida({ itens: itensExtracaoCotacao });
+    }
+
+    function imprimirCotacaoSalva() {
+      abrirDocumentoCotacaoSalva(true);
+    }
+
+    function salvarPdfCotacaoSalva() {
+      abrirDocumentoCotacaoSalva(true);
+    }
+
+    function abrirDocumentoCotacaoSalva(imprimir) {
+      if (!cotacaoSalvaAtual) {
+        setText('ext_resultInfo', 'SALVE A COTAÇÃO ANTES DE IMPRIMIR OU GERAR PDF.');
+        return;
+      }
+
+      const html = montarDocumentoCotacaoHtml(cotacaoSalvaAtual);
+      const win = window.open('', '_blank');
+      if (!win) {
+        setText('ext_resultInfo', 'NÃO FOI POSSÍVEL ABRIR A JANELA DE IMPRESSÃO.');
+        return;
+      }
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+      if (imprimir) {
+        win.focus();
+        setTimeout(function() { win.print(); }, 300);
+      }
+    }
+
+    function montarDocumentoCotacaoHtml(cotacao) {
+      const itens = cotacao.itens || [];
+      const total = itens.reduce(function(acc, item) {
+        return acc + Number(item.valorTotalMedBox || 0);
+      }, 0);
+      const linhas = itens.map(function(item) {
+        return '<tr>' +
+          '<td>' + escapeHtml(formatDecimal(item.quantidade || '')) + '</td>' +
+          '<td>' + escapeHtml(item.descricaoOriginal || '') + '</td>' +
+          '<td>' + escapeHtml(item.skuMaster || '') + '</td>' +
+          '<td>' + escapeHtml(formatMoeda(item.precoVendaMedBox || item.precoVenda || '')) + '</td>' +
+          '<td>' + escapeHtml(formatMoeda(item.valorTotalMedBox || '')) + '</td>' +
+          '<td></td>' +
+        '</tr>';
+      }).join('');
+      return '<!doctype html><html><head><meta charset="utf-8"><title>COTACAO MEDBOX</title>' +
+        '<style>body{font-family:Arial,sans-serif;color:#111;margin:28px}h1{margin:0 0 4px}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{border:1px solid #ddd;padding:7px;text-align:left}th{background:#f2f5f8}.right{text-align:right}@media print{button{display:none}}</style>' +
+        '</head><body><h1>MedBox</h1><h2>Cotação ' + escapeHtml(cotacao.numeroCotacao || '') + '</h2>' +
+        '<p>Data: ' + escapeHtml(new Date().toLocaleDateString('pt-BR')) + '</p>' +
+        '<p>Cliente: ' + escapeHtml(cotacao.cliente || '') + '</p>' +
+        '<p>Projeto: ' + escapeHtml(cotacao.projeto || '') + '</p>' +
+        '<p>Responsável: ' + escapeHtml(cotacao.responsavel || '') + '</p>' +
+        '<p>Categoria: ' + escapeHtml(cotacao.categoria || '') + '</p>' +
+        '<table><thead><tr><th>Quantidade</th><th>Descrição</th><th>Marca</th><th>Preço unitário MedBox</th><th>Preço total MedBox</th><th>Observação</th></tr></thead><tbody>' + linhas + '</tbody></table>' +
+        '<h3 class="right">Valor total da proposta: ' + escapeHtml(formatMoeda(total)) + '</h3>' +
+        '<p>Condições comerciais: conforme proposta aprovada.</p><p>Dados da MedBox: atendimento comercial MEDBOX ERP.</p></body></html>';
+    }
+
+    function novaCotacaoExtraida() {
+      cotacaoSalvaAtual = null;
+      itensExtracaoCotacao = [];
+      const body = document.getElementById('ext_resultadosBody');
+      if (body) body.innerHTML = '<tr><td colspan="13">SELECIONE UM ARQUIVO E CLIQUE EM EXTRAIR COTAÇÃO.</td></tr>';
+      atualizarResumoExtracaoCotacao();
+      atualizarBotoesCotacaoSalva();
+      setText('ext_resultInfo', 'PRONTO PARA NOVA COTAÇÃO.');
     }
 
     function parseNumeroLocal(valor) {

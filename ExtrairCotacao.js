@@ -17,6 +17,10 @@ const EXT_STATUS_REVISAR = 'REVISAR';
 const EXT_STATUS_NAO_ENCONTRADO = 'NAO_ENCONTRADO';
 const EXT_STATUS_CONFLITO_TECNICO = 'CONFLITO_TECNICO';
 const EXT_STATUS_CUSTO_NAO_ENCONTRADO = 'CUSTO_NAO_ENCONTRADO';
+const EXT_STATUS_LANCE_VENCEDOR = 'LANCE VENCEDOR';
+const EXT_STATUS_PRECO_IGUAL = 'PRECO IGUAL';
+const EXT_STATUS_PRECO_ACIMA = 'PRECO ACIMA';
+const EXT_STATUS_DADOS_INSUFICIENTES = 'DADOS INSUFICIENTES';
 
 function listarClientesComCotacao() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -133,6 +137,7 @@ function extrairCotacaoArquivoSemGravacao(payload) {
     colunasMapeadas: diagnostico.colunasMapeadas || {},
     clienteIdentificado: previa.clienteIdentificado,
     projetoIdentificado: previa.projetoIdentificado,
+    resumo: extCalcularResumoCotacaoExtraida_(previa.itens),
     itens: previa.itens
   };
 }
@@ -389,7 +394,7 @@ function extPontuarCabecalhoCotacao_(colunas) {
   if (colunas.skuMaster !== undefined) score += 16;
   if (colunas.projeto !== undefined) score += 10;
   if (colunas.categoria !== undefined) score += 8;
-  if (colunas.osinfo !== undefined) score += 8;
+  if (colunas.valorUnitarioCliente !== undefined || colunas.osinfo !== undefined) score += 8;
   if (colunas.valorTotal !== undefined) score += 8;
 
   if (colunas.codigo !== undefined && colunas.descricao !== undefined && colunas.quantidade !== undefined) score += 30;
@@ -409,8 +414,10 @@ function extMapearColunasCotacao_(headers) {
     if (colunas.descricao === undefined && extHeaderEm_(header, ['DESCRICAO', 'DESCRICAO ORIGINAL', 'DESCRICAO PRODUTO', 'PRODUTO', 'MATERIAL', 'ITEM DESCRICAO'])) colunas.descricao = i;
     if (colunas.skuMaster === undefined && extHeaderEm_(header, ['SKU MASTER', 'SKU_MASTER', 'SKU'])) colunas.skuMaster = i;
     if (colunas.quantidade === undefined && extHeaderEm_(header, ['QUANTIDADE', 'QUANT', 'QTD', 'QTDE'])) colunas.quantidade = i;
-    if (colunas.osinfo === undefined && extHeaderEm_(header, ['OSINFO', 'OS INFO', 'PRECO OSINFO', 'PRECO CLIENTE', 'VALOR OSINFO'])) colunas.osinfo = i;
-    if (colunas.valorTotal === undefined && extHeaderEm_(header, ['VALOR TOTAL', 'TOTAL'])) colunas.valorTotal = i;
+    if (colunas.unidade === undefined && extHeaderEm_(header, ['UNIDADE', 'UN', 'UND', 'UM'])) colunas.unidade = i;
+    if (colunas.valorUnitarioCliente === undefined && extHeaderEm_(header, ['OSINFO', 'OS INFO', 'VALOR UNITARIO', 'PRECO UNITARIO', 'PRECO DE COMPRA', 'VALOR CLIENTE', 'PRECO REFERENCIA', 'PRECO CLIENTE', 'VALOR OSINFO'])) colunas.valorUnitarioCliente = i;
+    if (colunas.osinfo === undefined && colunas.valorUnitarioCliente !== undefined) colunas.osinfo = colunas.valorUnitarioCliente;
+    if (colunas.valorTotal === undefined && extHeaderEm_(header, ['VALOR TOTAL', 'TOTAL', 'TOTAL ITEM'])) colunas.valorTotal = i;
     if (colunas.custoMedbox === undefined && extHeaderEm_(header, ['CUSTO MEDBOX', 'CUSTO'])) colunas.custoMedbox = i;
     if (colunas.margem === undefined && extHeaderEm_(header, ['MARGEM', 'MARKUP'])) colunas.margem = i;
     if (colunas.precoVenda === undefined && extHeaderEm_(header, ['PRECO VENDA', 'PRECO DE VENDA', 'VENDA'])) colunas.precoVenda = i;
@@ -440,6 +447,19 @@ function extAvaliarLinhaItemCotacao_(row, colunas, headers) {
   const descricao = extValorColuna_(row, colunas.descricao);
   const codigo = extValorColuna_(row, colunas.codigo);
   const quantidade = extToNumber_(extValorColuna_(row, colunas.quantidade));
+  const valorUnitarioInformado = extToNumber_(extValorColuna_(row, colunas.valorUnitarioCliente !== undefined ? colunas.valorUnitarioCliente : colunas.osinfo));
+  const valorTotalInformado = extToNumber_(extValorColuna_(row, colunas.valorTotal));
+  const valorUnitarioDerivado = valorUnitarioInformado === null &&
+    valorTotalInformado !== null &&
+    quantidade !== null &&
+    quantidade > 0
+      ? extArredondar_(valorTotalInformado / quantidade, 6)
+      : null;
+  const valorTotalCalculado = valorTotalInformado !== null
+    ? valorTotalInformado
+    : (valorUnitarioInformado !== null && quantidade !== null && quantidade > 0
+      ? extArredondar_(valorUnitarioInformado * quantidade, 6)
+      : null);
 
   if (!descricao) return { ok: false, motivo: 'SEM_DESCRICAO' };
   if (extTextoInstrucionalCotacao_(descricao, row)) return { ok: false, motivo: 'INSTRUCAO' };
@@ -453,11 +473,17 @@ function extAvaliarLinhaItemCotacao_(row, colunas, headers) {
     item: {
       projeto: extValorColuna_(row, colunas.projeto),
       categoria: extValorColuna_(row, colunas.categoria),
+      codigo: codigo,
       codigoFornecedor: codigo,
       descricaoOriginal: descricao,
       skuMaster: extValorColuna_(row, colunas.skuMaster),
       quantidade: quantidade === null ? '' : quantidade,
-      precoCusto: extValorColuna_(row, colunas.osinfo),
+      unidade: extValorColuna_(row, colunas.unidade),
+      valorCompraClienteUnitario: valorUnitarioInformado !== null ? valorUnitarioInformado : (valorUnitarioDerivado !== null ? valorUnitarioDerivado : ''),
+      valorCompraClienteTotal: valorTotalCalculado !== null ? valorTotalCalculado : '',
+      valorClienteDerivado: valorUnitarioDerivado !== null,
+      valorTotalClienteDerivado: valorTotalInformado === null && valorTotalCalculado !== null,
+      precoCusto: extValorColuna_(row, colunas.valorUnitarioCliente !== undefined ? colunas.valorUnitarioCliente : colunas.osinfo),
       precoTotal: extValorColuna_(row, colunas.valorTotal),
       custoMedboxArquivo: extValorColuna_(row, colunas.custoMedbox),
       margemArquivo: extValorColuna_(row, colunas.margem),
@@ -582,11 +608,20 @@ function extMontarPreviewCotacaoDeLinhas_(linhasBrutas, ctx) {
     const skuAtual = extUpper_(item.skuMaster || item.skuMasterSugerido || '');
     const match = extSugerirSkuMaster_(descricaoOriginal, skuAtual, catalogo);
     const custo = match.skuMasterSugerido ? extBuscarMenorCustoValidoPorSku_(match.skuMasterSugerido) : null;
-    const precoReferencia = extToNumber_(item.precoCusto);
+    const quantidade = extToNumber_(item.quantidade);
+    const valorCompraClienteUnitario = extToNumber_(item.valorCompraClienteUnitario !== undefined ? item.valorCompraClienteUnitario : item.precoCusto);
+    const valorCompraClienteTotal = extToNumber_(item.valorCompraClienteTotal);
     const markup = 0.8;
     const precoVenda = custo && custo.custoMedbox !== null
       ? extArredondar_(custo.custoMedbox * (1 + markup), 4)
       : '';
+    const itemComercial = extCalcularItemComercialCotacao_({
+      quantidade: quantidade,
+      valorCompraClienteUnitario: valorCompraClienteUnitario,
+      valorCompraClienteTotal: valorCompraClienteTotal,
+      custoMedBox: custo ? custo.custoMedbox : '',
+      margemPercentual: 80
+    });
 
     itens.push({
       idCotacao: '',
@@ -595,28 +630,42 @@ function extMontarPreviewCotacaoDeLinhas_(linhasBrutas, ctx) {
       cliente: clienteIdentificado,
       projeto: item.projeto || projetoIdentificado,
       categoria: item.categoria || '',
+      codigo: item.codigo || item.codigoFornecedor || '',
       codigoFornecedor: item.codigoFornecedor || '',
       descricaoOriginal: descricaoOriginal,
       descricao: descricaoOriginal,
+      quantidade: quantidade === null ? '' : quantidade,
+      unidade: item.unidade || '',
+      valorCompraClienteUnitario: itemComercial.valorCompraClienteUnitario,
+      valorCompraClienteTotal: itemComercial.valorCompraClienteTotal,
+      valorClienteDerivado: Boolean(item.valorClienteDerivado),
+      valorTotalClienteDerivado: Boolean(item.valorTotalClienteDerivado),
       skuMaster: match.skuMasterSugerido,
       skuMasterSugerido: match.skuMasterSugerido,
       statusMatch: match.statusMatch,
+      statusMatchInterno: match.statusMatch,
       scoreMatch: match.scoreMatch,
+      scoreInterno: match.scoreMatch,
       motivoRevisao: match.motivoRevisao,
+      motivoRevisaoInterno: match.motivoRevisao,
       custoMedbox: custo ? custo.custoMedbox : '',
+      custoMedBox: custo ? custo.custoMedbox : '',
       statusCusto: custo ? 'CUSTO_ENCONTRADO' : EXT_STATUS_CUSTO_NAO_ENCONTRADO,
       fornecedorCusto: custo ? custo.fornecedorCusto : '',
       dataCusto: custo ? custo.dataCusto : '',
       origemCusto: custo ? custo.origemCusto : '',
       margem: 80,
+      margemPercentual: 80,
       precoVenda: precoVenda,
-      precoOsinfo: precoReferencia === null ? '' : precoReferencia,
-      statusLance: extMontarStatusLance_(precoReferencia, precoVenda, custo),
+      precoVendaMedBox: itemComercial.precoVendaMedBox,
+      precoOsinfo: itemComercial.valorCompraClienteUnitario,
+      statusLance: itemComercial.statusLance,
       editavelSku: match.statusMatch !== EXT_STATUS_MATCH_CONFIRMADO,
       custoEditado: false,
       markupPercent: 80,
       precoCusto: custo ? custo.custoMedbox : '',
-      precoMedbox: precoVenda
+      precoMedbox: precoVenda,
+      valorTotalMedBox: itemComercial.valorTotalMedBox
     });
   }
 
@@ -902,6 +951,231 @@ function extSimularRemocaoArquivoImportacao_(estado) {
     origem: estado.origem,
     chamadasBackend: estado.chamadasBackend
   };
+}
+
+function testarCalculosCotacaoSemGravacao() {
+  const vencedor = extCalcularItemComercialCotacao_({
+    quantidade: 10,
+    valorCompraClienteUnitario: 20,
+    custoMedBox: 10,
+    margemPercentual: 80
+  });
+  const igual = extCalcularItemComercialCotacao_({
+    quantidade: 2,
+    valorCompraClienteUnitario: 18,
+    custoMedBox: 10,
+    margemPercentual: 80
+  });
+  const acima = extCalcularItemComercialCotacao_({
+    quantidade: 3,
+    valorCompraClienteUnitario: 15,
+    custoMedBox: 10,
+    margemPercentual: 80
+  });
+  const semCusto = extCalcularItemComercialCotacao_({
+    quantidade: 3,
+    valorCompraClienteUnitario: 15,
+    custoMedBox: '',
+    margemPercentual: 80
+  });
+  const semPrecoCliente = extCalcularItemComercialCotacao_({
+    quantidade: 3,
+    valorCompraClienteUnitario: '',
+    custoMedBox: 10,
+    margemPercentual: 80
+  });
+  const virgula = extToNumber_('1.234,56');
+  const ponto = extToNumber_('1234.56');
+  const derivado = extAvaliarLinhaItemCotacao_(
+    ['001', 'DIPIRONA 500MG COMPRIMIDO', '4', '', '40'],
+    { codigo: 0, descricao: 1, quantidade: 2, valorTotal: 4 },
+    ['CODIGO', 'DESCRICAO', 'QUANT', '', 'VALOR TOTAL']
+  );
+  const divisaoZero = extAvaliarLinhaItemCotacao_(
+    ['001', 'DIPIRONA 500MG COMPRIMIDO', '0', '', '40'],
+    { codigo: 0, descricao: 1, quantidade: 2, valorTotal: 4 },
+    ['CODIGO', 'DESCRICAO', 'QUANT', '', 'VALOR TOTAL']
+  );
+
+  return {
+    ok: vencedor.precoVendaMedBox === 18 &&
+      vencedor.valorTotalMedBox === 180 &&
+      vencedor.valorCompraClienteTotal === 200 &&
+      vencedor.statusLance === EXT_STATUS_LANCE_VENCEDOR &&
+      igual.statusLance === EXT_STATUS_PRECO_IGUAL &&
+      acima.statusLance === EXT_STATUS_PRECO_ACIMA &&
+      semCusto.statusLance === EXT_STATUS_DADOS_INSUFICIENTES &&
+      semPrecoCliente.statusLance === EXT_STATUS_DADOS_INSUFICIENTES &&
+      virgula === 1234.56 &&
+      ponto === 1234.56 &&
+      derivado.ok === true &&
+      derivado.item.valorCompraClienteUnitario === 10 &&
+      derivado.item.valorClienteDerivado === true &&
+      divisaoZero.ok === true &&
+      divisaoZero.item.valorCompraClienteUnitario === '',
+    casos: {
+      quantidadeExtraida: vencedor.quantidade,
+      valorUnitarioExtraido: vencedor.valorCompraClienteUnitario,
+      valorTotalExtraido: vencedor.valorCompraClienteTotal,
+      unitarioDerivado: derivado.item.valorCompraClienteUnitario,
+      divisaoPorZeroBloqueada: divisaoZero.item.valorCompraClienteUnitario === '',
+      statusVencedor: vencedor.statusLance,
+      statusIgual: igual.statusLance,
+      statusAcima: acima.statusLance,
+      faltaCusto: semCusto.statusLance,
+      faltaPrecoCliente: semPrecoCliente.statusLance,
+      moedaVirgula: virgula,
+      moedaPonto: ponto
+    }
+  };
+}
+
+function testarDocumentoCotacaoSemDadosInternos() {
+  const html = extMontarDocumentoCotacaoHtml_({
+    numeroCotacao: 'COT-TESTE',
+    cliente: 'CLIENTE TESTE',
+    projeto: 'PROJETO TESTE',
+    responsavel: 'RESPONSAVEL TESTE',
+    categoria: 'MEDICAMENTOS',
+    itens: [{
+      quantidade: 10,
+      descricaoOriginal: 'DIPIRONA 500MG COMPRIMIDO',
+      marca: 'MARCA TESTE',
+      precoVendaMedBox: 18,
+      valorTotalMedBox: 180,
+      custoMedBox: 10,
+      fornecedorCusto: 'FORNECEDOR INTERNO',
+      margemPercentual: 80,
+      scoreInterno: 99,
+      motivoRevisaoInterno: 'MATCH INTERNO',
+      valorCompraClienteUnitario: 20
+    }]
+  });
+  const bloqueados = ['custoMedBox', 'FORNECEDOR INTERNO', 'score', 'MATCH INTERNO', 'margem', 'valorCompraCliente'];
+  const vazouInterno = bloqueados.some(function(txt) {
+    return html.indexOf(txt) !== -1;
+  });
+
+  return {
+    ok: !vazouInterno &&
+      html.indexOf('COT-TESTE') !== -1 &&
+      html.indexOf('DIPIRONA 500MG COMPRIMIDO') !== -1 &&
+      html.indexOf('180') !== -1,
+    casos: {
+      semCustoInterno: html.indexOf('custoMedBox') === -1,
+      semFornecedorCusto: html.indexOf('FORNECEDOR INTERNO') === -1,
+      semScore: html.indexOf('score') === -1,
+      semMargem: html.indexOf('margem') === -1,
+      semPrecoCliente: html.indexOf('valorCompraCliente') === -1
+    }
+  };
+}
+
+function simularSalvarCotacaoExtraida(payload) {
+  const dados = payload || {};
+  const itens = Array.isArray(dados.itens) && dados.itens.length ? dados.itens : extItensCotacaoSimulacao_();
+  const itensNormalizados = itens.map(function(item, index) {
+    const calculado = extCalcularItemComercialCotacao_(item);
+    return Object.assign({}, item, calculado, {
+      indice: index + 1,
+      descricaoOriginal: extLimpar_(item.descricaoOriginal)
+    });
+  });
+  const erros = [];
+
+  itensNormalizados.forEach(function(item) {
+    if (!item.descricaoOriginal) erros.push({ indice: item.indice, erro: 'DESCRICAO_AUSENTE' });
+    if (extToNumber_(item.quantidade) === null || extToNumber_(item.quantidade) <= 0) erros.push({ indice: item.indice, erro: 'QUANTIDADE_INVALIDA' });
+    if (extToNumber_(item.precoVendaMedBox) === null || extToNumber_(item.precoVendaMedBox) <= 0) erros.push({ indice: item.indice, erro: 'PRECO_VENDA_INVALIDO' });
+  });
+
+  const resumo = extCalcularResumoCotacaoExtraida_(itensNormalizados);
+
+  return {
+    ok: erros.length === 0,
+    simulacao: true,
+    numeroCotacaoPrevisto: extGerarNumeroCotacao_(),
+    numeroItens: itensNormalizados.length,
+    totalCliente: resumo.valorTotalCliente,
+    totalMedBox: resumo.valorTotalMedBox,
+    itensQueSeriamSalvos: itensNormalizados.map(function(item) {
+      return {
+        indice: item.indice,
+        codigo: item.codigo || item.codigoFornecedor || '',
+        descricaoOriginal: item.descricaoOriginal,
+        skuMaster: item.skuMaster || '',
+        quantidade: item.quantidade,
+        valorCompraClienteUnitario: item.valorCompraClienteUnitario,
+        valorCompraClienteTotal: item.valorCompraClienteTotal,
+        custoMedBox: item.custoMedBox || item.custoMedbox || '',
+        margemPercentual: item.margemPercentual || item.margem || '',
+        precoVendaMedBox: item.precoVendaMedBox,
+        valorTotalMedBox: item.valorTotalMedBox,
+        statusLance: item.statusLance
+      };
+    }),
+    erros: erros,
+    gravacaoExecutada: false
+  };
+}
+
+function extItensCotacaoSimulacao_() {
+  return [{
+    codigo: '001',
+    descricaoOriginal: 'DIPIRONA 500MG COMPRIMIDO',
+    quantidade: 10,
+    valorCompraClienteUnitario: 20,
+    valorCompraClienteTotal: 200,
+    skuMaster: 'DIPIRONA 500MG COMPRIMIDO',
+    custoMedBox: 10,
+    margemPercentual: 80
+  }];
+}
+
+function extGerarNumeroCotacao_() {
+  return 'COT-' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmmss');
+}
+
+function extMontarDocumentoCotacaoHtml_(payload) {
+  const dados = payload || {};
+  const itens = Array.isArray(dados.itens) ? dados.itens : [];
+  const total = itens.reduce(function(acc, item) {
+    const totalItem = extToNumber_(item.valorTotalMedBox);
+    return acc + (totalItem || 0);
+  }, 0);
+  const linhas = itens.map(function(item) {
+    return '<tr>' +
+      '<td>' + extEscapeHtml_(item.quantidade || '') + '</td>' +
+      '<td>' + extEscapeHtml_(item.descricaoOriginal || '') + '</td>' +
+      '<td>' + extEscapeHtml_(item.marca || item.skuMaster || '') + '</td>' +
+      '<td>' + extEscapeHtml_(item.precoVendaMedBox || item.precoVenda || '') + '</td>' +
+      '<td>' + extEscapeHtml_(item.valorTotalMedBox || '') + '</td>' +
+      '<td>' + extEscapeHtml_(item.observacao || '') + '</td>' +
+      '</tr>';
+  }).join('');
+
+  return '<!doctype html><html><head><meta charset="utf-8"><style>@media print{button{display:none}}body{font-family:Arial,sans-serif}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ddd;padding:6px;text-align:left}</style></head><body>' +
+    '<h1>MedBox</h1>' +
+    '<h2>Cotacao ' + extEscapeHtml_(dados.numeroCotacao || '') + '</h2>' +
+    '<p>Data: ' + extEscapeHtml_(dados.data || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy')) + '</p>' +
+    '<p>Cliente: ' + extEscapeHtml_(dados.cliente || '') + '</p>' +
+    '<p>Projeto: ' + extEscapeHtml_(dados.projeto || '') + '</p>' +
+    '<p>Responsavel: ' + extEscapeHtml_(dados.responsavel || '') + '</p>' +
+    '<p>Categoria: ' + extEscapeHtml_(dados.categoria || '') + '</p>' +
+    '<table><thead><tr><th>Quantidade</th><th>Descricao</th><th>Marca</th><th>Preco unitario MedBox</th><th>Preco total MedBox</th><th>Observacao</th></tr></thead><tbody>' + linhas + '</tbody></table>' +
+    '<h3>Valor total da proposta: ' + extEscapeHtml_(extArredondar_(total, 2)) + '</h3>' +
+    '<p>Condicoes comerciais: conforme proposta aprovada.</p>' +
+    '<p>Dados da MedBox: atendimento comercial MEDBOX ERP.</p>' +
+    '</body></html>';
+}
+
+function extEscapeHtml_(valor) {
+  return String(valor === null || valor === undefined ? '' : valor)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function extAplicarItemCotacao_(ws, values, idx, item, relatorio, agora, usuario) {
@@ -1232,6 +1506,94 @@ function extMontarStatusLance_(precoCliente, precoVenda, custo) {
   if (cliente === null || cliente <= 0) return 'SEM PRECO_CLIENTE';
 
   return venda <= cliente ? 'GANHANDO ITEM' : 'ACIMA DO CLIENTE';
+}
+
+function extCalcularItemComercialCotacao_(item) {
+  const quantidade = extToNumber_(item && item.quantidade);
+  const valorUnitario = extToNumber_(item && item.valorCompraClienteUnitario);
+  const valorTotalInformado = extToNumber_(item && item.valorCompraClienteTotal);
+  const custo = extToNumber_(item && (item.custoMedBox !== undefined ? item.custoMedBox : item.custoMedbox));
+  const margem = extToNumber_(item && (item.margemPercentual !== undefined ? item.margemPercentual : item.margem));
+  const valorTotalCliente = valorTotalInformado !== null
+    ? valorTotalInformado
+    : (quantidade !== null && quantidade > 0 && valorUnitario !== null
+      ? extArredondar_(quantidade * valorUnitario, 6)
+      : '');
+  const precoVenda = custo !== null && custo > 0
+    ? extArredondar_(custo * (1 + ((margem === null ? 0 : margem) / 100)), 6)
+    : '';
+  const valorTotalMedBox = precoVenda !== '' && quantidade !== null && quantidade > 0
+    ? extArredondar_(precoVenda * quantidade, 6)
+    : '';
+  const statusLance = extMontarStatusLanceComercial_(valorUnitario, precoVenda, custo);
+
+  return {
+    quantidade: quantidade === null ? '' : quantidade,
+    valorCompraClienteUnitario: valorUnitario === null ? '' : valorUnitario,
+    valorCompraClienteTotal: valorTotalCliente,
+    custoMedBox: custo === null ? '' : custo,
+    margemPercentual: margem === null ? 80 : margem,
+    precoVendaMedBox: precoVenda,
+    valorTotalMedBox: valorTotalMedBox,
+    statusLance: statusLance
+  };
+}
+
+function extMontarStatusLanceComercial_(valorClienteUnitario, precoVendaMedBox, custoMedBox) {
+  const custo = extToNumber_(custoMedBox);
+  const cliente = extToNumber_(valorClienteUnitario);
+  const venda = extToNumber_(precoVendaMedBox);
+
+  if (custo === null || custo <= 0 || venda === null || venda <= 0 || cliente === null || cliente <= 0) {
+    return EXT_STATUS_DADOS_INSUFICIENTES;
+  }
+
+  if (Math.abs(venda - cliente) < 0.000001) return EXT_STATUS_PRECO_IGUAL;
+  return venda < cliente ? EXT_STATUS_LANCE_VENCEDOR : EXT_STATUS_PRECO_ACIMA;
+}
+
+function extCalcularResumoCotacaoExtraida_(itens) {
+  const lista = Array.isArray(itens) ? itens : [];
+  const resumo = {
+    totalItens: lista.length,
+    itensComSku: 0,
+    itensSemSku: 0,
+    itensComCusto: 0,
+    itensSemCusto: 0,
+    lancesVencedores: 0,
+    precosAcima: 0,
+    valorTotalCliente: 0,
+    valorTotalMedBox: 0,
+    diferencaTotal: 0,
+    competitividadePercentual: ''
+  };
+
+  lista.forEach(function(item) {
+    if (extLimpar_(item.skuMaster)) resumo.itensComSku++;
+    else resumo.itensSemSku++;
+
+    const custo = extToNumber_(item.custoMedBox !== undefined ? item.custoMedBox : item.custoMedbox);
+    if (custo !== null && custo > 0) resumo.itensComCusto++;
+    else resumo.itensSemCusto++;
+
+    const status = extUpper_(item.statusLance);
+    if (status === extUpper_(EXT_STATUS_LANCE_VENCEDOR)) resumo.lancesVencedores++;
+    if (status === extUpper_(EXT_STATUS_PRECO_ACIMA)) resumo.precosAcima++;
+
+    const totalCliente = extToNumber_(item.valorCompraClienteTotal);
+    const totalMedBox = extToNumber_(item.valorTotalMedBox);
+    if (totalCliente !== null) resumo.valorTotalCliente += totalCliente;
+    if (totalMedBox !== null) resumo.valorTotalMedBox += totalMedBox;
+  });
+
+  resumo.valorTotalCliente = extArredondar_(resumo.valorTotalCliente, 2);
+  resumo.valorTotalMedBox = extArredondar_(resumo.valorTotalMedBox, 2);
+  resumo.diferencaTotal = extArredondar_(resumo.valorTotalMedBox - resumo.valorTotalCliente, 2);
+  resumo.competitividadePercentual = resumo.valorTotalCliente > 0
+    ? extArredondar_(((resumo.valorTotalCliente - resumo.valorTotalMedBox) / resumo.valorTotalCliente) * 100, 2)
+    : '';
+
+  return resumo;
 }
 
 function extObterOuCriarRelatorio_(ss) {
