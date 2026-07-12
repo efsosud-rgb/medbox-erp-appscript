@@ -189,42 +189,108 @@ function rejeitarRevisoesCosmosEmLote(payloads) {
 
 function testarRevisaoCosmosSemGravacao() {
   const payloadAusente = rcValidarPayloadAprovacao_(null);
-  const gtinInvalido = rcValidarValoresEditados_({ gtinSugerido: 'ABC', ncmSugerido: '30049099' });
-  const ncmInvalido = rcValidarValoresEditados_({ gtinSugerido: '7890000000000', ncmSugerido: '30A' });
-  const validos = rcValidarValoresEditados_({
-    descricaoSugerida: ' PRODUTO TESTE ',
-    marcaSugerida: ' MARCA ',
-    gtinSugerido: '789.000-000/0000',
-    ncmSugerido: '3004.90.99'
+  const gtinsValidos = ['12345678', '123456789012', '1234567890123', '12345678901234']
+    .every(function(gtin) {
+      return rcValidarValoresEditados_({ marcaSugerida: 'MARCA', gtinSugerido: gtin, ncmSugerido: '' }, {}).ok;
+    });
+  const gtinPontuado = rcValidarValoresEditados_({ gtinSugerido: '789.000-000/0000', ncmSugerido: '30049099' }, {});
+  const gtinInvalido = rcValidarValoresEditados_({ gtinSugerido: '1234567', ncmSugerido: '30049099' }, {});
+  const ncmValido = rcValidarValoresEditados_({ gtinSugerido: '', ncmSugerido: '3004.90.99' }, {});
+  const ncmInvalido = rcValidarValoresEditados_({ gtinSugerido: '7890000000000', ncmSugerido: '30049' }, {});
+  const marcaValida = rcValidarValoresEditados_({ marcaSugerida: ' MARCA ', gtinSugerido: '', ncmSugerido: '' }, {});
+  const limparMarcaSemConfirmar = rcValidarValoresEditados_({ marcaSugerida: '', gtinSugerido: '', ncmSugerido: '' }, { marcaAtual: 'MARCA ATUAL' });
+  const limparGtinSemConfirmar = rcValidarValoresEditados_({ marcaSugerida: 'M', gtinSugerido: '', ncmSugerido: '' }, { gtinAtual: '7890000000000' });
+  const limparNcmSemConfirmar = rcValidarValoresEditados_({ marcaSugerida: 'M', gtinSugerido: '', ncmSugerido: '' }, { ncmAtual: '30049099' });
+  const limparComConfirmacao = rcValidarValoresEditados_({
+    marcaSugerida: '',
+    gtinSugerido: '',
+    ncmSugerido: '',
+    confirmarLimpezaMarca: true,
+    confirmarLimpezaGtin: true,
+    confirmarLimpezaNcm: true
+  }, {
+    marcaAtual: 'MARCA ATUAL',
+    gtinAtual: '7890000000000',
+    ncmAtual: '30049099'
   });
-
+  const revisaoInexistente = rcValidarContextoAprovacao_({ revisaoId: 'R1', itemId: 'I1' }, null, null);
+  const itemInexistente = rcValidarContextoAprovacao_({ revisaoId: 'R1', itemId: 'I1' }, { revisaoId: 'R1', itemId: 'I1', status: RC_STATUS_PENDENTE, versaoRegistro: 1 }, null);
+  const statusAprovado = rcValidarContextoAprovacao_({ revisaoId: 'R1', itemId: 'I1' }, { revisaoId: 'R1', itemId: 'I1', status: RC_STATUS_APROVADO, versaoRegistro: 1 }, {});
+  const statusRejeitado = rcValidarContextoAprovacao_({ revisaoId: 'R1', itemId: 'I1' }, { revisaoId: 'R1', itemId: 'I1', status: RC_STATUS_REJEITADO, versaoRegistro: 1 }, {});
+  const versaoDesatualizada = rcValidarContextoAprovacao_({ revisaoId: 'R1', itemId: 'I1', versaoRegistro: 1 }, { revisaoId: 'R1', itemId: 'I1', status: RC_STATUS_PENDENTE, versaoRegistro: 2 }, {});
+  const simulacaoAlteracoes = rcMontarAlteracoesAplicaveis_(
+    { marcaAtual: 'ANTIGA', gtinAtual: '12345678', ncmAtual: '30049099' },
+    { marcaSugerida: 'NOVA', gtinSugerido: '12345678', ncmSugerido: '' }
+  );
   const rejeicaoNaoAlteraCadastro = true;
   const descricaoOriginalProtegida = rcCamposAplicaveisCosmos_().indexOf('DESCRICAO_FORNECEDOR') === -1;
+  const descricaoSugeridaNaoGravavel = rcCamposAplicaveisCosmos_().indexOf('DESCRICAO_SUGERIDA') === -1 &&
+    rcCamposAplicaveisCosmos_().indexOf('DESCRICAO_NORMALIZADA') === -1;
+  const skuMasterProtegido = rcCamposAplicaveisCosmos_().indexOf('SKU_MASTER') === -1;
 
   return {
     ok: payloadAusente.erro === 'PAYLOAD_AUSENTE' &&
+      gtinsValidos &&
+      gtinPontuado.ok === true &&
+      gtinPontuado.valores.gtinSugerido === '7890000000000' &&
       gtinInvalido.erro === 'GTIN_INVALIDO' &&
+      ncmValido.ok === true &&
+      ncmValido.valores.ncmSugerido === '30049099' &&
       ncmInvalido.erro === 'NCM_INVALIDO' &&
-      validos.ok === true &&
-      validos.valores.gtinSugerido === '7890000000000' &&
-      validos.valores.ncmSugerido === '30049099' &&
+      marcaValida.valores.marcaSugerida === 'MARCA' &&
+      limparMarcaSemConfirmar.erro === 'CONFIRMACAO_LIMPEZA_MARCA_EXIGIDA' &&
+      limparGtinSemConfirmar.erro === 'CONFIRMACAO_LIMPEZA_GTIN_EXIGIDA' &&
+      limparNcmSemConfirmar.erro === 'CONFIRMACAO_LIMPEZA_NCM_EXIGIDA' &&
+      limparComConfirmacao.ok === true &&
+      revisaoInexistente.erro === 'REVISAO_NAO_LOCALIZADA' &&
+      itemInexistente.erro === 'ITEM_NAO_LOCALIZADO' &&
+      statusAprovado.erro === 'REVISAO_NAO_PENDENTE' &&
+      statusRejeitado.erro === 'REVISAO_NAO_PENDENTE' &&
+      versaoDesatualizada.erro === 'TELA_DESATUALIZADA' &&
+      simulacaoAlteracoes.length === 2 &&
       rejeicaoNaoAlteraCadastro &&
-      descricaoOriginalProtegida,
+      descricaoOriginalProtegida &&
+      descricaoSugeridaNaoGravavel &&
+      skuMasterProtegido,
     casos: {
       payloadAusente: payloadAusente.erro,
-      revisaoIdInexistente: 'VALIDADO_EM_FLUXO_DE_APROVACAO',
-      itemIdInexistente: 'VALIDADO_EM_FLUXO_DE_APROVACAO',
-      statusAprovado: 'VALIDADO_EM_FLUXO_DE_APROVACAO',
-      statusRejeitado: 'VALIDADO_EM_FLUXO_DE_APROVACAO',
+      descricaoNaoGravavel: descricaoSugeridaNaoGravavel,
+      marcaValida: marcaValida.ok,
+      gtin8_12_13_14: gtinsValidos,
+      gtinPontuado: gtinPontuado.valores.gtinSugerido,
       gtinInvalido: gtinInvalido.erro,
+      ncmValido: ncmValido.valores.ncmSugerido,
       ncmInvalido: ncmInvalido.erro,
+      limparMarcaSemConfirmar: limparMarcaSemConfirmar.erro,
+      limparGtinSemConfirmar: limparGtinSemConfirmar.erro,
+      limparNcmSemConfirmar: limparNcmSemConfirmar.erro,
+      revisaoIdInexistente: revisaoInexistente.erro,
+      itemIdInexistente: itemInexistente.erro,
+      statusAprovado: statusAprovado.erro,
+      statusRejeitado: statusRejeitado.erro,
+      versaoDesatualizada: versaoDesatualizada.erro,
       itemMovido: 'REVALIDA_ID_PRECO_ANTES_DE_GRAVAR',
-      itemRemovido: 'VALIDADO_EM_FLUXO_DE_APROVACAO',
+      itemRemovido: itemInexistente.erro,
       tentativaDuplicada: 'BLOQUEADA_POR_STATUS_E_LOCK',
       loteMisto: 'RETORNO_POR_ITEM',
       descricaoOriginalNaoAlterada: descricaoOriginalProtegida,
+      skuMasterNaoAlterado: skuMasterProtegido,
+      simulacaoSemGravacao: simulacaoAlteracoes,
       rejeicaoNaoAlteraCadastro: rejeicaoNaoAlteraCadastro
     }
+  };
+}
+
+function simularAprovacaoRevisaoCosmos(payload) {
+  const preparado = rcPrepararAprovacaoCosmos_(payload, false);
+  if (!preparado.ok) return preparado;
+
+  return {
+    ok: true,
+    simulacao: true,
+    revisaoId: preparado.rev.revisaoId,
+    itemId: preparado.rev.itemId,
+    alteracoes: rcMontarAlteracoesAplicaveis_(preparado.atual, preparado.valores)
   };
 }
 
@@ -288,39 +354,22 @@ function rcSincronizarRevisoesCosmos_(ss, revisao) {
 }
 
 function rcAplicarRevisaoCosmos_(payload) {
-  const payloadOk = rcValidarPayloadAprovacao_(payload);
-  if (!payloadOk.ok) return payloadOk;
+  const preparado = rcPrepararAprovacaoCosmos_(payload, true);
+  if (!preparado.ok) return preparado;
 
-  const valoresOk = rcValidarValoresEditados_(payload);
-  if (!valoresOk.ok) {
-    return rcResultadoFalha_(payload.revisaoId, payload.itemId, RC_STATUS_PENDENTE, valoresOk.erro);
-  }
-
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const revisao = rcObterOuCriarAba_(ss, RC_ABA_REVISAO, RC_HEADERS_REVISAO);
-  const origem = ss.getSheetByName(RC_ABA_ORIGEM);
+  const ss = preparado.ss;
+  const revisao = preparado.revisao;
+  const origem = preparado.origem;
   const relatorio = rcObterOuCriarAba_(ss, RC_ABA_RELATORIO, RC_HEADERS_RELATORIO);
   const backup = rcObterOuCriarAba_(ss, RC_ABA_BACKUP, RC_HEADERS_BACKUP);
 
-  if (!origem) return rcResultadoFalha_(payload.revisaoId, payload.itemId, RC_STATUS_PENDENTE, 'ABA_ORIGEM_NAO_ENCONTRADA');
-
-  const revEncontrada = rcEncontrarRevisao_(revisao, payload.revisaoId);
-  if (!revEncontrada) return rcResultadoFalha_(payload.revisaoId, payload.itemId, RC_STATUS_PENDENTE, 'REVISAO_NAO_LOCALIZADA');
-
-  const rev = revEncontrada.dto;
-  if (rev.itemId !== rcLimpar_(payload.itemId)) return rcResultadoFalha_(payload.revisaoId, payload.itemId, rev.status, 'ITEM_ID_DIVERGENTE');
-  if (rev.status !== RC_STATUS_PENDENTE) return rcResultadoFalha_(payload.revisaoId, payload.itemId, rev.status, 'REVISAO_NAO_PENDENTE');
-  if (payload.versaoRegistro && Number(payload.versaoRegistro) !== Number(rev.versaoRegistro)) {
-    return rcResultadoFalha_(payload.revisaoId, payload.itemId, rev.status, 'TELA_DESATUALIZADA');
-  }
-
-  const itemEncontrado = rcEncontrarItemOrigem_(origem, rev.itemId);
-  if (!itemEncontrado) return rcResultadoFalha_(payload.revisaoId, payload.itemId, RC_STATUS_PENDENTE, 'ITEM_NAO_LOCALIZADO');
-
   const usuario = Session.getActiveUser().getEmail() || '';
   const agora = new Date();
-  const atual = itemEncontrado.dto;
-  const valores = valoresOk.valores;
+  const rev = preparado.rev;
+  const revEncontrada = preparado.revEncontrada;
+  const itemEncontrado = preparado.itemEncontrado;
+  const atual = preparado.atual;
+  const valores = preparado.valores;
 
   backup.appendRow([
     agora,
@@ -352,7 +401,7 @@ function rcAplicarRevisaoCosmos_(payload) {
     rev.itemId,
     RC_ABA_ORIGEM,
     atual.descricaoOriginal,
-    valores.descricaoSugerida,
+    '',
     atual.marcaAtual,
     valores.marcaSugerida,
     atual.gtinAtual,
@@ -365,6 +414,43 @@ function rcAplicarRevisaoCosmos_(payload) {
   ]);
 
   return { revisaoId: rev.revisaoId, itemId: rev.itemId, ok: true, status: RC_STATUS_APROVADO };
+}
+
+function rcPrepararAprovacaoCosmos_(payload, criarAbaRevisao) {
+  const payloadOk = rcValidarPayloadAprovacao_(payload);
+  if (!payloadOk.ok) return payloadOk;
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const revisao = criarAbaRevisao
+    ? rcObterOuCriarAba_(ss, RC_ABA_REVISAO, RC_HEADERS_REVISAO)
+    : ss.getSheetByName(RC_ABA_REVISAO);
+  const origem = ss.getSheetByName(RC_ABA_ORIGEM);
+
+  if (!revisao) return rcResultadoFalha_(payload.revisaoId, payload.itemId, RC_STATUS_PENDENTE, 'REVISAO_NAO_LOCALIZADA');
+  if (!origem) return rcResultadoFalha_(payload.revisaoId, payload.itemId, RC_STATUS_PENDENTE, 'ABA_ORIGEM_NAO_ENCONTRADA');
+
+  const revEncontrada = rcEncontrarRevisao_(revisao, payload.revisaoId);
+  const rev = revEncontrada ? revEncontrada.dto : null;
+  const itemEncontrado = rev ? rcEncontrarItemOrigem_(origem, rev.itemId) : null;
+  const contextoOk = rcValidarContextoAprovacao_(payload, rev, itemEncontrado);
+  if (!contextoOk.ok) return contextoOk;
+
+  const valoresOk = rcValidarValoresEditados_(payload, itemEncontrado.dto);
+  if (!valoresOk.ok) {
+    return rcResultadoFalha_(payload.revisaoId, payload.itemId, rev.status, valoresOk.erro);
+  }
+
+  return {
+    ok: true,
+    ss: ss,
+    revisao: revisao,
+    origem: origem,
+    revEncontrada: revEncontrada,
+    rev: rev,
+    itemEncontrado: itemEncontrado,
+    atual: itemEncontrado.dto,
+    valores: valoresOk.valores
+  };
 }
 
 function rcRejeitarRevisaoCosmos_(payload) {
@@ -426,11 +512,26 @@ function rcValidarPayloadAprovacao_(payload) {
   return { ok: true };
 }
 
-function rcValidarValoresEditados_(payload) {
+function rcValidarContextoAprovacao_(payload, rev, itemEncontrado) {
+  if (!rev) return rcResultadoFalha_(payload.revisaoId, payload.itemId, RC_STATUS_PENDENTE, 'REVISAO_NAO_LOCALIZADA');
+  if (rev.itemId !== rcLimpar_(payload.itemId)) return rcResultadoFalha_(payload.revisaoId, payload.itemId, rev.status, 'ITEM_ID_DIVERGENTE');
+  if (rev.status !== RC_STATUS_PENDENTE) return rcResultadoFalha_(payload.revisaoId, payload.itemId, rev.status, 'REVISAO_NAO_PENDENTE');
+  if (payload.versaoRegistro && Number(payload.versaoRegistro) !== Number(rev.versaoRegistro)) {
+    return rcResultadoFalha_(payload.revisaoId, payload.itemId, rev.status, 'TELA_DESATUALIZADA');
+  }
+  if (!itemEncontrado) return rcResultadoFalha_(payload.revisaoId, payload.itemId, RC_STATUS_PENDENTE, 'ITEM_NAO_LOCALIZADO');
+  return { ok: true };
+}
+
+function rcValidarValoresEditados_(payload, atuais) {
+  const atual = atuais || {};
+  const marca = rcLimpar_(payload.marcaSugerida);
+  const gtinEntrada = rcLimpar_(payload.gtinSugerido);
+  const ncmEntrada = rcLimpar_(payload.ncmSugerido);
   const gtin = rcSomenteDigitos_(payload.gtinSugerido);
   const ncm = rcSomenteDigitos_(payload.ncmSugerido);
 
-  if (rcLimpar_(payload.gtinSugerido) && !/^\d+$/.test(gtin)) {
+  if (gtinEntrada && !/^[\d\s.\-/]+$/.test(gtinEntrada)) {
     return { ok: false, erro: 'GTIN_INVALIDO' };
   }
 
@@ -438,7 +539,7 @@ function rcValidarValoresEditados_(payload) {
     return { ok: false, erro: 'GTIN_INVALIDO' };
   }
 
-  if (rcLimpar_(payload.ncmSugerido) && !/^\d+$/.test(ncm)) {
+  if (ncmEntrada && !/^[\d\s.]+$/.test(ncmEntrada)) {
     return { ok: false, erro: 'NCM_INVALIDO' };
   }
 
@@ -446,15 +547,44 @@ function rcValidarValoresEditados_(payload) {
     return { ok: false, erro: 'NCM_INVALIDO' };
   }
 
+  if (!marca && rcLimpar_(atual.marcaAtual) && payload.confirmarLimpezaMarca !== true) {
+    return { ok: false, erro: 'CONFIRMACAO_LIMPEZA_MARCA_EXIGIDA' };
+  }
+
+  if (!gtin && rcLimpar_(atual.gtinAtual) && payload.confirmarLimpezaGtin !== true) {
+    return { ok: false, erro: 'CONFIRMACAO_LIMPEZA_GTIN_EXIGIDA' };
+  }
+
+  if (!ncm && rcLimpar_(atual.ncmAtual) && payload.confirmarLimpezaNcm !== true) {
+    return { ok: false, erro: 'CONFIRMACAO_LIMPEZA_NCM_EXIGIDA' };
+  }
+
   return {
     ok: true,
     valores: {
-      descricaoSugerida: rcLimpar_(payload.descricaoSugerida),
-      marcaSugerida: rcLimpar_(payload.marcaSugerida),
+      marcaSugerida: marca,
       gtinSugerido: gtin,
       ncmSugerido: ncm
     }
   };
+}
+
+function rcMontarAlteracoesAplicaveis_(atual, valores) {
+  const mapa = [
+    { campoDestino: 'FABRICANTE_MARCA', atual: atual.marcaAtual, novo: valores.marcaSugerida },
+    { campoDestino: 'EAN', atual: atual.gtinAtual, novo: valores.gtinSugerido },
+    { campoDestino: 'NCM', atual: atual.ncmAtual, novo: valores.ncmSugerido }
+  ];
+
+  return mapa
+    .filter(function(item) { return rcLimpar_(item.atual) !== rcLimpar_(item.novo); })
+    .map(function(item) {
+      return {
+        campoDestino: item.campoDestino,
+        valorAnterior: rcLimpar_(item.atual),
+        valorNovo: rcLimpar_(item.novo)
+      };
+    });
 }
 
 function rcAplicarCamposOrigem_(origem, idx, rowNumber, valores) {
@@ -481,7 +611,6 @@ function rcAtualizarRevisaoAposAcao_(revisao, idx, rowNumber, dados) {
   if (idx['REVISADO_POR'] !== undefined) revisao.getRange(rowNumber, idx['REVISADO_POR'] + 1).setValue(dados.revisadoPor);
   if (idx['MENSAGEM_ERRO'] !== undefined) revisao.getRange(rowNumber, idx['MENSAGEM_ERRO'] + 1).setValue(dados.mensagem);
   if (idx['VERSAO_REGISTRO'] !== undefined) revisao.getRange(rowNumber, idx['VERSAO_REGISTRO'] + 1).setValue(dados.versaoRegistro);
-  if (idx['DESCRICAO_SUGERIDA'] !== undefined) revisao.getRange(rowNumber, idx['DESCRICAO_SUGERIDA'] + 1).setValue(dados.valores.descricaoSugerida);
   if (idx['MARCA_SUGERIDA'] !== undefined) revisao.getRange(rowNumber, idx['MARCA_SUGERIDA'] + 1).setValue(dados.valores.marcaSugerida);
   if (idx['GTIN_SUGERIDO'] !== undefined) revisao.getRange(rowNumber, idx['GTIN_SUGERIDO'] + 1).setValue(dados.valores.gtinSugerido);
   if (idx['NCM_SUGERIDO'] !== undefined) revisao.getRange(rowNumber, idx['NCM_SUGERIDO'] + 1).setValue(dados.valores.ncmSugerido);

@@ -48,6 +48,8 @@
     .readonly { color: #485465; max-width: 280px; white-space: normal; line-height: 1.35; }
     .editable { min-width: 150px; background: var(--amarelo); }
     .descricao { min-width: 260px; }
+    .ref-note { margin-top: 4px; color: #8a5a00; font-size: 10px; font-weight: 800; line-height: 1.25; }
+    .destino { margin-top: 4px; color: var(--azul); font-size: 10px; font-weight: 900; }
     .idcol { min-width: 145px; font-weight: 800; color: var(--azul); }
     .status { display: inline-block; border-radius: 999px; padding: 3px 8px; font-weight: 900; font-size: 10px; }
     .status-pendente { background: #fff3cd; color: #8a5a00; }
@@ -88,13 +90,13 @@
             <th><input type="checkbox" id="selectAll" onchange="alternarTodos(this.checked)"></th>
             <th>ID do item</th>
             <th>Descricao original</th>
-            <th>Descricao sugerida</th>
+            <th>Descricao Cosmos</th>
             <th>Marca atual</th>
-            <th>Marca sugerida</th>
+            <th>Marca aprovada</th>
             <th>GTIN atual</th>
-            <th>GTIN sugerido</th>
+            <th>GTIN aprovado</th>
             <th>NCM atual</th>
-            <th>NCM sugerido</th>
+            <th>NCM aprovado</th>
             <th>Origem</th>
             <th>Status</th>
             <th>Acoes</th>
@@ -115,7 +117,6 @@
         sugestoesOriginais = {};
         itens.forEach(function(item) {
           sugestoesOriginais[item.revisaoId] = {
-            descricaoSugerida: item.descricaoSugerida || '',
             marcaSugerida: item.marcaSugerida || '',
             gtinSugerido: item.gtinSugerido || '',
             ncmSugerido: item.ncmSugerido || ''
@@ -144,17 +145,18 @@
           <td><input type="checkbox" class="sel" value="${escapeHtml(item.revisaoId)}"></td>
           <td class="idcol">${escapeHtml(item.itemId)}<br><span class="readonly">${escapeHtml(item.revisaoId)}</span></td>
           <td class="readonly descricao">${escapeHtml(item.descricaoOriginal)}</td>
-          <td><input class="editable descricao" id="${id(item.revisaoId, 'desc')}" value="${escapeAttr(item.descricaoSugerida)}"></td>
+          <td><div class="readonly descricao">${escapeHtml(item.descricaoSugerida)}</div><div class="ref-note">Descricao somente para referencia - nao sera aplicada</div></td>
           <td class="readonly">${escapeHtml(item.marcaAtual)}</td>
-          <td><input class="editable" id="${id(item.revisaoId, 'marca')}" value="${escapeAttr(item.marcaSugerida)}"></td>
+          <td><input class="editable" id="${id(item.revisaoId, 'marca')}" value="${escapeAttr(item.marcaSugerida)}"><div class="destino">Destino: FABRICANTE_MARCA</div></td>
           <td class="readonly">${escapeHtml(item.gtinAtual)}</td>
-          <td><input class="editable" id="${id(item.revisaoId, 'gtin')}" value="${escapeAttr(item.gtinSugerido)}"></td>
+          <td><input class="editable" id="${id(item.revisaoId, 'gtin')}" value="${escapeAttr(item.gtinSugerido)}"><div class="destino">Destino: EAN</div></td>
           <td class="readonly">${escapeHtml(item.ncmAtual)}</td>
-          <td><input class="editable" id="${id(item.revisaoId, 'ncm')}" value="${escapeAttr(item.ncmSugerido)}"></td>
+          <td><input class="editable" id="${id(item.revisaoId, 'ncm')}" value="${escapeAttr(item.ncmSugerido)}"><div class="destino">Destino: NCM</div></td>
           <td class="readonly">${escapeHtml(item.origemAba)} L${escapeHtml(item.origemLinha)}<br>${escapeHtml(item.fonte)}</td>
           <td><span class="status status-${escapeHtml(cls)}">${escapeHtml(item.status)}</span></td>
           <td><div class="row-actions">
             <button class="btn btn-primary" onclick="aprovarUm('${escapeJs(item.revisaoId)}')">Aprovar</button>
+            <button class="btn btn-secondary" onclick="simularUm('${escapeJs(item.revisaoId)}')">Simular</button>
             <button class="btn btn-danger" onclick="rejeitarUm('${escapeJs(item.revisaoId)}')">Rejeitar</button>
             <button class="btn btn-secondary" onclick="restaurar('${escapeJs(item.revisaoId)}')">Restaurar sugestao</button>
           </div></td>
@@ -162,25 +164,40 @@
       }).join('');
     }
     function aprovarUm(revisaoId) {
-      const payload = montarPayload(revisaoId);
+      const payload = montarPayloadAprovacao(revisaoId, false);
       if (!payload) return;
       if (!confirm('Confirmar aprovacao deste item? Somente os valores editados serao aplicados.')) return;
       enviarAprovacao([payload]);
     }
+    function simularUm(revisaoId) {
+      const payload = montarPayloadAprovacao(revisaoId, false);
+      if (!payload) return;
+      setLoading(true, 'Simulando aprovacao...');
+      google.script.run.withSuccessHandler(function(resp) {
+        setLoading(false);
+        const qtd = resp && resp.alteracoes ? resp.alteracoes.length : 0;
+        msg('Simulacao concluida. Alteracoes previstas: ' + qtd, resp && resp.ok ? 'ok' : 'warn');
+      }).withFailureHandler(function(err) {
+        setLoading(false);
+        msg('Erro ao simular: ' + escapeHtml(err.message || String(err)), 'err');
+      }).simularAprovacaoRevisaoCosmos(payload);
+    }
     function rejeitarUm(revisaoId) {
-      const payload = montarPayload(revisaoId);
+      const payload = montarPayloadBase(revisaoId);
       if (!payload) return;
       if (!confirm('Confirmar rejeicao deste item? Nenhum dado do cadastro sera alterado.')) return;
       enviarRejeicao([payload]);
     }
     function aprovarSelecionados() {
-      const payloads = selecionados().map(montarPayload).filter(Boolean);
+      const payloads = selecionados().map(function(revisaoId) {
+        return montarPayloadAprovacao(revisaoId, true);
+      }).filter(Boolean);
       if (!payloads.length) return msg('Selecione ao menos um item.', 'warn');
       if (!confirm('Confirmar aprovacao de ' + payloads.length + ' item(ns)?')) return;
       enviarAprovacao(payloads);
     }
     function rejeitarSelecionados() {
-      const payloads = selecionados().map(montarPayload).filter(Boolean);
+      const payloads = selecionados().map(montarPayloadBase).filter(Boolean);
       if (!payloads.length) return msg('Selecione ao menos um item.', 'warn');
       if (!confirm('Confirmar rejeicao de ' + payloads.length + ' item(ns)?')) return;
       enviarRejeicao(payloads);
@@ -207,23 +224,64 @@
         msg('Erro ao rejeitar: ' + escapeHtml(err.message || String(err)), 'err');
       }).rejeitarRevisoesCosmosEmLote(payloads);
     }
-    function montarPayload(revisaoId) {
+    function montarPayloadBase(revisaoId) {
       const item = itens.find(function(x) { return x.revisaoId === revisaoId; });
       if (!item) { msg('Item nao encontrado na tela.', 'err'); return null; }
       return {
         revisaoId: item.revisaoId,
         itemId: item.itemId,
-        versaoRegistro: item.versaoRegistro,
-        descricaoSugerida: val(id(item.revisaoId, 'desc')),
+        versaoRegistro: item.versaoRegistro
+      };
+    }
+    function montarPayloadAprovacao(revisaoId, emLote) {
+      const item = itens.find(function(x) { return x.revisaoId === revisaoId; });
+      const payload = montarPayloadBase(revisaoId);
+      if (!item || !payload) return null;
+
+      Object.assign(payload, {
         marcaSugerida: val(id(item.revisaoId, 'marca')),
         gtinSugerido: val(id(item.revisaoId, 'gtin')),
         ncmSugerido: val(id(item.revisaoId, 'ncm'))
-      };
+      });
+
+      const limpeza = confirmarLimpezas(item, payload, emLote);
+      if (!limpeza.ok) {
+        msg(limpeza.erro, 'warn');
+        return null;
+      }
+
+      return payload;
+    }
+    function confirmarLimpezas(item, payload, emLote) {
+      const campos = [
+        { atual: item.marcaAtual, novo: payload.marcaSugerida, flag: 'confirmarLimpezaMarca', nome: 'Marca', destino: 'FABRICANTE_MARCA' },
+        { atual: item.gtinAtual, novo: payload.gtinSugerido, flag: 'confirmarLimpezaGtin', nome: 'GTIN', destino: 'EAN' },
+        { atual: item.ncmAtual, novo: payload.ncmSugerido, flag: 'confirmarLimpezaNcm', nome: 'NCM', destino: 'NCM' }
+      ];
+      const limpezas = campos.filter(function(campo) {
+        return String(campo.atual || '').trim() && !String(campo.novo || '').trim();
+      });
+
+      if (!limpezas.length) return { ok: true };
+      if (emLote) {
+        return {
+          ok: false,
+          erro: 'Aprovacao em lote nao permite limpar campos preenchidos. Revise e aprove individualmente o item que precisa limpar valor.'
+        };
+      }
+
+      for (let i = 0; i < limpezas.length; i++) {
+        const campo = limpezas[i];
+        const texto = 'Confirmar limpeza do campo ' + campo.nome + ' em ' + campo.destino + '? O valor atual preenchido sera apagado.';
+        if (!confirm(texto)) return { ok: false, erro: 'Limpeza cancelada pelo usuario.' };
+        payload[campo.flag] = true;
+      }
+
+      return { ok: true };
     }
     function restaurar(revisaoId) {
       const original = sugestoesOriginais[revisaoId];
       if (!original) return;
-      setVal(id(revisaoId, 'desc'), original.descricaoSugerida);
       setVal(id(revisaoId, 'marca'), original.marcaSugerida);
       setVal(id(revisaoId, 'gtin'), original.gtinSugerido);
       setVal(id(revisaoId, 'ncm'), original.ncmSugerido);
