@@ -764,13 +764,16 @@
           </div>
 
           <div class="panel-body">
-            <div class="filters-mapa" style="grid-template-columns: 1fr auto;">
+            <div class="filters-mapa" style="grid-template-columns: 1fr auto auto;">
               <div>
                 <label>Cliente</label>
                 <select id="ext_cliente"><option value="">CARREGANDO CLIENTES...</option></select>
               </div>
               <div style="display:flex; align-items:flex-end;">
                 <button class="btn btn-primary" onclick="extrairCotacao()">🚀 EXTRAIR COTAÇÃO</button>
+              </div>
+              <div style="display:flex; align-items:flex-end;">
+                <button class="btn btn-secondary" onclick="confirmarImportacaoCotacao()">CONFIRMAR IMPORTAÇÃO</button>
               </div>
             </div>
           </div>
@@ -779,17 +782,21 @@
             <table>
               <thead>
                 <tr>
+                  <th>Descrição original</th>
                   <th>SKU Master</th>
-                  <th>Descrição</th>
-                  <th>Preço OSINFO</th>
-                  <th>% Markup</th>
-                  <th>Preço Custo</th>
-                  <th>Preço MedBox</th>
-                  <th>Custo Máx. Lance (80%)</th>
-                  <th>Custo Máx. Lance (50%)</th>
+                  <th>Status match</th>
+                  <th>Score</th>
+                  <th>Motivo revisão</th>
+                  <th>Custo MedBox</th>
+                  <th>Fornecedor custo</th>
+                  <th>Data custo</th>
+                  <th>Origem custo</th>
+                  <th>Margem %</th>
+                  <th>Preço venda</th>
+                  <th>Status lance</th>
                 </tr>
               </thead>
-              <tbody id="ext_resultadosBody"><tr><td colspan="8">SELECIONE UM CLIENTE E CLIQUE EM EXTRAIR COTAÇÃO.</td></tr></tbody>
+              <tbody id="ext_resultadosBody"><tr><td colspan="12">SELECIONE UM CLIENTE E CLIQUE EM EXTRAIR COTAÇÃO.</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -874,7 +881,11 @@
 
               <div style="margin-top:10px;" class="upload-box">
                 <strong>ANEXAR ARQUIVO DA TABELA</strong>
-                <input id="imp_arquivo" type="file" accept=".xlsx,.xls,.csv,.txt,.pdf,.doc,.docx,.jpg,.jpeg,.png">
+                <input id="imp_arquivo" type="file" accept=".xlsx,.xls,.csv,.txt,.pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="atualizarArquivoImportacaoSelecionado()">
+                <div style="display:flex; gap:6px; align-items:center; margin-top:8px;">
+                  <button type="button" class="btn btn-secondary" id="imp_removerArquivo" onclick="removerArquivoImportacao()" disabled>REMOVER ARQUIVO</button>
+                  <span class="small" id="imp_arquivoInfo">NENHUM ARQUIVO SELECIONADO.</span>
+                </div>
                 <div class="small" style="margin-top:8px;">
                   FORMATOS: XLSX, XLS, CSV, TXT, PDF, DOC, DOCX, JPEG, PNG.
                 </div>
@@ -1510,6 +1521,8 @@
      * EXTRAIR COTAÇÃO POR CLIENTE
      ************************************************************/
 
+    let itensExtracaoCotacao = [];
+
     function abrirExtrairCotacao() {
       document.getElementById('painelExtrairCotacao').style.display = 'block';
       carregarClientesComCotacao();
@@ -1554,6 +1567,7 @@
       google.script.run
         .withSuccessHandler(function(itens) {
           setLoading(false);
+          itensExtracaoCotacao = itens || [];
           renderResultadosExtrairCotacao(itens);
         })
         .withFailureHandler(function(err) {
@@ -1568,23 +1582,30 @@
       body.innerHTML = '';
 
       if (!itens || itens.length === 0) {
-        body.innerHTML = '<tr><td colspan="8">NENHUM ITEM COTADO ENCONTRADO PARA ESTE CLIENTE.</td></tr>';
+        body.innerHTML = '<tr><td colspan="12">NENHUM ITEM COTADO ENCONTRADO PARA ESTE CLIENTE.</td></tr>';
         setText('ext_resultInfo', '0 ITENS ENCONTRADOS');
         return;
       }
 
-      itens.forEach(function(item) {
+      itens.forEach(function(item, index) {
         const tr = document.createElement('tr');
+        const skuReadOnly = item.editavelSku ? '' : 'readonly';
+        const custo = item.custoMedbox === null || item.custoMedbox === undefined ? '' : item.custoMedbox;
+        const margem = item.margem === null || item.margem === undefined || item.margem === '' ? 80 : item.margem;
 
         tr.innerHTML = `
-          <td>${escapeHtml(upper(item.skuMaster))}</td>
-          <td>${escapeHtml(upper(item.descricao))}</td>
-          <td class="money">${formatMoeda(item.precoOsinfo)}</td>
-          <td><input type="number" class="table-input ext-markup" value="${item.markupPercent}" data-custo="${item.precoCusto || 0}" oninput="recalcularMedboxLinha(this)"></td>
-          <td class="money ext-custo">${formatMoeda(item.precoCusto)}</td>
-          <td class="money"><b class="ext-medbox">${formatMoeda(item.precoMedbox)}</b></td>
-          <td class="money">${formatMoeda(item.custoMax80)}</td>
-          <td class="money">${formatMoeda(item.custoMax50)}</td>
+          <td>${escapeHtml(item.descricaoOriginal || '')}</td>
+          <td><input class="table-input ext-sku" value="${escapeHtml(item.skuMaster || '')}" ${skuReadOnly} onchange="alterarSkuExtracao(${index}, this)"></td>
+          <td>${badgeStatus(item.statusMatch || '')}</td>
+          <td>${escapeHtml(String(item.scoreMatch || ''))}</td>
+          <td>${escapeHtml(item.motivoRevisao || '')}</td>
+          <td><input class="table-input ext-custo-input" value="${escapeHtml(formatDecimal(custo))}" onchange="alterarCustoExtracao(${index}, this)"></td>
+          <td class="ext-fornecedor">${escapeHtml(item.fornecedorCusto || '')}</td>
+          <td class="ext-data-custo">${escapeHtml(item.dataCusto || '')}</td>
+          <td class="ext-origem-custo">${escapeHtml(item.origemCusto || '')}</td>
+          <td><input type="number" class="table-input ext-margem" value="${escapeHtml(margem)}" oninput="alterarMargemExtracao(${index}, this)"></td>
+          <td class="money"><b class="ext-preco-venda">${formatMoeda(item.precoVenda)}</b></td>
+          <td class="ext-status-lance">${badgeStatus(item.statusLance || '')}</td>
         `;
 
         body.appendChild(tr);
@@ -1593,16 +1614,120 @@
       setText('ext_resultInfo', itens.length + ' ITENS ENCONTRADOS');
     }
 
-    function recalcularMedboxLinha(input) {
-      const precoCusto = parseFloat(input.getAttribute('data-custo')) || 0;
-      const markupPercent = parseFloat(input.value) || 0;
-      const tr = input.closest('tr');
+    function alterarSkuExtracao(index, input) {
+      const item = itensExtracaoCotacao[index];
+      if (!item) return;
+
+      item.skuMaster = upper(input.value);
+      if (!item.skuMaster) return;
 
       google.script.run
-        .withSuccessHandler(function(precoMedbox) {
-          tr.querySelector('.ext-medbox').textContent = formatMoeda(precoMedbox);
+        .withSuccessHandler(function(resp) {
+          if (!resp || !resp.ok) {
+            item.custoMedbox = '';
+            item.statusCusto = 'CUSTO_NAO_ENCONTRADO';
+            item.fornecedorCusto = '';
+            item.dataCusto = '';
+            item.origemCusto = '';
+            item.precoVenda = '';
+            item.statusLance = 'CUSTO_NAO_ENCONTRADO';
+            renderResultadosExtrairCotacao(itensExtracaoCotacao);
+            return;
+          }
+
+          if (item.custoEditado && !confirm('O custo foi editado manualmente. Substituir pelo menor custo vinculado ao SKU?')) {
+            return;
+          }
+
+          item.custoMedbox = resp.custoMedbox;
+          item.statusCusto = resp.statusCusto;
+          item.fornecedorCusto = resp.fornecedorCusto || '';
+          item.dataCusto = resp.dataCusto || '';
+          item.origemCusto = resp.origemCusto || '';
+          item.custoEditado = false;
+          recalcularItemExtracao(item);
+          renderResultadosExtrairCotacao(itensExtracaoCotacao);
         })
-        .recalcularPrecoMedbox(precoCusto, markupPercent);
+        .withFailureHandler(function(err) {
+          setText('ext_resultInfo', 'ERRO AO BUSCAR CUSTO: ' + err.message);
+        })
+        .buscarCustoMedboxPorSkuCotacao(item.skuMaster);
+    }
+
+    function alterarCustoExtracao(index, input) {
+      const item = itensExtracaoCotacao[index];
+      if (!item) return;
+
+      item.custoMedbox = parseNumeroLocal(input.value);
+      item.custoEditado = true;
+      if (!item.custoMedbox || item.custoMedbox <= 0) {
+        item.custoMedbox = '';
+        item.precoVenda = '';
+        item.statusLance = 'CUSTO_NAO_ENCONTRADO';
+      } else {
+        recalcularItemExtracao(item);
+      }
+      renderResultadosExtrairCotacao(itensExtracaoCotacao);
+    }
+
+    function alterarMargemExtracao(index, input) {
+      const item = itensExtracaoCotacao[index];
+      if (!item) return;
+
+      item.margem = parseNumeroLocal(input.value);
+      recalcularItemExtracao(item);
+      renderResultadosExtrairCotacao(itensExtracaoCotacao);
+    }
+
+    function recalcularItemExtracao(item) {
+      const custo = Number(item.custoMedbox || 0);
+      const margem = Number(item.margem || 0) / 100;
+
+      if (!custo || custo <= 0) {
+        item.precoVenda = '';
+        item.statusLance = 'CUSTO_NAO_ENCONTRADO';
+        return;
+      }
+
+      // Regra comercial: o rotulo exibido e "Margem",
+      // mas o calculo aplicado e markup sobre o custo.
+      item.precoVenda = Math.round((custo * (1 + margem)) * 10000) / 10000;
+      if (!item.precoOsinfo || Number(item.precoOsinfo) <= 0) {
+        item.statusLance = 'SEM PRECO_CLIENTE';
+      } else {
+        item.statusLance = item.precoVenda <= Number(item.precoOsinfo) ? 'GANHANDO ITEM' : 'ACIMA DO CLIENTE';
+      }
+    }
+
+    function confirmarImportacaoCotacao() {
+      if (!itensExtracaoCotacao.length) {
+        setText('ext_resultInfo', 'NADA PARA CONFIRMAR.');
+        return;
+      }
+
+      if (!confirm('Confirmar importacao revisada? SKU, custo, margem e preco de venda serao gravados em BD_COTACOES.')) return;
+
+      setLoading(true, 'CONFIRMANDO IMPORTACAO...', 'ext_resultInfo');
+
+      google.script.run
+        .withSuccessHandler(function(resp) {
+          setLoading(false);
+          setText('ext_resultInfo', 'CONFIRMACAO CONCLUIDA. APLICADOS: ' + (resp.aplicados || 0) + ' | FALHAS: ' + (resp.falhas || 0));
+        })
+        .withFailureHandler(function(err) {
+          setLoading(false);
+      setText('ext_resultInfo', 'ERRO AO CONFIRMAR: ' + err.message);
+        })
+        .confirmarImportacaoCotacaoRevisada({ itens: itensExtracaoCotacao });
+    }
+
+    function parseNumeroLocal(valor) {
+      if (valor === null || valor === undefined || valor === '') return null;
+      let txt = String(valor).trim().replace(/R\$/gi, '').replace(/%/g, '').replace(/\s+/g, '');
+      if (txt.includes(',')) txt = txt.replace(/\./g, '').replace(',', '.');
+      txt = txt.replace(/[^0-9.\-]/g, '');
+      const n = Number(txt);
+      return isNaN(n) ? null : n;
     }
 
     /************************************************************
@@ -1745,6 +1870,44 @@
       reader.readAsDataURL(file);
     }
 
+    function atualizarArquivoImportacaoSelecionado() {
+      const fileInput = document.getElementById('imp_arquivo');
+      const file = fileInput && fileInput.files && fileInput.files[0];
+      const info = document.getElementById('imp_arquivoInfo');
+      const remover = document.getElementById('imp_removerArquivo');
+
+      if (!file) {
+        if (info) info.textContent = 'NENHUM ARQUIVO SELECIONADO.';
+        if (remover) remover.disabled = true;
+        return;
+      }
+
+      if (info) info.textContent = file.name + ' | ' + formatTamanhoArquivo(file.size);
+      if (remover) remover.disabled = false;
+      setText('statusImportar', 'ARQUIVO SELECIONADO. PRONTO PARA IMPORTAR.');
+    }
+
+    function removerArquivoImportacao() {
+      const fileInput = document.getElementById('imp_arquivo');
+      const info = document.getElementById('imp_arquivoInfo');
+      const remover = document.getElementById('imp_removerArquivo');
+
+      if (fileInput) fileInput.value = '';
+      if (info) info.textContent = 'NENHUM ARQUIVO SELECIONADO.';
+      if (remover) remover.disabled = true;
+      setProgressImportacao(0);
+      setText('statusImportar', 'ARQUIVO REMOVIDO. NENHUMA IMPORTACAO EXECUTADA.');
+      document.getElementById('resultadoImportar').textContent =
+        'O ARQUIVO SERA SALVO NO DRIVE E OS ITENS EXTRAIDOS IRAO PARA REVISAO_IMPORTACAO_PRECOS.';
+    }
+
+    function formatTamanhoArquivo(bytes) {
+      const n = Number(bytes || 0);
+      if (n >= 1048576) return (n / 1048576).toFixed(2).replace('.', ',') + ' MB';
+      if (n >= 1024) return (n / 1024).toFixed(1).replace('.', ',') + ' KB';
+      return n + ' B';
+    }
+
     function aprovarRevisaoPrecos() {
       setLoading(true, 'APROVANDO LINHAS MARCADAS COMO APROVAR...', 'statusImportar');
 
@@ -1784,6 +1947,7 @@
 
       const fileInput = document.getElementById('imp_arquivo');
       if (fileInput) fileInput.value = '';
+      atualizarArquivoImportacaoSelecionado();
 
       setProgressImportacao(0);
       setText('statusImportar', 'FORMULÁRIO DE IMPORTAÇÃO LIMPO.');
