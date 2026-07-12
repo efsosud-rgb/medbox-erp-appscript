@@ -222,9 +222,7 @@ function verificarTokenCosmosConfigurado() {
   };
 }
 
-function testarConexaoCosmosSomenteLeitura() {
-  const endpoint = 'products_query';
-  const metodo = 'GET';
+function rfcTokenCosmosSeguro_() {
   const token = PropertiesService.getScriptProperties().getProperty(RFC_PROP_TOKEN);
   let tokenSeguro = token ? String(token).trim() : '';
 
@@ -232,6 +230,189 @@ function testarConexaoCosmosSomenteLeitura() {
       (tokenSeguro.charAt(0) === "'" && tokenSeguro.charAt(tokenSeguro.length - 1) === "'")) {
     tokenSeguro = tokenSeguro.substring(1, tokenSeguro.length - 1).trim();
   }
+
+  return tokenSeguro;
+}
+
+function rfcOpcoesGetCosmos_(tokenSeguro) {
+  return {
+    method: 'get',
+    headers: {
+      'X-Cosmos-Token': tokenSeguro,
+      'User-Agent': 'Cosmos-API-Request',
+      'Accept': 'application/json'
+    },
+    muteHttpExceptions: true
+  };
+}
+
+function rfcNormalizarConsultaDescricao_(descricao) {
+  const consulta = String(descricao || '').trim().replace(/\s+/g, ' ');
+  return consulta.substring(0, 80).trim();
+}
+
+function rfcNormalizarConsultaGtin_(gtin) {
+  return String(gtin || '').replace(/[\s.\-/]/g, '');
+}
+
+function rfcGtinValido_(gtin) {
+  return /^\d{8}$|^\d{12}$|^\d{13}$|^\d{14}$/.test(gtin);
+}
+
+function rfcErroCosmosSeguro_(codigoStatus, tipoConsulta, encontradoQuando404) {
+  if (codigoStatus === 401) {
+    return { ok: false, autenticado: false, httpStatus: 401, erro: 'NAO_AUTORIZADO' };
+  }
+
+  if (codigoStatus === 403) {
+    return { ok: false, autenticado: false, httpStatus: 403, erro: 'ACESSO_NEGADO' };
+  }
+
+  if (codigoStatus === 404) {
+    const resposta404 = { ok: true, httpStatus: 404, encontrado: false };
+    if (tipoConsulta === 'DESCRICAO') resposta404.resultados = [];
+    if (encontradoQuando404 !== undefined) resposta404.encontrado = encontradoQuando404;
+    return resposta404;
+  }
+
+  if (codigoStatus === 429) {
+    return { ok: false, httpStatus: 429, erro: 'LIMITE_DE_REQUISICOES' };
+  }
+
+  if (codigoStatus >= 500) {
+    return { ok: false, httpStatus: codigoStatus, erro: 'SERVICO_COSMOS_INDISPONIVEL' };
+  }
+
+  return { ok: false, httpStatus: codigoStatus, erro: 'ERRO_HTTP' };
+}
+
+function rfcSanitizarProdutoCosmos_(produto) {
+  const seguro = {};
+
+  if (produto && produto.description) seguro.descricao = String(produto.description);
+  if (produto && produto.brand && produto.brand.name) seguro.marca = String(produto.brand.name);
+  if (produto && produto.gtin) seguro.gtin = String(produto.gtin);
+  if (produto && produto.ncm && produto.ncm.code) seguro.ncm = String(produto.ncm.code);
+
+  return seguro;
+}
+
+function consultarProdutoCosmosPorDescricaoSeguro(descricao) {
+  const consulta = rfcNormalizarConsultaDescricao_(descricao);
+
+  if (!consulta) {
+    return { ok: false, erro: 'CONSULTA_INVALIDA' };
+  }
+
+  const tokenSeguro = rfcTokenCosmosSeguro_();
+  if (!tokenSeguro) {
+    return { ok: false, autenticado: false, erro: 'TOKEN_NAO_CONFIGURADO' };
+  }
+
+  const url = 'https://api.cosmos.bluesoft.com.br/products?query=' +
+    encodeURIComponent(consulta) +
+    '&per_page=5';
+
+  try {
+    const resposta = UrlFetchApp.fetch(url, rfcOpcoesGetCosmos_(tokenSeguro));
+    const codigoStatus = resposta.getResponseCode();
+
+    if (codigoStatus !== 200) {
+      const erro = rfcErroCosmosSeguro_(codigoStatus, 'DESCRICAO');
+      erro.tipoConsulta = 'DESCRICAO';
+      return erro;
+    }
+
+    const dados = JSON.parse(resposta.getContentText());
+    const resultados = rfcExtrairListaProdutos_(dados)
+      .slice(0, 5)
+      .map(rfcSanitizarProdutoCosmos_);
+
+    return {
+      ok: true,
+      consulta: consulta,
+      tipoConsulta: 'DESCRICAO',
+      httpStatus: codigoStatus,
+      quantidadeRetornada: resultados.length,
+      resultados: resultados
+    };
+  } catch (erro) {
+    return { ok: false, tipoConsulta: 'DESCRICAO', erro: 'ERRO_CONEXAO' };
+  }
+}
+
+function consultarProdutoCosmosPorGtinSeguro(gtin) {
+  const consulta = rfcNormalizarConsultaGtin_(gtin);
+
+  if (!rfcGtinValido_(consulta)) {
+    return { ok: false, erro: 'CONSULTA_INVALIDA' };
+  }
+
+  const tokenSeguro = rfcTokenCosmosSeguro_();
+  if (!tokenSeguro) {
+    return { ok: false, autenticado: false, erro: 'TOKEN_NAO_CONFIGURADO' };
+  }
+
+  const url = 'https://api.cosmos.bluesoft.com.br/products?query=' +
+    encodeURIComponent(consulta) +
+    '&per_page=1';
+
+  try {
+    const resposta = UrlFetchApp.fetch(url, rfcOpcoesGetCosmos_(tokenSeguro));
+    const codigoStatus = resposta.getResponseCode();
+
+    if (codigoStatus !== 200) {
+      const erro = rfcErroCosmosSeguro_(codigoStatus, 'GTIN', false);
+      erro.tipoConsulta = 'GTIN';
+      return erro;
+    }
+
+    const produtos = rfcExtrairListaProdutos_(JSON.parse(resposta.getContentText()));
+    const produto = produtos.length ? rfcSanitizarProdutoCosmos_(produtos[0]) : null;
+
+    return {
+      ok: true,
+      consulta: consulta,
+      tipoConsulta: 'GTIN',
+      httpStatus: codigoStatus,
+      encontrado: Boolean(produto),
+      produto: produto || {}
+    };
+  } catch (erro) {
+    return { ok: false, tipoConsulta: 'GTIN', erro: 'ERRO_CONEXAO' };
+  }
+}
+
+function testarValidacoesConsultaCosmosSemApi() {
+  const descricaoVazia = consultarProdutoCosmosPorDescricaoSeguro('');
+  const descricaoEspacos = consultarProdutoCosmosPorDescricaoSeguro('   ');
+  const gtinPontuado = rfcNormalizarConsultaGtin_('789.000-000/0000');
+  const gtinInvalido = consultarProdutoCosmosPorGtinSeguro('123');
+  const descricaoAusente = consultarProdutoCosmosPorDescricaoSeguro();
+  const gtinAusente = consultarProdutoCosmosPorGtinSeguro();
+
+  return {
+    ok: descricaoVazia.erro === 'CONSULTA_INVALIDA' &&
+      descricaoEspacos.erro === 'CONSULTA_INVALIDA' &&
+      gtinPontuado === '7890000000000' &&
+      gtinInvalido.erro === 'CONSULTA_INVALIDA' &&
+      descricaoAusente.erro === 'CONSULTA_INVALIDA' &&
+      gtinAusente.erro === 'CONSULTA_INVALIDA',
+    casos: {
+      descricaoVazia: descricaoVazia.erro,
+      descricaoSomenteEspacos: descricaoEspacos.erro,
+      gtinComPontuacao: gtinPontuado,
+      gtinInvalido: gtinInvalido.erro,
+      descricaoAusente: descricaoAusente.erro,
+      gtinAusente: gtinAusente.erro
+    }
+  };
+}
+
+function testarConexaoCosmosSomenteLeitura() {
+  const endpoint = 'products_query';
+  const metodo = 'GET';
+  const tokenSeguro = rfcTokenCosmosSeguro_();
 
   if (!tokenSeguro) {
     return {
@@ -247,11 +428,7 @@ function testarConexaoCosmosSomenteLeitura() {
 
   const opcoes = {
     method: 'get',
-    headers: {
-      'X-Cosmos-Token': tokenSeguro,
-      'User-Agent': 'Cosmos-API-Request',
-      'Accept': 'application/json'
-    },
+    headers: rfcOpcoesGetCosmos_(tokenSeguro).headers,
     muteHttpExceptions: true
   };
 
@@ -318,11 +495,7 @@ function rfcConsultarCosmosPorDescricao_(descricaoOriginal, token) {
 
   const opcoes = {
     method: 'get',
-    headers: {
-      'X-Cosmos-Token': tokenSeguro,
-      'User-Agent': 'Cosmos-API-Request',
-      'Accept': 'application/json'
-    },
+    headers: rfcOpcoesGetCosmos_(tokenSeguro).headers,
     muteHttpExceptions: true
   };
 
