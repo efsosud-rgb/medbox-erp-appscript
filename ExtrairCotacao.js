@@ -1096,8 +1096,11 @@ function simularSalvarCotacaoExtraida(payload) {
     simulacao: true,
     numeroCotacaoPrevisto: extGerarNumeroCotacao_(),
     numeroItens: itensNormalizados.length,
-    totalCliente: resumo.valorTotalCliente,
-    totalMedBox: resumo.valorTotalMedBox,
+    totalCliente: resumo.valorTotalCotado,
+    totalMedBox: resumo.valorTotalCotado,
+    valorTotalGanhoMedBox: resumo.valorTotalGanhoMedBox,
+    totalItensGanhos: resumo.totalItensGanhos,
+    percentualItensGanhos: resumo.percentualItensGanhos,
     itensQueSeriamSalvos: itensNormalizados.map(function(item) {
       return {
         indice: item.indice,
@@ -1116,6 +1119,79 @@ function simularSalvarCotacaoExtraida(payload) {
     }),
     erros: erros,
     gravacaoExecutada: false
+  };
+}
+
+function testarFormatacaoNumericaCotacaoSemGravacao() {
+  const casos = {
+    qtd100: extToNumber_('100'),
+    qtd1600: extToNumber_('1.600'),
+    qtd2450: extToNumber_('2.450'),
+    qtdDecimal: extToNumber_('1,5'),
+    moedaReal: extToNumber_('R$ 2,60'),
+    moedaVirgula: extToNumber_('1.234,56'),
+    moedaPonto: extToNumber_('1234.56'),
+    vazio: extToNumber_(''),
+    invalido: extToNumber_('abc')
+  };
+
+  return {
+    ok: casos.qtd100 === 100 &&
+      casos.qtd1600 === 1600 &&
+      casos.qtd2450 === 2450 &&
+      casos.qtdDecimal === 1.5 &&
+      casos.moedaReal === 2.6 &&
+      casos.moedaVirgula === 1234.56 &&
+      casos.moedaPonto === 1234.56 &&
+      casos.vazio === null &&
+      casos.invalido === null,
+    casos: casos
+  };
+}
+
+function testarResumoComercialCotacaoSemGravacao() {
+  const itens = [
+    { precoVendaMedBox: 10, valorTotalMedBox: 100, statusLance: EXT_STATUS_LANCE_VENCEDOR },
+    { precoVendaMedBox: 20, valorTotalMedBox: 200, statusLance: EXT_STATUS_PRECO_ACIMA },
+    { precoVendaMedBox: 30, valorTotalMedBox: 300, statusLance: EXT_STATUS_PRECO_IGUAL },
+    { precoVendaMedBox: '', valorTotalMedBox: '', statusLance: EXT_STATUS_DADOS_INSUFICIENTES }
+  ];
+  const resumo = extCalcularResumoCotacaoExtraida_(itens);
+  const zero = extCalcularResumoCotacaoExtraida_([
+    { precoVendaMedBox: '', valorTotalMedBox: '', statusLance: EXT_STATUS_DADOS_INSUFICIENTES }
+  ]);
+  const editado = [
+    { quantidade: 10, valorCompraClienteUnitario: 20, custoMedBox: 10, margemPercentual: 80 }
+  ].map(extCalcularItemComercialCotacao_);
+  const resumoEditado = extCalcularResumoCotacaoExtraida_(editado);
+  editado[0] = extCalcularItemComercialCotacao_({
+    quantidade: 10,
+    valorCompraClienteUnitario: 20,
+    custoMedBox: 10,
+    margemPercentual: 100
+  });
+  const resumoMargemEditada = extCalcularResumoCotacaoExtraida_(editado);
+
+  return {
+    ok: resumo.totalItensCotados === 3 &&
+      resumo.valorTotalCotado === 600 &&
+      resumo.totalItensGanhos === 1 &&
+      resumo.valorTotalGanhoMedBox === 100 &&
+      resumo.percentualItensGanhos === 33.33 &&
+      resumo.itensSemPreco === 1 &&
+      zero.totalItensCotados === 0 &&
+      zero.percentualItensGanhos === 0 &&
+      resumoEditado.valorTotalCotado === 180 &&
+      resumoMargemEditada.valorTotalCotado === 200,
+    casos: {
+      totalCotado: resumo.valorTotalCotado,
+      totalGanho: resumo.valorTotalGanhoMedBox,
+      quantidadeGanhos: resumo.totalItensGanhos,
+      percentualGanhos: resumo.percentualItensGanhos,
+      zeroItensCotados: zero.percentualItensGanhos,
+      atualizacaoAposEditarCusto: resumoEditado.valorTotalCotado,
+      atualizacaoAposEditarMargem: resumoMargemEditada.valorTotalCotado
+    }
   };
 }
 
@@ -1555,43 +1631,37 @@ function extMontarStatusLanceComercial_(valorClienteUnitario, precoVendaMedBox, 
 function extCalcularResumoCotacaoExtraida_(itens) {
   const lista = Array.isArray(itens) ? itens : [];
   const resumo = {
-    totalItens: lista.length,
-    itensComSku: 0,
-    itensSemSku: 0,
-    itensComCusto: 0,
-    itensSemCusto: 0,
-    lancesVencedores: 0,
-    precosAcima: 0,
-    valorTotalCliente: 0,
-    valorTotalMedBox: 0,
-    diferencaTotal: 0,
-    competitividadePercentual: ''
+    totalItensCotados: 0,
+    valorTotalCotado: 0,
+    totalItensGanhos: 0,
+    valorTotalGanhoMedBox: 0,
+    percentualItensGanhos: 0,
+    itensSemPreco: 0
   };
 
   lista.forEach(function(item) {
-    if (extLimpar_(item.skuMaster)) resumo.itensComSku++;
-    else resumo.itensSemSku++;
-
-    const custo = extToNumber_(item.custoMedBox !== undefined ? item.custoMedBox : item.custoMedbox);
-    if (custo !== null && custo > 0) resumo.itensComCusto++;
-    else resumo.itensSemCusto++;
-
-    const status = extUpper_(item.statusLance);
-    if (status === extUpper_(EXT_STATUS_LANCE_VENCEDOR)) resumo.lancesVencedores++;
-    if (status === extUpper_(EXT_STATUS_PRECO_ACIMA)) resumo.precosAcima++;
-
-    const totalCliente = extToNumber_(item.valorCompraClienteTotal);
+    const precoVenda = extToNumber_(item.precoVendaMedBox !== undefined ? item.precoVendaMedBox : item.precoVenda);
     const totalMedBox = extToNumber_(item.valorTotalMedBox);
-    if (totalCliente !== null) resumo.valorTotalCliente += totalCliente;
-    if (totalMedBox !== null) resumo.valorTotalMedBox += totalMedBox;
+    const status = extUpper_(item.statusLance);
+
+    if (precoVenda !== null && precoVenda > 0 && totalMedBox !== null && totalMedBox > 0) {
+      resumo.totalItensCotados++;
+      resumo.valorTotalCotado += totalMedBox;
+
+      if (status === extUpper_(EXT_STATUS_LANCE_VENCEDOR)) {
+        resumo.totalItensGanhos++;
+        resumo.valorTotalGanhoMedBox += totalMedBox;
+      }
+    } else {
+      resumo.itensSemPreco++;
+    }
   });
 
-  resumo.valorTotalCliente = extArredondar_(resumo.valorTotalCliente, 2);
-  resumo.valorTotalMedBox = extArredondar_(resumo.valorTotalMedBox, 2);
-  resumo.diferencaTotal = extArredondar_(resumo.valorTotalMedBox - resumo.valorTotalCliente, 2);
-  resumo.competitividadePercentual = resumo.valorTotalCliente > 0
-    ? extArredondar_(((resumo.valorTotalCliente - resumo.valorTotalMedBox) / resumo.valorTotalCliente) * 100, 2)
-    : '';
+  resumo.valorTotalCotado = extArredondar_(resumo.valorTotalCotado, 2);
+  resumo.valorTotalGanhoMedBox = extArredondar_(resumo.valorTotalGanhoMedBox, 2);
+  resumo.percentualItensGanhos = resumo.totalItensCotados > 0
+    ? extArredondar_((resumo.totalItensGanhos / resumo.totalItensCotados) * 100, 2)
+    : 0;
 
   return resumo;
 }
@@ -1691,11 +1761,15 @@ function extToNumber_(valor) {
   if (valor === null || valor === undefined || valor === '') return null;
   if (typeof valor === 'number') return isNaN(valor) ? null : valor;
 
-  let txt = String(valor).trim();
+  let txt = String(valor).replace(/[\u00A0\u200B-\u200D\uFEFF]/g, '').trim();
   if (!txt || txt === '-' || txt === '--') return null;
 
   txt = txt.replace(/R\$/gi, '').replace(/\$/g, '').replace(/%/g, '').replace(/\s+/g, '');
-  if (txt.includes(',')) txt = txt.replace(/\./g, '').replace(',', '.');
+  if (txt.includes(',')) {
+    txt = txt.replace(/\./g, '').replace(',', '.');
+  } else if (/^-?\d{1,3}(\.\d{3})+$/.test(txt)) {
+    txt = txt.replace(/\./g, '');
+  }
   txt = txt.replace(/[^0-9.\-]/g, '');
   if (!txt || txt === '-') return null;
 

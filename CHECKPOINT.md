@@ -63,7 +63,10 @@
 - Valor total do cliente e valor total MedBox sao calculados por quantidade; quando o arquivo traz apenas quantidade e valor total, o valor unitario do cliente e derivado por `valor total / quantidade` somente se a quantidade for numerica e maior que zero.
 - O preco total do cliente nao deve ser usado como preco unitario.
 - Status do lance comercial: `LANCE VENCEDOR`, `PRECO IGUAL`, `PRECO ACIMA` ou `DADOS INSUFICIENTES`.
-- Resumo da cotacao exibe totais de itens, SKUs, custos, lances vencedores/precos acima, total cliente, total MedBox, diferenca e competitividade.
+- Quantidades na grade usam formato pt-BR sem moeda, inteiras sem casas decimais e fracionadas com ate 3 casas.
+- Valores financeiros usam formato pt-BR `R$ 1.234,56`; valores vazios ou invalidos aparecem como `—`.
+- Resumo comercial da cotacao exibe: total de itens cotados, valor total cotado, total de itens ganhos, valor total ganho MedBox, percentual de itens ganhos e itens sem preco.
+- Itens ganhos no resumo consideram somente status `LANCE VENCEDOR`; `PRECO IGUAL`, `PRECO ACIMA`, `DADOS INSUFICIENTES` e `CUSTO_NAO_ENCONTRADO` nao entram como ganhos.
 - Status de match implementados: `MATCH_CONFIRMADO`, `REVISAR`, `NAO_ENCONTRADO`, `CONFLITO_TECNICO`.
 - O SKU sugerido usa catalogo existente em `MAPA_ERP` e `BD_SKU_MASTER_SEFAZ`, com normalizacao e validacao de atributos tecnicos como concentracao, volume, quantidade, forma e apresentacao.
 - Custos sao buscados em `BD_PRECOS` apenas por `SKU_MASTER` exato e somente quando positivos; custos vazios, zero ou negativos sao rejeitados.
