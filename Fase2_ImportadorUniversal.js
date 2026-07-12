@@ -1883,10 +1883,16 @@ function f2hHeaderEhCodigo_(h) {
 
   return [
     'COD',
+    'CÓD',
     'CODIGO',
     'CÓDIGO',
     'CODIGO FORNECEDOR',
     'COD FORNECEDOR',
+    'COD ITEM',
+    'CÓD ITEM',
+    'CODIGO ITEM',
+    'CÓDIGO ITEM',
+    'ITEM',
     'PRODUTO'
   ].some(x => header === f2hNormalizarHeader_(x));
 }
@@ -2017,6 +2023,7 @@ function f2hHeaderEhQuantidade_(h) {
 
   return [
     'QUANTIDADE',
+    'QUANT',
     'QTD',
     'QTDE',
     'CX COM',

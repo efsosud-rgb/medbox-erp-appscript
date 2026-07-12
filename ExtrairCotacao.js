@@ -101,17 +101,36 @@ function extrairCotacaoCliente(nomeCliente) {
 
 function extrairCotacaoArquivoSemGravacao(payload) {
   const ctx = extValidarPayloadArquivoCotacao_(payload);
-  const linhasBrutas = extExtrairLinhasBrutasArquivoCotacao_(ctx);
+  const extracao = extExtrairLinhasBrutasArquivoCotacao_(ctx);
+  const linhasBrutas = Array.isArray(extracao) ? extracao : extracao.linhas;
+  const diagnosticoExtracao = Array.isArray(extracao) ? {} : extracao.diagnostico;
   const previa = extMontarPreviewCotacaoDeLinhas_(linhasBrutas, ctx);
+  const motivosIgnorados = extMesclarMotivosIgnorados_(
+    diagnosticoExtracao && diagnosticoExtracao.motivosIgnorados,
+    previa.motivosIgnorados
+  );
+  const diagnostico = Object.assign({}, diagnosticoExtracao || {}, {
+    linhasLidas: diagnosticoExtracao && diagnosticoExtracao.linhasLidas !== undefined
+      ? diagnosticoExtracao.linhasLidas
+      : linhasBrutas.length,
+    itensValidos: previa.itens.length,
+    linhasIgnoradas: extSomarMotivos_(motivosIgnorados),
+    motivosIgnorados: motivosIgnorados
+  });
 
   return {
     ok: true,
     modo: 'ARQUIVO_SEM_GRAVACAO',
     nomeArquivo: ctx.nomeArquivo,
     formatosSuportados: ['XLSX', 'XLS', 'CSV', 'TXT', 'PDF', 'DOC', 'DOCX', 'JPG', 'JPEG', 'PNG'],
-    linhasLidas: linhasBrutas.length,
+    linhasLidas: diagnostico.linhasLidas,
     linhasValidas: previa.itens.length,
-    linhasIgnoradas: previa.linhasIgnoradas,
+    linhasIgnoradas: diagnostico.linhasIgnoradas,
+    motivosIgnorados: motivosIgnorados,
+    diagnostico: diagnostico,
+    abaSelecionada: diagnostico.abaSelecionada || '',
+    linhaCabecalho: diagnostico.linhaCabecalho || '',
+    colunasMapeadas: diagnostico.colunasMapeadas || {},
     clienteIdentificado: previa.clienteIdentificado,
     projetoIdentificado: previa.projetoIdentificado,
     itens: previa.itens
@@ -180,14 +199,30 @@ function extExtrairLinhasBrutasArquivoCotacao_(ctx) {
     const mime = f2hUpper_(ctx.mimeType);
 
     if (f2hEhPlanilha_(nome, mime)) {
-      return f2hExtrairDePlanilha_(contextoParser);
+      return extExtrairPlanilhaCotacaoDireta_(contextoParser);
     }
 
     if (f2hEhTexto_(nome, mime)) {
-      return f2hExtrairDeTexto_(f2hExtrairTextoDireto_(fileId), contextoParser);
+      const linhas = f2hExtrairDeTexto_(f2hExtrairTextoDireto_(fileId), contextoParser);
+      return {
+        linhas: linhas,
+        diagnostico: {
+          tipoArquivo: f2hDetectarTipoArquivo_(ctx.nomeArquivo, ctx.mimeType),
+          linhasLidas: linhas.length,
+          abas: []
+        }
+      };
     }
 
-    return f2hExtrairDeTexto_(f2hExtrairTextoPorConversaoOuOcr_(contextoParser), contextoParser);
+    const linhasTexto = f2hExtrairDeTexto_(f2hExtrairTextoPorConversaoOuOcr_(contextoParser), contextoParser);
+    return {
+      linhas: linhasTexto,
+      diagnostico: {
+        tipoArquivo: f2hDetectarTipoArquivo_(ctx.nomeArquivo, ctx.mimeType),
+        linhasLidas: linhasTexto.length,
+        abas: []
+      }
+    };
   } finally {
     try {
       DriveApp.getFileById(fileId).setTrashed(true);
@@ -195,10 +230,340 @@ function extExtrairLinhasBrutasArquivoCotacao_(ctx) {
   }
 }
 
+function extExtrairPlanilhaCotacaoDireta_(ctx) {
+  const nome = f2hUpper_(ctx.nomeArquivo);
+
+  if (nome.endsWith('.CSV')) {
+    const texto = f2hExtrairTextoDireto_(ctx.fileId);
+    const values = Utilities.parseCsv(texto, f2hDetectarDelimitadorCsv_(texto));
+    const resultadoCsv = extSelecionarTabelaCotacaoDeMatrizes_([
+      { nome: 'CSV', values: values, mergedCount: 0 }
+    ]);
+    return resultadoCsv;
+  }
+
+  const tempId = f2hConverterArquivoParaGoogleSheets_(ctx.fileId, ctx.nomeArquivo);
+
+  try {
+    const tempSs = SpreadsheetApp.openById(tempId);
+    const matrizes = tempSs.getSheets().map(function(sheet) {
+      const range = sheet.getDataRange();
+      return {
+        nome: sheet.getName(),
+        values: range.getValues(),
+        mergedCount: range.getMergedRanges().length
+      };
+    });
+
+    return extSelecionarTabelaCotacaoDeMatrizes_(matrizes);
+  } finally {
+    try {
+      DriveApp.getFileById(tempId).setTrashed(true);
+    } catch (e) {}
+  }
+}
+
+function extSelecionarTabelaCotacaoDeMatrizes_(matrizes) {
+  const avaliacoes = (matrizes || []).map(function(matriz) {
+    return extAvaliarMatrizCotacao_(matriz.values, matriz.nome, matriz.mergedCount);
+  });
+
+  const melhor = avaliacoes
+    .filter(function(item) { return item.header.encontrou; })
+    .sort(function(a, b) {
+      if (b.linhas.length !== a.linhas.length) return b.linhas.length - a.linhas.length;
+      return b.header.score - a.header.score;
+    })[0];
+
+  const selecionado = melhor || {
+    nomeAba: '',
+    dimensoes: { linhas: 0, colunas: 0 },
+    mergedCount: 0,
+    header: { encontrou: false, linhaHeader: -1, colunas: {}, score: 0 },
+    linhas: [],
+    motivosIgnorados: { SEM_TABELA: 1 }
+  };
+  const motivosSelecionado = Object.assign({}, selecionado.motivosIgnorados || {});
+  avaliacoes.forEach(function(item) {
+    if (item !== selecionado) {
+      motivosSelecionado.ABA_NAO_SELECIONADA = (motivosSelecionado.ABA_NAO_SELECIONADA || 0) + item.dimensoes.linhas;
+    }
+  });
+
+  const totalLinhas = avaliacoes.reduce(function(total, item) {
+    return total + item.dimensoes.linhas;
+  }, 0);
+
+  return {
+    linhas: selecionado.linhas,
+    diagnostico: {
+      abas: avaliacoes.map(function(item) {
+        return {
+          nome: item.nomeAba,
+          linhas: item.dimensoes.linhas,
+          colunas: item.dimensoes.colunas,
+          celulasMescladas: item.mergedCount,
+          linhaCabecalhoProvavel: item.header.encontrou ? item.header.linhaHeader + 1 : '',
+          colunasCandidatas: item.header.colunas || {}
+        };
+      }),
+      abaSelecionada: selecionado.nomeAba,
+      linhaCabecalho: selecionado.header.encontrou ? selecionado.header.linhaHeader + 1 : '',
+      colunasMapeadas: selecionado.header.colunas || {},
+      linhasLidas: totalLinhas,
+      itensValidos: selecionado.linhas.length,
+      linhasIgnoradas: extSomarMotivos_(motivosSelecionado),
+      motivosIgnorados: motivosSelecionado
+    }
+  };
+}
+
+function extAvaliarMatrizCotacao_(values, nomeAba, mergedCount) {
+  const matriz = values || [];
+  const dimensoes = {
+    linhas: matriz.length,
+    colunas: matriz.reduce(function(max, row) { return Math.max(max, row.length); }, 0)
+  };
+  const header = extDetectarCabecalhoCotacao_(matriz);
+  const linhas = [];
+  const motivosIgnorados = {};
+
+  if (!header.encontrou) {
+    motivosIgnorados.SEM_TABELA = dimensoes.linhas;
+    return { nomeAba: nomeAba, dimensoes: dimensoes, mergedCount: mergedCount || 0, header: header, linhas: linhas, motivosIgnorados: motivosIgnorados };
+  }
+
+  if (header.linhaHeader > 0) {
+    motivosIgnorados.PRE_TABELA = header.linhaHeader;
+  }
+
+  for (let r = header.linhaHeader + 1; r < matriz.length; r++) {
+    const row = matriz[r] || [];
+    const aval = extAvaliarLinhaItemCotacao_(row, header.colunas, header.headers);
+
+    if (!aval.ok) {
+      motivosIgnorados[aval.motivo] = (motivosIgnorados[aval.motivo] || 0) + 1;
+      continue;
+    }
+
+    linhas.push(Object.assign(aval.item, {
+      abaOrigem: nomeAba,
+      linhaOrigem: r + 1,
+      linhaOriginal: f2hLinhaOriginalMatriz_(row)
+    }));
+  }
+
+  return { nomeAba: nomeAba, dimensoes: dimensoes, mergedCount: mergedCount || 0, header: header, linhas: linhas, motivosIgnorados: motivosIgnorados };
+}
+
+function extDetectarCabecalhoCotacao_(values) {
+  const limite = Math.min((values || []).length, 100);
+  let melhor = { encontrou: false, linhaHeader: -1, headers: [], colunas: {}, score: 0 };
+
+  for (let r = 0; r < limite; r++) {
+    const headers = (values[r] || []).map(function(v) { return extNormalizarHeaderCotacao_(v); });
+    const colunas = extMapearColunasCotacao_(headers);
+    const score = extPontuarCabecalhoCotacao_(colunas);
+
+    if (score > melhor.score) {
+      melhor = {
+        encontrou: score >= 55,
+        linhaHeader: r,
+        headers: headers,
+        colunas: colunas,
+        score: score
+      };
+    }
+  }
+
+  if (!melhor.encontrou) melhor.linhaHeader = -1;
+  return melhor;
+}
+
+function extPontuarCabecalhoCotacao_(colunas) {
+  let score = 0;
+
+  if (colunas.codigo !== undefined) score += 18;
+  if (colunas.descricao !== undefined) score += 35;
+  if (colunas.quantidade !== undefined) score += 22;
+  if (colunas.skuMaster !== undefined) score += 16;
+  if (colunas.projeto !== undefined) score += 10;
+  if (colunas.categoria !== undefined) score += 8;
+  if (colunas.osinfo !== undefined) score += 8;
+  if (colunas.valorTotal !== undefined) score += 8;
+
+  if (colunas.codigo !== undefined && colunas.descricao !== undefined && colunas.quantidade !== undefined) score += 30;
+  if (colunas.descricao !== undefined && colunas.skuMaster !== undefined && colunas.quantidade !== undefined) score += 24;
+  if (colunas.projeto !== undefined && colunas.categoria !== undefined && colunas.codigo !== undefined && colunas.descricao !== undefined) score += 24;
+
+  return score;
+}
+
+function extMapearColunasCotacao_(headers) {
+  const colunas = {};
+
+  (headers || []).forEach(function(header, i) {
+    if (colunas.projeto === undefined && extHeaderEm_(header, ['PROJETO'])) colunas.projeto = i;
+    if (colunas.categoria === undefined && extHeaderEm_(header, ['CATEGORIA', 'CLASSIFICACAO', 'CLASSIFICACAO RAPIDA', 'GRUPO'])) colunas.categoria = i;
+    if (colunas.codigo === undefined && extHeaderEm_(header, ['CODIGO', 'COD', 'COD ITEM', 'CODIGO ITEM', 'ITEM'])) colunas.codigo = i;
+    if (colunas.descricao === undefined && extHeaderEm_(header, ['DESCRICAO', 'DESCRICAO ORIGINAL', 'DESCRICAO PRODUTO', 'PRODUTO', 'MATERIAL', 'ITEM DESCRICAO'])) colunas.descricao = i;
+    if (colunas.skuMaster === undefined && extHeaderEm_(header, ['SKU MASTER', 'SKU_MASTER', 'SKU'])) colunas.skuMaster = i;
+    if (colunas.quantidade === undefined && extHeaderEm_(header, ['QUANTIDADE', 'QUANT', 'QTD', 'QTDE'])) colunas.quantidade = i;
+    if (colunas.osinfo === undefined && extHeaderEm_(header, ['OSINFO', 'OS INFO', 'PRECO OSINFO', 'PRECO CLIENTE', 'VALOR OSINFO'])) colunas.osinfo = i;
+    if (colunas.valorTotal === undefined && extHeaderEm_(header, ['VALOR TOTAL', 'TOTAL'])) colunas.valorTotal = i;
+    if (colunas.custoMedbox === undefined && extHeaderEm_(header, ['CUSTO MEDBOX', 'CUSTO'])) colunas.custoMedbox = i;
+    if (colunas.margem === undefined && extHeaderEm_(header, ['MARGEM', 'MARKUP'])) colunas.margem = i;
+    if (colunas.precoVenda === undefined && extHeaderEm_(header, ['PRECO VENDA', 'PRECO DE VENDA', 'VENDA'])) colunas.precoVenda = i;
+    if (colunas.status === undefined && extHeaderEm_(header, ['STATUS', 'STATUS LANCE'])) colunas.status = i;
+  });
+
+  return colunas;
+}
+
+function extHeaderEm_(header, lista) {
+  const h = extNormalizarHeaderCotacao_(header);
+  return lista.some(function(item) {
+    const n = extNormalizarHeaderCotacao_(item);
+    return h === n || h.indexOf(n) !== -1;
+  });
+}
+
+function extAvaliarLinhaItemCotacao_(row, colunas, headers) {
+  if (!row || row.every(function(v) { return !extLimpar_(v); })) {
+    return { ok: false, motivo: 'LINHA_VAZIA' };
+  }
+
+  if (extLinhaPareceCabecalhoCotacao_(row, headers)) {
+    return { ok: false, motivo: 'CABECALHO' };
+  }
+
+  const descricao = extValorColuna_(row, colunas.descricao);
+  const codigo = extValorColuna_(row, colunas.codigo);
+  const quantidade = extToNumber_(extValorColuna_(row, colunas.quantidade));
+
+  if (!descricao) return { ok: false, motivo: 'SEM_DESCRICAO' };
+  if (extTextoInstrucionalCotacao_(descricao, row)) return { ok: false, motivo: 'INSTRUCAO' };
+  if (!extDescricaoComercialCotacao_(descricao)) return { ok: false, motivo: 'DESCRICAO_NAO_COMERCIAL' };
+  if (!(quantidade !== null && quantidade > 0) && !extCodigoItemValidoCotacao_(codigo)) {
+    return { ok: false, motivo: 'SEM_QUANTIDADE_E_SEM_CODIGO' };
+  }
+
+  return {
+    ok: true,
+    item: {
+      projeto: extValorColuna_(row, colunas.projeto),
+      categoria: extValorColuna_(row, colunas.categoria),
+      codigoFornecedor: codigo,
+      descricaoOriginal: descricao,
+      skuMaster: extValorColuna_(row, colunas.skuMaster),
+      quantidade: quantidade === null ? '' : quantidade,
+      precoCusto: extValorColuna_(row, colunas.osinfo),
+      precoTotal: extValorColuna_(row, colunas.valorTotal),
+      custoMedboxArquivo: extValorColuna_(row, colunas.custoMedbox),
+      margemArquivo: extValorColuna_(row, colunas.margem),
+      precoVendaArquivo: extValorColuna_(row, colunas.precoVenda),
+      statusArquivo: extValorColuna_(row, colunas.status)
+    }
+  };
+}
+
+function extLinhaPareceCabecalhoCotacao_(row, headers) {
+  const normalizada = (row || []).map(function(v) { return extNormalizarHeaderCotacao_(v); });
+  let iguais = 0;
+
+  normalizada.forEach(function(v, i) {
+    if (v && headers && headers[i] && v === headers[i]) iguais++;
+  });
+
+  return iguais >= 2;
+}
+
+function extTextoInstrucionalCotacao_(descricao, row) {
+  const textoLinha = extNormalizarHeaderCotacao_((row || []).map(extLimpar_).filter(Boolean).join(' '));
+  const desc = extNormalizarHeaderCotacao_(descricao);
+  const bloqueios = [
+    'ABRIR A ABA',
+    'FILTRAR POR',
+    'NA COLUNA',
+    'VOLTAR AO',
+    'O QUE SIGNIFICA',
+    'ITEM AINDA',
+    'RESPONSABILIDADE',
+    'SEM CLIENTES',
+    'CLASSIFICACAO RAPIDA',
+    'PAINEL EXECUTIVO'
+  ];
+
+  if (desc === 'PROJETO') return true;
+  if (desc === 'STATUS') return true;
+  if (desc === 'CATEGORIA') return true;
+
+  return bloqueios.some(function(b) {
+    return textoLinha.indexOf(extNormalizarHeaderCotacao_(b)) !== -1;
+  });
+}
+
+function extDescricaoComercialCotacao_(descricao) {
+  const texto = extLimpar_(descricao);
+  const normal = extNormalizar_(texto);
+
+  if (!texto || texto.length < 5) return false;
+  if (!/[A-Z]/i.test(texto)) return false;
+  if (normal.split(/\s+/).length < 2) return false;
+  if (['PROJETO', 'UPA SANTO AMARO', 'O QUE SIGNIFICA'].indexOf(normal) !== -1) return false;
+
+  return typeof f2hDescricaoProdutoValida_ !== 'function' || f2hDescricaoProdutoValida_(texto);
+}
+
+function extCodigoItemValidoCotacao_(codigo) {
+  const texto = extLimpar_(codigo);
+  const normal = extNormalizarHeaderCotacao_(texto);
+
+  if (!texto) return false;
+  if (['PROJETO', 'CODIGO', 'COD', 'ITEM', 'STATUS'].indexOf(normal) !== -1) return false;
+
+  return /^[A-Z0-9._\/-]{1,30}$/i.test(texto);
+}
+
+function extValorColuna_(row, index) {
+  if (index === undefined || index === null || index < 0) return '';
+  return extLimpar_(row[index]);
+}
+
+function extNormalizarHeaderCotacao_(valor) {
+  return String(valor || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extSomarMotivos_(motivos) {
+  return Object.keys(motivos || {}).reduce(function(total, chave) {
+    return total + Number(motivos[chave] || 0);
+  }, 0);
+}
+
+function extMesclarMotivosIgnorados_() {
+  const out = {};
+
+  for (let i = 0; i < arguments.length; i++) {
+    const motivos = arguments[i] || {};
+    Object.keys(motivos).forEach(function(chave) {
+      out[chave] = (out[chave] || 0) + Number(motivos[chave] || 0);
+    });
+  }
+
+  return out;
+}
+
 function extMontarPreviewCotacaoDeLinhas_(linhasBrutas, ctx) {
   const catalogo = extCarregarCatalogoSku_();
   const itens = [];
   let linhasIgnoradas = 0;
+  const motivosIgnorados = {};
   const clienteIdentificado = extIdentificarClienteCotacaoArquivo_(linhasBrutas, ctx.nomeArquivo);
   const projetoIdentificado = '';
 
@@ -210,6 +575,7 @@ function extMontarPreviewCotacaoDeLinhas_(linhasBrutas, ctx) {
 
     if (!descricaoValida) {
       linhasIgnoradas++;
+      motivosIgnorados.DESCRICAO_NAO_COMERCIAL = (motivosIgnorados.DESCRICAO_NAO_COMERCIAL || 0) + 1;
       continue;
     }
 
@@ -227,7 +593,9 @@ function extMontarPreviewCotacaoDeLinhas_(linhasBrutas, ctx) {
       origemArquivo: ctx.nomeArquivo,
       linhaOrigem: item.linhaOrigem || i + 1,
       cliente: clienteIdentificado,
-      projeto: projetoIdentificado,
+      projeto: item.projeto || projetoIdentificado,
+      categoria: item.categoria || '',
+      codigoFornecedor: item.codigoFornecedor || '',
       descricaoOriginal: descricaoOriginal,
       descricao: descricaoOriginal,
       skuMaster: match.skuMasterSugerido,
@@ -255,6 +623,7 @@ function extMontarPreviewCotacaoDeLinhas_(linhasBrutas, ctx) {
   return {
     itens: itens,
     linhasIgnoradas: linhasIgnoradas,
+    motivosIgnorados: motivosIgnorados,
     clienteIdentificado: clienteIdentificado,
     projetoIdentificado: projetoIdentificado
   };
@@ -435,6 +804,77 @@ function testarExtracaoArquivoCotacaoSemClienteSemGravacao() {
       previaPreenchida: previa.itens.length,
       gravacaoAntesConfirmacao: false,
       fluxoAntigoSeparado: true
+    }
+  };
+}
+
+function testarFiltroLinhasNaoProdutosSemGravacao() {
+  const abaErrada = [
+    ['PAINEL EXECUTIVO'],
+    ['ABRIR A ABA CLASSIFICAÇÃO RÁPIDA'],
+    ['FILTRAR POR UNIDADE'],
+    ['O QUE SIGNIFICA']
+  ];
+  const abaItens = [
+    ['UPA SANTO AMARO'],
+    ['PROJETO'],
+    ['instrucoes acima da tabela'],
+    ['PROJETO', 'CATEGORIA', 'CÓDIGO', 'DESCRIÇÃO', 'QUANT', 'OSINFO', 'VALOR TOTAL'],
+    ['UPA SANTO AMARO', '', '', 'PROJETO', '', '', ''],
+    ['UPA SANTO AMARO', 'MEDICAMENTO', '001', 'DIPIRONA 500MG COMPRIMIDO', 10, 2.5, 25],
+    ['UPA SANTO AMARO', 'MATERIAL', '', 'SERINGA DESCARTAVEL 10ML', 20, 1.2, 24],
+    ['', '', '', 'ABRIR A ABA CLASSIFICAÇÃO RÁPIDA', '', '', ''],
+    ['', '', '', '', '', '', '']
+  ];
+  const colunasOrdemDiferente = [
+    ['texto mesclado acima'],
+    ['DESCRIÇÃO', 'OSINFO', 'QUANTIDADE', 'SKU_MASTER', 'CÓDIGO'],
+    ['SORO FISIOLOGICO 0,9% 500ML', 8.9, 3, '', 'S001']
+  ];
+
+  const resultado = extSelecionarTabelaCotacaoDeMatrizes_([
+    { nome: 'INSTRUCOES', values: abaErrada, mergedCount: 2 },
+    { nome: 'ITENS', values: abaItens, mergedCount: 1 }
+  ]);
+  const resultadoOrdem = extSelecionarTabelaCotacaoDeMatrizes_([
+    { nome: 'ORDEM_DIFERENTE', values: colunasOrdemDiferente, mergedCount: 1 }
+  ]);
+
+  const descricoes = resultado.linhas.map(function(item) { return item.descricaoOriginal; });
+
+  return {
+    ok: resultado.diagnostico.abaSelecionada === 'ITENS' &&
+      resultado.diagnostico.linhaCabecalho === 4 &&
+      resultado.linhas.length === 2 &&
+      descricoes.indexOf('ABRIR A ABA CLASSIFICAÇÃO RÁPIDA') === -1 &&
+      descricoes.indexOf('PROJETO') === -1 &&
+      descricoes.indexOf('UPA SANTO AMARO') === -1 &&
+      resultadoOrdem.linhas.length === 1 &&
+      resultadoOrdem.linhas[0].descricaoOriginal === 'SORO FISIOLOGICO 0,9% 500ML',
+    diagnostico: {
+      abaSelecionada: resultado.diagnostico.abaSelecionada,
+      linhaCabecalho: resultado.diagnostico.linhaCabecalho,
+      colunasMapeadas: resultado.diagnostico.colunasMapeadas,
+      linhasLidas: resultado.diagnostico.linhasLidas,
+      itensValidos: resultado.linhas.length,
+      linhasIgnoradas: resultado.diagnostico.linhasIgnoradas,
+      motivosIgnorados: resultado.diagnostico.motivosIgnorados,
+      ordemDiferenteItens: resultadoOrdem.linhas.length
+    },
+    casos: {
+      instrucaoNaoViraProduto: descricoes.indexOf('ABRIR A ABA CLASSIFICAÇÃO RÁPIDA') === -1,
+      cabecalhoNaoViraProduto: descricoes.indexOf('DESCRIÇÃO') === -1,
+      projetoIsoladoNaoViraProduto: descricoes.indexOf('PROJETO') === -1,
+      nomeProjetoIsoladoNaoViraProduto: descricoes.indexOf('UPA SANTO AMARO') === -1,
+      codigoDescricaoQuantidadeViraProduto: descricoes.indexOf('DIPIRONA 500MG COMPRIMIDO') !== -1,
+      descricaoQuantidadeViraProduto: descricoes.indexOf('SERINGA DESCARTAVEL 10ML') !== -1,
+      linhaVaziaIgnorada: Boolean(resultado.diagnostico.motivosIgnorados.LINHA_VAZIA),
+      tabelaLinhaDiferenteDe1: resultado.diagnostico.linhaCabecalho === 4,
+      colunasOrdemDiferente: resultadoOrdem.linhas.length === 1,
+      celulasMescladasAcima: resultado.diagnostico.abas[1].celulasMescladas === 1,
+      multiplasAbas: resultado.diagnostico.abas.length === 2,
+      abaErradaIgnorada: resultado.diagnostico.abaSelecionada === 'ITENS',
+      gravacaoBdCotacoes: false
     }
   };
 }

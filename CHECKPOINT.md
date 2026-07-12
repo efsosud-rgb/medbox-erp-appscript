@@ -70,4 +70,9 @@
 - Teste sem gravacao executado: `testarExtracaoCotacaoSemGravacao`.
 - Teste sem backend para remocao isolada de arquivo: `testarRemocaoArquivoImportacaoSemBackend`.
 - Botao dedicado `REMOVER ARQUIVO` limpa apenas o arquivo selecionado, nome/tamanho, mensagens e previa, sem chamar backend e sem limpar campos manuais.
-- Proximo passo: validar visualmente a grade e executar confirmacao somente com um item de teste controlado.
+- A extracao direta por arquivo usa `FileReader` no Web App e chama `extrairCotacaoArquivoSemGravacao`, sem exigir cliente previamente cadastrado.
+- O fluxo antigo por cliente foi separado como consulta de cotacoes ja cadastradas.
+- A extracao XLSX/CSV para cotacao agora detecta a tabela real por cabecalhos comerciais, mapeia colunas por nome e ignora instrucoes, paineis, filtros, nomes de projeto isolados e linhas fora da tabela.
+- Diagnostico seguro retornado na previa: aba selecionada, linha de cabecalho, colunas mapeadas, linhas lidas, itens validos, linhas ignoradas e motivos agregados.
+- Teste sem gravacao executado: `testarFiltroLinhasNaoProdutosSemGravacao`.
+- Proximo passo: validar visualmente a grade com o XLSX controlado no Web App e executar confirmacao somente com um item de teste controlado.

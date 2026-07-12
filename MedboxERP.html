@@ -1636,8 +1636,11 @@
 
             setText(
               'ext_resultInfo',
-              'ARQUIVO PROCESSADO: ' + itens.length + ' ITENS | CLIENTE: ' +
-                (resp && resp.clienteIdentificado ? resp.clienteIdentificado : 'NÃO IDENTIFICADO')
+              'ARQUIVO PROCESSADO: ' + itens.length + ' ITENS | ABA: ' +
+                ((resp && resp.abaSelecionada) || 'NÃO IDENTIFICADA') +
+                ' | CABEÇALHO: ' + ((resp && resp.linhaCabecalho) || '-') +
+                ' | IGNORADAS: ' + ((resp && resp.linhasIgnoradas) || 0) +
+                ' | CLIENTE: ' + (resp && resp.clienteIdentificado ? resp.clienteIdentificado : 'NÃO IDENTIFICADO')
             );
           })
           .withFailureHandler(function(err) {
