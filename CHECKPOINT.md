@@ -23,3 +23,27 @@
 - Versao Apps Script validada: `20`.
 - Deployment validado: `AKfycbweUomzdMhwsVlBlB8V4Fo4xt4JsGLCUPZ_pWojHQXL_cSadEgCwVCUKHdKA45C_en6 @20`.
 - Proximo passo recomendado: criar tela de revisao e aprovacao antes de alimentar o cadastro interno.
+
+## Revisao e aprovacao Cosmos
+
+- Tela HTML criada: `RevisaoCosmosUI.html`.
+- Backend criado: `RevisaoCosmos.js`.
+- Funcao de abertura no Google Sheets: `abrirRevisaoCosmos`.
+- Menu MEDBOX ERP atualizado com submenu `Cosmos` e opcao `Revisar e aprovar resultados`.
+- Aba de origem identificada: `BD_PRECOS`.
+- Identificador estavel usado: `ID_PRECO`.
+- Fila tecnica de revisao: `REVISAO_COSMOS`.
+- Relatorio append-only: `RELATORIO_APROVACAO_COSMOS`.
+- Backup append-only antes de aprovacao: `BACKUP_APROVACAO_COSMOS`.
+- Campos exibidos/editaveis na tela: descricao sugerida, marca sugerida, GTIN sugerido e NCM sugerido.
+- Campos aplicados no cadastro apos aprovacao explicita: `FABRICANTE_MARCA`, `EAN`, `NCM`.
+- `DESCRICAO_FORNECEDOR` e `SKU_MASTER` nao sao sobrescritos pela revisao Cosmos.
+- Itens rejeitados apenas mudam status para `REJEITADO` na fila de revisao e nao alteram `BD_PRECOS`.
+- Itens pendentes nao alteram `BD_PRECOS`.
+- Aprovacao usa `LockService`, `REVISAO_ID`, `ITEM_ID`, status atual e `VERSAO_REGISTRO` para evitar duplicidade e tela desatualizada.
+- Revalidacao antes da escrita: a origem e localizada novamente por `BD_PRECOS.ID_PRECO`; `LINHA_ORIGEM` e apenas referencia visual.
+- Validacoes implementadas: payload ausente, revisao ausente, item ausente, status nao pendente, GTIN invalido, NCM invalido, item movido/removido e tentativa duplicada.
+- Teste executado sem gravacao: `testarRevisaoCosmosSemGravacao`.
+- Validacao visual e aprovacao/rejeicao real nao foram executadas nesta etapa para evitar teste sobre produto real sem autorizacao explicita.
+- Limitacao: a fila `REVISAO_COSMOS` e criada/sincronizada ao carregar a tela a partir de sugestoes Cosmos existentes em `BD_PRECOS`.
+- Proximo passo: autorizar um item de teste ou copia controlada para validar carregamento visual, aprovacao, rejeicao e relatorio automatico ponta a ponta.

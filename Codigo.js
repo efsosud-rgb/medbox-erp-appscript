@@ -50,6 +50,13 @@ function onOpen() {
     .addItem('🧮 Abrir Simulador', 'abrirSimulador')
     .addItem('📊 Abrir Dashboard', 'abrirDashboard')
     .addSeparator()
+    .addSubMenu(
+      SpreadsheetApp.getUi()
+        .createMenu('Cosmos')
+        .addItem('Consultar produtos', 'executarLoteVarreduraFiscalCosmos')
+        .addItem('Revisar e aprovar resultados', 'abrirRevisaoCosmos')
+    )
+    .addSeparator()
     .addItem('🔍 Buscar Dados Fiscais (Cosmos)', 'executarLoteVarreduraFiscalCosmos')
     .addItem('📦 Processar Lote Cosmos (50 produtos)', 'processarLoteCosmos50Manual')
     .addSeparator()

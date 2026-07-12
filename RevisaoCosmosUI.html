@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    :root {
+      --azul: #002e56;
+      --azul2: #005c85;
+      --vermelho: #d80024;
+      --verde: #087334;
+      --amarelo: #fff5c7;
+      --cinza-bg: #f4f6f8;
+      --cinza-borda: #d6dce2;
+      --texto: #1b1f24;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: var(--cinza-bg); color: var(--texto); font-size: 12px; overflow: hidden; text-transform: uppercase; }
+    .app { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+    .topbar { background: linear-gradient(90deg, var(--azul), #003c68); color: white; border-bottom: 4px solid var(--vermelho); padding: 10px 14px; flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .topbar h1 { margin: 0; font-size: 18px; letter-spacing: 0; }
+    .topbar span { display: block; margin-top: 3px; font-size: 10px; opacity: 0.9; }
+    .toolbar { background: white; border-bottom: 1px solid var(--cinza-borda); padding: 8px; flex: 0 0 auto; display: grid; grid-template-columns: repeat(4, 150px) minmax(220px, 1fr) repeat(3, 150px); gap: 8px; align-items: end; }
+    .metric { background: #f8fafc; border: 1px solid var(--cinza-borda); border-radius: 8px; padding: 7px 9px; min-height: 52px; }
+    .metric strong { display: block; color: var(--azul); font-size: 10px; margin-bottom: 3px; }
+    .metric b { color: var(--azul); font-size: 19px; }
+    label { display: block; color: var(--azul); font-weight: 800; font-size: 10px; margin-bottom: 2px; }
+    input { width: 100%; height: 32px; border: 1px solid #c8d0d8; border-radius: 6px; padding: 6px 8px; font-size: 12px; font-family: Arial, Helvetica, sans-serif; background: var(--amarelo); text-transform: uppercase; }
+    input[readonly] { background: #eef1f4; color: #495564; }
+    input:focus { border-color: var(--azul2); outline: none; box-shadow: 0 0 0 2px rgba(0,92,133,0.12); }
+    .btn { height: 34px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 12px; padding: 0 10px; }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.12); }
+    .btn-primary { background: var(--verde); color: white; }
+    .btn-danger { background: var(--vermelho); color: white; }
+    .btn-secondary { background: white; color: var(--azul); border: 1px solid var(--cinza-borda); }
+    .message { padding: 8px 10px; border-bottom: 1px solid var(--cinza-borda); background: #f8fafc; min-height: 34px; color: #3d4752; font-weight: 800; flex: 0 0 auto; }
+    .message.ok { background: #e6f4ea; color: #137333; }
+    .message.err { background: #fde7e9; color: #b00020; }
+    .message.warn { background: #fff3cd; color: #8a5a00; }
+    .table-wrap { flex: 1 1 auto; overflow: auto; padding: 8px; }
+    table { width: 100%; min-width: 1680px; border-collapse: collapse; font-size: 11px; }
+    th { position: sticky; top: 0; z-index: 3; background: var(--azul); color: white; padding: 6px; border: 1px solid #0b416a; text-align: left; white-space: nowrap; }
+    td { border: 1px solid #e1e6eb; background: white; padding: 5px; vertical-align: top; }
+    tr:nth-child(even) td { background: #fafbfd; }
+    tr.aprovado td { background: #e6f4ea; }
+    tr.rejeitado td { background: #fde7e9; }
+    tr.pendente td:first-child { border-left: 4px solid #d9a300; }
+    .readonly { color: #485465; max-width: 280px; white-space: normal; line-height: 1.35; }
+    .editable { min-width: 150px; background: var(--amarelo); }
+    .descricao { min-width: 260px; }
+    .idcol { min-width: 145px; font-weight: 800; color: var(--azul); }
+    .status { display: inline-block; border-radius: 999px; padding: 3px 8px; font-weight: 900; font-size: 10px; }
+    .status-pendente { background: #fff3cd; color: #8a5a00; }
+    .status-aprovado { background: #e6f4ea; color: #137333; }
+    .status-rejeitado { background: #fde7e9; color: #b00020; }
+    .row-actions { display: grid; grid-template-columns: 1fr; gap: 5px; min-width: 130px; }
+    .loading { opacity: 0.55; pointer-events: none; }
+    @media (max-width: 1100px) {
+      .toolbar { grid-template-columns: repeat(2, 1fr); }
+      .topbar { align-items: flex-start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <div class="topbar">
+      <div>
+        <h1>Revisao de Produtos - Cosmos</h1>
+        <span>Aplicacao manual e auditada de sugestoes fiscais em BD_PRECOS</span>
+      </div>
+      <div><strong>MEDBOX</strong><span>INTELIGENCIA COMERCIAL</span></div>
+    </div>
+    <div class="toolbar">
+      <div class="metric"><strong>Total</strong><b id="mTotal">0</b></div>
+      <div class="metric"><strong>Pendente</strong><b id="mPendentes">0</b></div>
+      <div class="metric"><strong>Aprovado</strong><b id="mAprovadas">0</b></div>
+      <div class="metric"><strong>Rejeitado</strong><b id="mRejeitadas">0</b></div>
+      <div><label>Busca / filtro</label><input id="filtro" placeholder="ID, descricao, GTIN, NCM ou marca"></div>
+      <button class="btn btn-secondary" onclick="carregar()">Atualizar lista</button>
+      <button class="btn btn-primary" onclick="aprovarSelecionados()">Aprovar selecionados</button>
+      <button class="btn btn-danger" onclick="rejeitarSelecionados()">Rejeitar selecionados</button>
+    </div>
+    <div id="mensagem" class="message">Carregando revisoes pendentes...</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="selectAll" onchange="alternarTodos(this.checked)"></th>
+            <th>ID do item</th>
+            <th>Descricao original</th>
+            <th>Descricao sugerida</th>
+            <th>Marca atual</th>
+            <th>Marca sugerida</th>
+            <th>GTIN atual</th>
+            <th>GTIN sugerido</th>
+            <th>NCM atual</th>
+            <th>NCM sugerido</th>
+            <th>Origem</th>
+            <th>Status</th>
+            <th>Acoes</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"><tr><td colspan="13">Carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    let itens = [];
+    let sugestoesOriginais = {};
+    function carregar() {
+      setLoading(true, 'Carregando revisoes...');
+      google.script.run.withSuccessHandler(function(resp) {
+        setLoading(false);
+        itens = resp.itens || [];
+        sugestoesOriginais = {};
+        itens.forEach(function(item) {
+          sugestoesOriginais[item.revisaoId] = {
+            descricaoSugerida: item.descricaoSugerida || '',
+            marcaSugerida: item.marcaSugerida || '',
+            gtinSugerido: item.gtinSugerido || '',
+            ncmSugerido: item.ncmSugerido || ''
+          };
+        });
+        setText('mTotal', resp.total || 0);
+        setText('mPendentes', resp.pendentes || 0);
+        setText('mAprovadas', resp.aprovadas || 0);
+        setText('mRejeitadas', resp.rejeitadas || 0);
+        render();
+        msg('Lista atualizada.', 'ok');
+      }).withFailureHandler(function(err) {
+        setLoading(false);
+        msg('Erro ao carregar: ' + escapeHtml(err.message || String(err)), 'err');
+      }).listarRevisoesCosmosPendentes({ filtro: val('filtro'), limite: 200 });
+    }
+    function render() {
+      const body = document.getElementById('tbody');
+      if (!itens.length) {
+        body.innerHTML = '<tr><td colspan="13">Nenhuma revisao pendente encontrada.</td></tr>';
+        return;
+      }
+      body.innerHTML = itens.map(function(item) {
+        const cls = String(item.status || '').toLowerCase();
+        return `<tr class="${escapeHtml(cls)}" data-id="${escapeHtml(item.revisaoId)}">
+          <td><input type="checkbox" class="sel" value="${escapeHtml(item.revisaoId)}"></td>
+          <td class="idcol">${escapeHtml(item.itemId)}<br><span class="readonly">${escapeHtml(item.revisaoId)}</span></td>
+          <td class="readonly descricao">${escapeHtml(item.descricaoOriginal)}</td>
+          <td><input class="editable descricao" id="${id(item.revisaoId, 'desc')}" value="${escapeAttr(item.descricaoSugerida)}"></td>
+          <td class="readonly">${escapeHtml(item.marcaAtual)}</td>
+          <td><input class="editable" id="${id(item.revisaoId, 'marca')}" value="${escapeAttr(item.marcaSugerida)}"></td>
+          <td class="readonly">${escapeHtml(item.gtinAtual)}</td>
+          <td><input class="editable" id="${id(item.revisaoId, 'gtin')}" value="${escapeAttr(item.gtinSugerido)}"></td>
+          <td class="readonly">${escapeHtml(item.ncmAtual)}</td>
+          <td><input class="editable" id="${id(item.revisaoId, 'ncm')}" value="${escapeAttr(item.ncmSugerido)}"></td>
+          <td class="readonly">${escapeHtml(item.origemAba)} L${escapeHtml(item.origemLinha)}<br>${escapeHtml(item.fonte)}</td>
+          <td><span class="status status-${escapeHtml(cls)}">${escapeHtml(item.status)}</span></td>
+          <td><div class="row-actions">
+            <button class="btn btn-primary" onclick="aprovarUm('${escapeJs(item.revisaoId)}')">Aprovar</button>
+            <button class="btn btn-danger" onclick="rejeitarUm('${escapeJs(item.revisaoId)}')">Rejeitar</button>
+            <button class="btn btn-secondary" onclick="restaurar('${escapeJs(item.revisaoId)}')">Restaurar sugestao</button>
+          </div></td>
+        </tr>`;
+      }).join('');
+    }
+    function aprovarUm(revisaoId) {
+      const payload = montarPayload(revisaoId);
+      if (!payload) return;
+      if (!confirm('Confirmar aprovacao deste item? Somente os valores editados serao aplicados.')) return;
+      enviarAprovacao([payload]);
+    }
+    function rejeitarUm(revisaoId) {
+      const payload = montarPayload(revisaoId);
+      if (!payload) return;
+      if (!confirm('Confirmar rejeicao deste item? Nenhum dado do cadastro sera alterado.')) return;
+      enviarRejeicao([payload]);
+    }
+    function aprovarSelecionados() {
+      const payloads = selecionados().map(montarPayload).filter(Boolean);
+      if (!payloads.length) return msg('Selecione ao menos um item.', 'warn');
+      if (!confirm('Confirmar aprovacao de ' + payloads.length + ' item(ns)?')) return;
+      enviarAprovacao(payloads);
+    }
+    function rejeitarSelecionados() {
+      const payloads = selecionados().map(montarPayload).filter(Boolean);
+      if (!payloads.length) return msg('Selecione ao menos um item.', 'warn');
+      if (!confirm('Confirmar rejeicao de ' + payloads.length + ' item(ns)?')) return;
+      enviarRejeicao(payloads);
+    }
+    function enviarAprovacao(payloads) {
+      setLoading(true, 'Aplicando aprovacoes...');
+      google.script.run.withSuccessHandler(function(resp) {
+        setLoading(false);
+        msg('Aprovacao concluida. Aplicados: ' + (resp.totalAplicado || 0) + ' | Falhas: ' + (resp.totalFalhou || 0), resp.totalFalhou ? 'warn' : 'ok');
+        carregar();
+      }).withFailureHandler(function(err) {
+        setLoading(false);
+        msg('Erro ao aprovar: ' + escapeHtml(err.message || String(err)), 'err');
+      }).aprovarRevisoesCosmosEmLote(payloads);
+    }
+    function enviarRejeicao(payloads) {
+      setLoading(true, 'Registrando rejeicoes...');
+      google.script.run.withSuccessHandler(function(resp) {
+        setLoading(false);
+        msg('Rejeicao concluida. Registradas: ' + (resp.totalAplicado || 0) + ' | Falhas: ' + (resp.totalFalhou || 0), resp.totalFalhou ? 'warn' : 'ok');
+        carregar();
+      }).withFailureHandler(function(err) {
+        setLoading(false);
+        msg('Erro ao rejeitar: ' + escapeHtml(err.message || String(err)), 'err');
+      }).rejeitarRevisoesCosmosEmLote(payloads);
+    }
+    function montarPayload(revisaoId) {
+      const item = itens.find(function(x) { return x.revisaoId === revisaoId; });
+      if (!item) { msg('Item nao encontrado na tela.', 'err'); return null; }
+      return {
+        revisaoId: item.revisaoId,
+        itemId: item.itemId,
+        versaoRegistro: item.versaoRegistro,
+        descricaoSugerida: val(id(item.revisaoId, 'desc')),
+        marcaSugerida: val(id(item.revisaoId, 'marca')),
+        gtinSugerido: val(id(item.revisaoId, 'gtin')),
+        ncmSugerido: val(id(item.revisaoId, 'ncm'))
+      };
+    }
+    function restaurar(revisaoId) {
+      const original = sugestoesOriginais[revisaoId];
+      if (!original) return;
+      setVal(id(revisaoId, 'desc'), original.descricaoSugerida);
+      setVal(id(revisaoId, 'marca'), original.marcaSugerida);
+      setVal(id(revisaoId, 'gtin'), original.gtinSugerido);
+      setVal(id(revisaoId, 'ncm'), original.ncmSugerido);
+      msg('Sugestao original restaurada para o item.', 'ok');
+    }
+    function selecionados() { return Array.from(document.querySelectorAll('.sel:checked')).map(function(el) { return el.value; }); }
+    function alternarTodos(checked) { document.querySelectorAll('.sel').forEach(function(el) { el.checked = checked; }); }
+    function setLoading(loading, text) { document.getElementById('app').classList.toggle('loading', Boolean(loading)); if (text) msg(text, 'warn'); }
+    function msg(text, type) { const el = document.getElementById('mensagem'); el.className = 'message ' + (type || ''); el.innerHTML = text || ''; }
+    function id(base, suffix) { return 'f_' + String(base).replace(/[^a-zA-Z0-9_-]/g, '_') + '_' + suffix; }
+    function val(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+    function setVal(id, value) { const el = document.getElementById(id); if (el) el.value = value || ''; }
+    function setText(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
+    function escapeHtml(value) {
+      if (value === null || value === undefined) return '';
+      return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+    function escapeAttr(value) { return escapeHtml(value); }
+    function escapeJs(value) { return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+    document.getElementById('filtro').addEventListener('keydown', function(e) { if (e.key === 'Enter') carregar(); });
+    carregar();
+  </script>
+</body>
+</html>
