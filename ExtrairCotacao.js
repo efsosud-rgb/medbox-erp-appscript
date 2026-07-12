@@ -368,6 +368,7 @@ function extDetectarCabecalhoCotacao_(values) {
   for (let r = 0; r < limite; r++) {
     const headers = (values[r] || []).map(function(v) { return extNormalizarHeaderCotacao_(v); });
     const colunas = extMapearColunasCotacao_(headers);
+    extEscolherColunaQuantidadeCotacao_(values, r, headers, colunas);
     const score = extPontuarCabecalhoCotacao_(colunas);
 
     if (score > melhor.score) {
@@ -406,6 +407,7 @@ function extPontuarCabecalhoCotacao_(colunas) {
 
 function extMapearColunasCotacao_(headers) {
   const colunas = {};
+  const quantidadeCandidatas = [];
 
   (headers || []).forEach(function(header, i) {
     if (colunas.projeto === undefined && extHeaderEm_(header, ['PROJETO'])) colunas.projeto = i;
@@ -413,7 +415,10 @@ function extMapearColunasCotacao_(headers) {
     if (colunas.codigo === undefined && extHeaderEm_(header, ['CODIGO', 'COD', 'COD ITEM', 'CODIGO ITEM', 'ITEM'])) colunas.codigo = i;
     if (colunas.descricao === undefined && extHeaderEm_(header, ['DESCRICAO', 'DESCRICAO ORIGINAL', 'DESCRICAO PRODUTO', 'PRODUTO', 'MATERIAL', 'ITEM DESCRICAO'])) colunas.descricao = i;
     if (colunas.skuMaster === undefined && extHeaderEm_(header, ['SKU MASTER', 'SKU_MASTER', 'SKU'])) colunas.skuMaster = i;
-    if (colunas.quantidade === undefined && extHeaderEm_(header, ['QUANTIDADE', 'QUANT', 'QTD', 'QTDE'])) colunas.quantidade = i;
+    if (extHeaderEm_(header, ['QUANTIDADE', 'QUANT', 'QTD', 'QTDE'])) {
+      quantidadeCandidatas.push(i);
+      if (colunas.quantidade === undefined) colunas.quantidade = i;
+    }
     if (colunas.unidade === undefined && extHeaderEm_(header, ['UNIDADE', 'UN', 'UND', 'UM'])) colunas.unidade = i;
     if (colunas.valorUnitarioCliente === undefined && extHeaderEm_(header, ['OSINFO', 'OS INFO', 'VALOR UNITARIO', 'PRECO UNITARIO', 'PRECO DE COMPRA', 'VALOR CLIENTE', 'PRECO REFERENCIA', 'PRECO CLIENTE', 'VALOR OSINFO'])) colunas.valorUnitarioCliente = i;
     if (colunas.osinfo === undefined && colunas.valorUnitarioCliente !== undefined) colunas.osinfo = colunas.valorUnitarioCliente;
@@ -424,7 +429,48 @@ function extMapearColunasCotacao_(headers) {
     if (colunas.status === undefined && extHeaderEm_(header, ['STATUS', 'STATUS LANCE'])) colunas.status = i;
   });
 
+  colunas.quantidadeCandidatas = quantidadeCandidatas;
   return colunas;
+}
+
+function extEscolherColunaQuantidadeCotacao_(values, linhaHeader, headers, colunas) {
+  const candidatos = colunas.quantidadeCandidatas || [];
+  if (!candidatos.length) return;
+
+  let melhor = { index: candidatos[0], score: -1, prioridade: 99 };
+  candidatos.forEach(function(index) {
+    const header = headers[index] || '';
+    const prioridade = extPrioridadeHeaderQuantidadeCotacao_(header);
+    let validos = 0;
+    let ambiguos = 0;
+    let preenchidos = 0;
+
+    for (let r = linhaHeader + 1; r < Math.min(values.length, linhaHeader + 80); r++) {
+      const valor = extValorColuna_(values[r] || [], index);
+      if (!valor) continue;
+      preenchidos++;
+      const parsed = parseQuantidadeCotacao_(valor);
+      if (parsed.ok && parsed.valor > 0) validos++;
+      if (!parsed.ok && parsed.motivo === 'QUANTIDADE_AMBIGUA') ambiguos++;
+    }
+
+    const score = (validos * 10) - (ambiguos * 6) + Math.max(0, 8 - prioridade) + (preenchidos > 0 ? 1 : 0);
+    if (score > melhor.score || (score === melhor.score && prioridade < melhor.prioridade)) {
+      melhor = { index: index, score: score, prioridade: prioridade };
+    }
+  });
+
+  colunas.quantidade = melhor.index;
+  colunas.quantidadeIndiceEscolhido = melhor.index;
+}
+
+function extPrioridadeHeaderQuantidadeCotacao_(header) {
+  const h = extNormalizarHeaderCotacao_(header);
+  if (h === 'QUANTIDADE') return 0;
+  if (h === 'QUANT') return 1;
+  if (h === 'QTD') return 2;
+  if (h === 'QTDE') return 3;
+  return 9;
 }
 
 function extHeaderEm_(header, lista) {
@@ -446,7 +492,8 @@ function extAvaliarLinhaItemCotacao_(row, colunas, headers) {
 
   const descricao = extValorColuna_(row, colunas.descricao);
   const codigo = extValorColuna_(row, colunas.codigo);
-  const quantidade = extToNumber_(extValorColuna_(row, colunas.quantidade));
+  const quantidadeParse = parseQuantidadeCotacao_(extValorColuna_(row, colunas.quantidade));
+  const quantidade = quantidadeParse.ok ? quantidadeParse.valor : null;
   const valorUnitarioInformado = extToNumber_(extValorColuna_(row, colunas.valorUnitarioCliente !== undefined ? colunas.valorUnitarioCliente : colunas.osinfo));
   const valorTotalInformado = extToNumber_(extValorColuna_(row, colunas.valorTotal));
   const valorUnitarioDerivado = valorUnitarioInformado === null &&
@@ -455,15 +502,16 @@ function extAvaliarLinhaItemCotacao_(row, colunas, headers) {
     quantidade > 0
       ? extArredondar_(valorTotalInformado / quantidade, 6)
       : null;
-  const valorTotalCalculado = valorTotalInformado !== null
-    ? valorTotalInformado
-    : (valorUnitarioInformado !== null && quantidade !== null && quantidade > 0
-      ? extArredondar_(valorUnitarioInformado * quantidade, 6)
+  const valorTotalCalculado = valorUnitarioInformado !== null && quantidade !== null && quantidade > 0
+    ? extArredondar_(valorUnitarioInformado * quantidade, 6)
+    : (valorUnitarioDerivado !== null && quantidade !== null && quantidade > 0
+      ? extArredondar_(valorUnitarioDerivado * quantidade, 6)
       : null);
 
   if (!descricao) return { ok: false, motivo: 'SEM_DESCRICAO' };
   if (extTextoInstrucionalCotacao_(descricao, row)) return { ok: false, motivo: 'INSTRUCAO' };
   if (!extDescricaoComercialCotacao_(descricao)) return { ok: false, motivo: 'DESCRICAO_NAO_COMERCIAL' };
+  if (!quantidadeParse.ok && quantidadeParse.motivo === 'QUANTIDADE_AMBIGUA') return { ok: false, motivo: 'QUANTIDADE_AMBIGUA' };
   if (!(quantidade !== null && quantidade > 0) && !extCodigoItemValidoCotacao_(codigo)) {
     return { ok: false, motivo: 'SEM_QUANTIDADE_E_SEM_CODIGO' };
   }
@@ -481,8 +529,11 @@ function extAvaliarLinhaItemCotacao_(row, colunas, headers) {
       unidade: extValorColuna_(row, colunas.unidade),
       valorCompraClienteUnitario: valorUnitarioInformado !== null ? valorUnitarioInformado : (valorUnitarioDerivado !== null ? valorUnitarioDerivado : ''),
       valorCompraClienteTotal: valorTotalCalculado !== null ? valorTotalCalculado : '',
+      valorCompraClienteTotalCalculado: valorTotalCalculado !== null ? valorTotalCalculado : '',
+      valorOriginalArquivo: valorTotalInformado !== null ? valorTotalInformado : '',
       valorClienteDerivado: valorUnitarioDerivado !== null,
       valorTotalClienteDerivado: valorTotalInformado === null && valorTotalCalculado !== null,
+      divergenciaTotalCliente: valorTotalInformado !== null && valorTotalCalculado !== null && Math.abs(valorTotalInformado - valorTotalCalculado) > 0.01 ? 'TOTAL_CLIENTE_DIVERGENTE' : '',
       precoCusto: extValorColuna_(row, colunas.valorUnitarioCliente !== undefined ? colunas.valorUnitarioCliente : colunas.osinfo),
       precoTotal: extValorColuna_(row, colunas.valorTotal),
       custoMedboxArquivo: extValorColuna_(row, colunas.custoMedbox),
@@ -1084,8 +1135,9 @@ function simularSalvarCotacaoExtraida(payload) {
   const erros = [];
 
   itensNormalizados.forEach(function(item) {
+    const quantidadeParse = parseQuantidadeCotacao_(item.quantidade);
     if (!item.descricaoOriginal) erros.push({ indice: item.indice, erro: 'DESCRICAO_AUSENTE' });
-    if (extToNumber_(item.quantidade) === null || extToNumber_(item.quantidade) <= 0) erros.push({ indice: item.indice, erro: 'QUANTIDADE_INVALIDA' });
+    if (!quantidadeParse.ok || quantidadeParse.valor <= 0) erros.push({ indice: item.indice, erro: quantidadeParse.motivo || 'QUANTIDADE_INVALIDA' });
     if (extToNumber_(item.precoVendaMedBox) === null || extToNumber_(item.precoVendaMedBox) <= 0) erros.push({ indice: item.indice, erro: 'PRECO_VENDA_INVALIDO' });
   });
 
@@ -1173,13 +1225,13 @@ function testarResumoComercialCotacaoSemGravacao() {
   const resumoMargemEditada = extCalcularResumoCotacaoExtraida_(editado);
 
   return {
-    ok: resumo.totalItensCotados === 3 &&
+    ok: resumo.totalItensCotados === 4 &&
       resumo.valorTotalCotado === 600 &&
       resumo.totalItensGanhos === 1 &&
       resumo.valorTotalGanhoMedBox === 100 &&
-      resumo.percentualItensGanhos === 33.33 &&
+      resumo.percentualItensGanhos === 25 &&
       resumo.itensSemPreco === 1 &&
-      zero.totalItensCotados === 0 &&
+      zero.totalItensCotados === 1 &&
       zero.percentualItensGanhos === 0 &&
       resumoEditado.valorTotalCotado === 180 &&
       resumoMargemEditada.valorTotalCotado === 200,
@@ -1191,6 +1243,113 @@ function testarResumoComercialCotacaoSemGravacao() {
       zeroItensCotados: zero.percentualItensGanhos,
       atualizacaoAposEditarCusto: resumoEditado.valorTotalCotado,
       atualizacaoAposEditarMargem: resumoMargemEditada.valorTotalCotado
+    }
+  };
+}
+
+function testarQuantidadeCotacaoSemGravacao() {
+  const casos = {
+    q1: parseQuantidadeCotacao_('1'),
+    q150: parseQuantidadeCotacao_('150'),
+    q2450: parseQuantidadeCotacao_('2.450'),
+    qDecimal: parseQuantidadeCotacao_('1,5'),
+    ambigua01: parseQuantidadeCotacao_('0 1'),
+    ambigua30100: parseQuantidadeCotacao_('30 100'),
+    texto: parseQuantidadeCotacao_('abc')
+  };
+  const matriz = [
+    ['DESCRICAO', 'QTD', 'QUANTIDADE'],
+    ['PRODUTO TESTE A', '0 1', '150'],
+    ['PRODUTO TESTE B', '30 100', '2.450'],
+    ['PRODUTO TESTE C', '', '1,5']
+  ];
+  const header = extDetectarCabecalhoCotacao_(matriz);
+
+  return {
+    ok: casos.q1.ok && casos.q1.valor === 1 &&
+      casos.q150.ok && casos.q150.valor === 150 &&
+      casos.q2450.ok && casos.q2450.valor === 2450 &&
+      casos.qDecimal.ok && casos.qDecimal.valor === 1.5 &&
+      !casos.ambigua01.ok && casos.ambigua01.motivo === 'QUANTIDADE_AMBIGUA' &&
+      !casos.ambigua30100.ok && casos.ambigua30100.motivo === 'QUANTIDADE_AMBIGUA' &&
+      !casos.texto.ok &&
+      header.colunas.quantidade === 2,
+    casos: {
+      quantidade1: casos.q1.valor,
+      quantidade150: casos.q150.valor,
+      quantidade2450: casos.q2450.valor,
+      quantidadeDecimal: casos.qDecimal.valor,
+      ambigua01: casos.ambigua01.motivo,
+      ambigua30100: casos.ambigua30100.motivo,
+      colunaEscolhida: header.colunas.quantidade
+    }
+  };
+}
+
+function testarValorTotalClienteSemGravacao() {
+  const casos = [
+    { quantidade: 1, valorCompraClienteUnitario: 0.47, esperado: 0.47 },
+    { quantidade: 150, valorCompraClienteUnitario: 2.60, esperado: 390.00 },
+    { quantidade: 50, valorCompraClienteUnitario: 5.57, esperado: 278.50 },
+    { quantidade: 2, valorCompraClienteUnitario: 1.41, esperado: 2.82 },
+    { quantidade: 30, valorCompraClienteUnitario: 3.26, esperado: 97.80 }
+  ].map(function(caso) {
+    const calc = extCalcularItemComercialCotacao_(caso);
+    return Object.assign({}, caso, { calculado: calc.valorCompraClienteTotal });
+  });
+  const divergente = extAvaliarLinhaItemCotacao_(
+    ['001', 'PRODUTO TESTE COMERCIAL', '10', '2,00', '99,99'],
+    { codigo: 0, descricao: 1, quantidade: 2, valorUnitarioCliente: 3, osinfo: 3, valorTotal: 4 },
+    ['CODIGO', 'DESCRICAO', 'QUANTIDADE', 'OSINFO', 'VALOR TOTAL']
+  );
+
+  return {
+    ok: casos.every(function(caso) { return Math.abs(caso.calculado - caso.esperado) < 0.000001; }) &&
+      divergente.ok === true &&
+      divergente.item.valorCompraClienteTotal === 20 &&
+      divergente.item.valorOriginalArquivo === 99.99 &&
+      divergente.item.divergenciaTotalCliente === 'TOTAL_CLIENTE_DIVERGENTE',
+    casos: casos,
+    divergencia: divergente.item
+  };
+}
+
+function testarCardsCotacaoSemGravacao() {
+  const itens388SemPreco = Array.from({ length: 388 }, function(_, i) {
+    return {
+      descricaoOriginal: 'ITEM ' + (i + 1),
+      quantidade: 1,
+      valorCompraClienteUnitario: 1,
+      precoVendaMedBox: '',
+      valorTotalMedBox: '',
+      statusLance: EXT_STATUS_DADOS_INSUFICIENTES
+    };
+  });
+  const resumoSemPreco = extCalcularResumoCotacaoExtraida_(itens388SemPreco);
+  const resumoComGanho = extCalcularResumoCotacaoExtraida_([
+    { precoVendaMedBox: 10, valorTotalMedBox: 100, statusLance: EXT_STATUS_LANCE_VENCEDOR },
+    { precoVendaMedBox: 10, valorTotalMedBox: 200, statusLance: EXT_STATUS_PRECO_IGUAL },
+    { precoVendaMedBox: 10, valorTotalMedBox: 300, statusLance: EXT_STATUS_PRECO_ACIMA },
+    { precoVendaMedBox: '', valorTotalMedBox: '', statusLance: EXT_STATUS_CUSTO_NAO_ENCONTRADO }
+  ]);
+
+  return {
+    ok: resumoSemPreco.totalItensCotados === 388 &&
+      resumoSemPreco.itensSemPreco === 388 &&
+      resumoSemPreco.totalItensGanhos === 0 &&
+      resumoSemPreco.percentualItensGanhos === 0 &&
+      resumoComGanho.totalItensCotados === 4 &&
+      resumoComGanho.totalItensGanhos === 1 &&
+      resumoComGanho.valorTotalCotado === 600 &&
+      resumoComGanho.valorTotalGanhoMedBox === 100 &&
+      resumoComGanho.percentualItensGanhos === 25,
+    casos: {
+      total388: resumoSemPreco.totalItensCotados,
+      semPreco388: resumoSemPreco.itensSemPreco,
+      ganhosAntesPrecificacao: resumoSemPreco.totalItensGanhos,
+      percentualAntesPrecificacao: resumoSemPreco.percentualItensGanhos,
+      quantidadeNaoDependeSkuOuCusto: resumoSemPreco.totalItensCotados === 388,
+      resumoComGanho: resumoComGanho
     }
   };
 }
@@ -1585,16 +1744,14 @@ function extMontarStatusLance_(precoCliente, precoVenda, custo) {
 }
 
 function extCalcularItemComercialCotacao_(item) {
-  const quantidade = extToNumber_(item && item.quantidade);
+  const quantidadeParse = parseQuantidadeCotacao_(item && item.quantidade);
+  const quantidade = quantidadeParse.ok ? quantidadeParse.valor : null;
   const valorUnitario = extToNumber_(item && item.valorCompraClienteUnitario);
-  const valorTotalInformado = extToNumber_(item && item.valorCompraClienteTotal);
   const custo = extToNumber_(item && (item.custoMedBox !== undefined ? item.custoMedBox : item.custoMedbox));
   const margem = extToNumber_(item && (item.margemPercentual !== undefined ? item.margemPercentual : item.margem));
-  const valorTotalCliente = valorTotalInformado !== null
-    ? valorTotalInformado
-    : (quantidade !== null && quantidade > 0 && valorUnitario !== null
-      ? extArredondar_(quantidade * valorUnitario, 6)
-      : '');
+  const valorTotalCliente = quantidade !== null && quantidade > 0 && valorUnitario !== null && valorUnitario >= 0
+    ? extArredondar_(quantidade * valorUnitario, 6)
+    : '';
   const precoVenda = custo !== null && custo > 0
     ? extArredondar_(custo * (1 + ((margem === null ? 0 : margem) / 100)), 6)
     : '';
@@ -1631,7 +1788,7 @@ function extMontarStatusLanceComercial_(valorClienteUnitario, precoVendaMedBox, 
 function extCalcularResumoCotacaoExtraida_(itens) {
   const lista = Array.isArray(itens) ? itens : [];
   const resumo = {
-    totalItensCotados: 0,
+    totalItensCotados: lista.length,
     valorTotalCotado: 0,
     totalItensGanhos: 0,
     valorTotalGanhoMedBox: 0,
@@ -1645,7 +1802,6 @@ function extCalcularResumoCotacaoExtraida_(itens) {
     const status = extUpper_(item.statusLance);
 
     if (precoVenda !== null && precoVenda > 0 && totalMedBox !== null && totalMedBox > 0) {
-      resumo.totalItensCotados++;
       resumo.valorTotalCotado += totalMedBox;
 
       if (status === extUpper_(EXT_STATUS_LANCE_VENCEDOR)) {
@@ -1775,6 +1931,35 @@ function extToNumber_(valor) {
 
   const n = Number(txt);
   return isNaN(n) ? null : n;
+}
+
+function parseQuantidadeCotacao_(valor) {
+  if (valor === null || valor === undefined || valor === '') {
+    return { ok: false, valor: null, motivo: 'QUANTIDADE_VAZIA' };
+  }
+  if (typeof valor === 'number') {
+    return isNaN(valor) || !isFinite(valor)
+      ? { ok: false, valor: null, motivo: 'QUANTIDADE_INVALIDA' }
+      : { ok: true, valor: valor, motivo: '' };
+  }
+
+  let txt = String(valor).replace(/[\u00A0\u200B-\u200D\uFEFF]/g, '').trim();
+  if (!txt || txt === '-' || txt === '--') return { ok: false, valor: null, motivo: 'QUANTIDADE_VAZIA' };
+  if (/^-?\d+(?:[,.]\d+)?\s+-?\d+(?:[,.]\d+)?$/.test(txt)) {
+    return { ok: false, valor: null, motivo: 'QUANTIDADE_AMBIGUA' };
+  }
+
+  txt = txt.replace(/\s+/g, '');
+  if (txt.includes(',')) {
+    txt = txt.replace(/\./g, '').replace(',', '.');
+  } else if (/^-?\d{1,3}(\.\d{3})+(?:\.\d+)?$/.test(txt)) {
+    txt = txt.replace(/\./g, '');
+  }
+
+  if (!/^-?\d+(?:\.\d+)?$/.test(txt)) return { ok: false, valor: null, motivo: 'QUANTIDADE_INVALIDA' };
+  const n = Number(txt);
+  if (isNaN(n) || !isFinite(n)) return { ok: false, valor: null, motivo: 'QUANTIDADE_INVALIDA' };
+  return { ok: true, valor: n, motivo: '' };
 }
 
 function extNormalizarPercentual_(valor) {

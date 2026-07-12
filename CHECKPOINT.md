@@ -64,8 +64,12 @@
 - O preco total do cliente nao deve ser usado como preco unitario.
 - Status do lance comercial: `LANCE VENCEDOR`, `PRECO IGUAL`, `PRECO ACIMA` ou `DADOS INSUFICIENTES`.
 - Quantidades na grade usam formato pt-BR sem moeda, inteiras sem casas decimais e fracionadas com ate 3 casas.
+- Quantidade vem de uma unica coluna mapeada; quando houver mais de uma candidata, a escolha prioriza `QUANTIDADE`, `QUANT`, `QTD` ou `QTDE` e a proporcao de celulas numericas positivas.
+- Valores ambiguos de quantidade com dois numeros separados por espaco, como `0 1` ou `30 100`, sao rejeitados como `QUANTIDADE_AMBIGUA` e nao sao interpretados por tentativa.
 - Valores financeiros usam formato pt-BR `R$ 1.234,56`; valores vazios ou invalidos aparecem como `—`.
 - Resumo comercial da cotacao exibe: total de itens cotados, valor total cotado, total de itens ganhos, valor total ganho MedBox, percentual de itens ganhos e itens sem preco.
+- `TOTAL DE ITENS COTADOS` e a quantidade de linhas comerciais validas extraidas, independente de SKU, custo, preco MedBox ou status do lance.
+- `ITENS SEM PRECO` contabiliza itens validos sem `precoVendaMedBox` maior que zero.
 - Itens ganhos no resumo consideram somente status `LANCE VENCEDOR`; `PRECO IGUAL`, `PRECO ACIMA`, `DADOS INSUFICIENTES` e `CUSTO_NAO_ENCONTRADO` nao entram como ganhos.
 - Status de match implementados: `MATCH_CONFIRMADO`, `REVISAR`, `NAO_ENCONTRADO`, `CONFLITO_TECNICO`.
 - O SKU sugerido usa catalogo existente em `MAPA_ERP` e `BD_SKU_MASTER_SEFAZ`, com normalizacao e validacao de atributos tecnicos como concentracao, volume, quantidade, forma e apresentacao.

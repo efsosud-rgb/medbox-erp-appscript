@@ -1895,8 +1895,12 @@
       const margemValor = item.margemPercentual !== undefined && item.margemPercentual !== '' ? item.margemPercentual : item.margem;
       const margemNumero = parseNumeroCotacao(margemValor);
       const margem = (margemNumero === null ? 0 : margemNumero) / 100;
-      const quantidade = parseNumeroCotacao(item.quantidade);
+      const quantidadeInfo = parseQuantidadeCotacao(item.quantidade);
+      const quantidade = quantidadeInfo.ok ? quantidadeInfo.valor : null;
       const valorCliente = parseNumeroCotacao(item.valorCompraClienteUnitario || item.precoOsinfo);
+      item.valorCompraClienteTotal = quantidade !== null && quantidade > 0 && valorCliente !== null && valorCliente >= 0
+        ? Math.round((quantidade * valorCliente) * 100) / 100
+        : '';
 
       if (custo === null || custo <= 0) {
         item.precoVenda = '';
@@ -1945,7 +1949,7 @@
 
     function calcularResumoExtracaoCotacao() {
       const resumo = {
-        totalItensCotados: 0,
+        totalItensCotados: itensExtracaoCotacao.length,
         valorTotalCotado: 0,
         totalItensGanhos: 0,
         valorTotalGanhoMedBox: 0,
@@ -1959,7 +1963,6 @@
         const status = upper(item.statusLance || '');
 
         if (precoVenda !== null && precoVenda > 0 && totalMedBox !== null && totalMedBox > 0) {
-          resumo.totalItensCotados++;
           resumo.valorTotalCotado += totalMedBox;
 
           if (status === 'LANCE VENCEDOR') {
@@ -2065,7 +2068,7 @@
       }, 0);
       const linhas = itens.map(function(item) {
         return '<tr>' +
-          '<td>' + escapeHtml(formatDecimal(item.quantidade || '')) + '</td>' +
+          '<td>' + escapeHtml(formatQuantidadeCotacao(item.quantidade || '')) + '</td>' +
           '<td>' + escapeHtml(item.descricaoOriginal || '') + '</td>' +
           '<td>' + escapeHtml(item.skuMaster || '') + '</td>' +
           '<td>' + escapeHtml(formatMoeda(item.precoVendaMedBox || item.precoVenda || '')) + '</td>' +
@@ -2725,9 +2728,38 @@
       return Number.isFinite(n) ? n : null;
     }
 
+    function parseQuantidadeCotacao(valor) {
+      if (valor === null || valor === undefined || valor === '') return { ok: false, valor: null, motivo: 'QUANTIDADE_VAZIA' };
+      if (typeof valor === 'number') {
+        return Number.isFinite(valor)
+          ? { ok: true, valor: valor, motivo: '' }
+          : { ok: false, valor: null, motivo: 'QUANTIDADE_INVALIDA' };
+      }
+
+      let txt = String(valor).replace(/[\u00A0\u200B-\u200D\uFEFF]/g, '').trim();
+      if (!txt || txt === '-' || txt === '--') return { ok: false, valor: null, motivo: 'QUANTIDADE_VAZIA' };
+      if (/^-?\d+(?:[,.]\d+)?\s+-?\d+(?:[,.]\d+)?$/.test(txt)) {
+        return { ok: false, valor: null, motivo: 'QUANTIDADE_AMBIGUA' };
+      }
+
+      txt = txt.replace(/\s+/g, '');
+      if (txt.includes(',')) {
+        txt = txt.replace(/\./g, '').replace(',', '.');
+      } else if (/^-?\d{1,3}(\.\d{3})+(?:\.\d+)?$/.test(txt)) {
+        txt = txt.replace(/\./g, '');
+      }
+
+      if (!/^-?\d+(?:\.\d+)?$/.test(txt)) return { ok: false, valor: null, motivo: 'QUANTIDADE_INVALIDA' };
+      const n = Number(txt);
+      return Number.isFinite(n)
+        ? { ok: true, valor: n, motivo: '' }
+        : { ok: false, valor: null, motivo: 'QUANTIDADE_INVALIDA' };
+    }
+
     function formatQuantidadeCotacao(valor) {
-      const n = parseNumeroCotacao(valor);
-      if (n === null) return '—';
+      const parsed = parseQuantidadeCotacao(valor);
+      if (!parsed.ok) return '—';
+      const n = parsed.valor;
       const temFracao = Math.abs(n - Math.round(n)) > 0.000001;
       return n.toLocaleString('pt-BR', {
         minimumFractionDigits: 0,
