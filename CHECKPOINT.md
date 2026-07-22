@@ -159,3 +159,4 @@
 - **Arquivos alterados:** `Codigo.js` (função `f2dObterAbasClientes_`), `CHECKPOINT.md`.
 - **Testes executados:** `node --check Codigo.js`, `git diff --check`, verificação manual de exclusão por nome para todos os termos do enunciado.
 - **Pendência:** `calcularDashboardFase2` (em `Fase2_Dashboard.js`) ainda lê `MAPA_ERP` diretamente e não consome `obterMapaDeProdutos`. Essa decisão será tratada separadamente após validação visual dos dados.
+- **Refinamento posterior:** Termos curtos LOG, AUX e MAPA passaram a usar correspondência por token completo para evitar falsos positivos em nomes como Cardiologia, Auxiliadora e Amapá.

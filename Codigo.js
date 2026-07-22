@@ -1048,24 +1048,33 @@ function f2dObterAbasClientes_(ss) {
 
     // Excluir abas de sistema e referência técnica por nome normalizado
     // Deve ocorrer antes da validação de schema
-    const exclusionTerms = [
+    // Termos longos e específicos: substring no nome normalizado
+    const longTerms = [
       "COTACOES", "COTAÇÕES",
       "SKU_MASTER", "SKU MASTER",
       "PRECOS", "PREÇOS",
       "SEFAZ",
       "ADMIN", "BACKUP",
       "REVISAO", "REVISÃO",
-      "RELATORIO", "RELATÓRIO",
-      "LOG", "AUX", "MAPA"
+      "RELATORIO", "RELATÓRIO"
     ];
-    let isExcluded = false;
-    for (const term of exclusionTerms) {
+    for (const term of longTerms) {
       if (upperName.indexOf(term) !== -1) {
-        isExcluded = true;
-        break;
+        return;
       }
     }
-    if (isExcluded) return;
+    // Termos curtos e genéricos: correspondência por token completo
+    const shortTerms = ["LOG", "AUX", "MAPA"];
+    const tokenName = upperName
+      .replace(/[_\-.\/\\]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const tokens = tokenName.split(" ");
+    for (const term of shortTerms) {
+      if (tokens.indexOf(term) !== -1) {
+        return;
+      }
+    }
 
     // Se passar nas exclusões, verificar se tem estrutura válida
     const detection = f2dDetectarCabecalhoEColunas_(sheet);
