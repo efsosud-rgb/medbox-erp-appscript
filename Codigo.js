@@ -34,14 +34,9 @@ const MAX_RESULTADOS_BUSCA = 300;
 const MAX_RESULTADOS_MAPA = 500;
 
 const MEDBOX_SPREADSHEET_ID = '1QLurrnKCXorjXUoUtPl6MoSP0Gk32Yz0AWBHxebifCw';
-const MEDBOX_MAPA_SPREADSHEET_ID = MEDBOX_SPREADSHEET_ID;
 
 function obterPlanilhaMedbox_() {
   return SpreadsheetApp.openById(MEDBOX_SPREADSHEET_ID);
-}
-
-function obterPlanilhaMapaMedbox_() {
-  return obterPlanilhaMedbox_();
 }
 
 /************************************************************
@@ -1085,7 +1080,7 @@ function textoTemVolumeExato(texto, volume) {
 
 function obterClientesDoMapa(headers) {
   try {
-    const ss = obterPlanilhaMapaMedbox_();
+    const ss = obterPlanilhaMedbox_();
     const abasClientes = f2dObterAbasClientes_(ss);
     const clientes = abasClientes.map(sheet => {
       const name = sheet.getName();
@@ -1142,29 +1137,58 @@ function f2dObterAbasClientes_(ss) {
       const suffix = nameUpper.substring(3).trim();
       const isExcluded = excludedPatterns.some(pat => nameUpper.indexOf(pat) !== -1);
       if (!isExcluded && suffix.length > 0) {
-        abasClientes.push(sheet);
+        const detection = f2dDetectarCabecalhoEColunas_(sheet);
+        if (detection !== null) {
+          abasClientes.push(sheet);
+        }
       }
     }
   });
   return abasClientes;
 }
 
+function f2dDetectarCabecalhoEColunas_(sheet) {
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow === 0 || lastCol === 0) return null;
+
+  const range = sheet.getRange(1, 1, Math.min(lastRow, 5), lastCol);
+  const values = range.getValues();
+
+  for (let r = 0; r < values.length; r++) {
+    const row = values[r].map(String);
+    const colSku = f2dEncontrarColunaFlex_(row, ['SKU_MASTER', 'SKU MASTER', 'SKU_OPERACIONAL', 'SKU OPERACIONAL', 'SKU']);
+    const colQtd = f2dEncontrarColunaFlex_(row, ['QUANTIDADE', 'QUANT', 'QTD', 'QTDE', 'QUANT_TOTAL', 'QUANT. TOTAL']);
+    const colVal = f2dEncontrarColunaFlex_(row, ['PRECO_REFERENCIA_CLIENTE', 'PRECO_REFERENCIA', 'VALOR_UNITARIO', 'VALOR UNITARIO', 'VALOR_UNIT', 'VALOR UNIT', 'PRECO', 'PRECO_MEDBOX', 'MENOR_VALOR', 'MENOR PRECO', 'PRECO_UNITARIO', 'PRECO UNITARIO']);
+
+    if (colSku !== -1 && colQtd !== -1 && colVal !== -1) {
+      return {
+        headerRowIndex: r,
+        colSku: colSku,
+        colQtd: colQtd,
+        colVal: colVal
+      };
+    }
+  }
+  return null;
+}
+
 function f2dCarregarDadosClienteSheet_(sheet) {
   const skuMap = {};
-  if (sheet.getLastRow() < 2) return skuMap;
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return skuMap;
+
+  const detection = f2dDetectarCabecalhoEColunas_(sheet);
+  if (!detection) return skuMap;
 
   const values = sheet.getDataRange().getValues();
-  const headers = values[0].map(String);
 
-  const colSku = f2dEncontrarColunaFlex_(headers, ['SKU_MASTER', 'SKU MASTER', 'SKU_OPERACIONAL', 'SKU OPERACIONAL', 'SKU']);
-  const colQtd = f2dEncontrarColunaFlex_(headers, ['QUANTIDADE', 'QUANT', 'QTD', 'QTDE', 'QUANT_TOTAL', 'QUANT. TOTAL']);
-  const colVal = f2dEncontrarColunaFlex_(headers, ['PRECO_REFERENCIA_CLIENTE', 'PRECO_REFERENCIA', 'VALOR_UNITARIO', 'VALOR UNITARIO', 'VALOR_UNIT', 'VALOR UNIT', 'PRECO', 'PRECO_MEDBOX', 'MENOR_VALOR', 'MENOR PRECO', 'PRECO_UNITARIO', 'PRECO UNITARIO']);
+  const colSku = detection.colSku;
+  const colQtd = detection.colQtd;
+  const colVal = detection.colVal;
+  const startRow = detection.headerRowIndex + 1;
 
-  if (colSku === -1) {
-    return skuMap;
-  }
-
-  for (let i = 1; i < values.length; i++) {
+  for (let i = startRow; i < values.length; i++) {
     const row = values[i];
     const skuRaw = String(row[colSku]).trim();
     if (!skuRaw) continue;
@@ -1208,7 +1232,7 @@ function f2dEncontrarColunaFlex_(headers, candidates) {
       return idx;
     }
     for (let i = 0; i < headersNorm.length; i++) {
-      if (headersNorm[i].indexOf(candidateNorm) !== -1 || candidateNorm.indexOf(headersNorm[i]) !== -1) {
+      if (headersNorm[i] !== "" && (headersNorm[i].indexOf(candidateNorm) !== -1 || candidateNorm.indexOf(headersNorm[i]) !== -1)) {
         return i;
       }
     }
@@ -1234,6 +1258,11 @@ function getCell(row, idx, nomeColuna) {
   }
 
   return row[pos];
+}
+
+// Re-add obterPlanilhaMapaMedbox_ for backwards/external compatibilities if called
+function obterPlanilhaMapaMedbox_() {
+  return obterPlanilhaMedbox_();
 }
 
 function limparTexto(valor) {

@@ -140,8 +140,8 @@ function diagnosticarMapaDeProdutosEClientes() {
   try {
     // 1. Verificar acesso à Planilha Oficial
     log.push('1. Verificando acesso à Planilha Oficial...');
-    log.push('Spreadsheet ID: ' + MEDBOX_MAPA_SPREADSHEET_ID);
-    const ss = obterPlanilhaMapaMedbox_();
+    log.push('Spreadsheet ID: ' + MEDBOX_SPREADSHEET_ID);
+    const ss = obterPlanilhaMedbox_();
     log.push('Planilha Oficial carregada com sucesso: "' + ss.getName() + '"\n');
 
     // 2. Verificar Aba MAPA_ERP
@@ -178,16 +178,14 @@ function diagnosticarMapaDeProdutosEClientes() {
       const cols = sheet.getLastColumn();
       log.push('  - Aba: "' + name + '" -> Cliente: "' + clienteName.toUpperCase() + '" (' + rows + ' linhas, ' + cols + ' colunas)');
 
-      if (rows > 0) {
-        const headers = sheet.getRange(1, 1, 1, cols).getValues()[0].map(String);
-        const colSku = f2dEncontrarColunaFlex_(headers, ['SKU_MASTER', 'SKU MASTER', 'SKU_OPERACIONAL', 'SKU OPERACIONAL', 'SKU']);
-        const colQtd = f2dEncontrarColunaFlex_(headers, ['QUANTIDADE', 'QUANT', 'QTD', 'QTDE', 'QUANT_TOTAL', 'QUANT. TOTAL']);
-        const colVal = f2dEncontrarColunaFlex_(headers, ['PRECO_REFERENCIA_CLIENTE', 'PRECO_REFERENCIA', 'VALOR_UNITARIO', 'VALOR UNITARIO', 'VALOR_UNIT', 'VALOR UNIT', 'PRECO', 'PRECO_MEDBOX', 'MENOR_VALOR', 'MENOR PRECO', 'PRECO_UNITARIO', 'PRECO UNITARIO']);
-
-        log.push('    Mapeamento de colunas:');
-        log.push('      SKU_MASTER: ' + (colSku !== -1 ? 'Coluna ' + (colSku + 1) + ' ("' + headers[colSku] + '")' : '❌ NÃO ENCONTRADA'));
-        log.push('      QUANTIDADE: ' + (colQtd !== -1 ? 'Coluna ' + (colQtd + 1) + ' ("' + headers[colQtd] + '")' : '❌ NÃO ENCONTRADA'));
-        log.push('      PREÇO CLIENTE: ' + (colVal !== -1 ? 'Coluna ' + (colVal + 1) + ' ("' + headers[colVal] + '")' : '❌ NÃO ENCONTRADA'));
+      const detection = f2dDetectarCabecalhoEColunas_(sheet);
+      if (detection) {
+        log.push('    Mapeamento de colunas (Cabeçalho na linha ' + (detection.headerRowIndex + 1) + '):');
+        log.push('      SKU_MASTER: Coluna ' + (detection.colSku + 1));
+        log.push('      QUANTIDADE: Coluna ' + (detection.colQtd + 1));
+        log.push('      PREÇO CLIENTE: Coluna ' + (detection.colVal + 1));
+      } else {
+        log.push('    ❌ ERRO: Cabeçalho compatível com SKU, Quantidade e Preço não encontrado nas primeiras 5 linhas.');
       }
     });
     log.push('');

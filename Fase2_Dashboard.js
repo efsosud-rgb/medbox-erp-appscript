@@ -311,7 +311,7 @@ function atualizarDashboardFase2() {
 
   f2dRegistrarLog_('DASHBOARD FASE 2D ATUALIZADO.');
 
-  SpreadsheetApp.getUi().alert('Dashboard Fase 2D updated successfully.');
+  SpreadsheetApp.getUi().alert('Dashboard Fase 2D atualizado com sucesso.');
 }
 
 function escreverResumoDashboard_(ws, data) {
