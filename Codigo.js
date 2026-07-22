@@ -427,26 +427,46 @@ function obterMapaDeProdutos(filtros) {
     const consumosPorCliente = {};
 
     clientes.forEach(cliente => {
-      const clientSkuMap = dadosClientesMap[cliente];
+      const clientData = dadosClientesMap[cliente];
       let q = 0;
       let v = null;
       let d = 0;
 
-      if (clientSkuMap) {
-        const lookupKeys = [
+      if (clientData) {
+        // First try to look up in skuMap by SKU Master or SKU Operational
+        const lookupSkus = [
           normalizarTexto(skuMaster),
-          normalizarTexto(skuOperacional),
-          normalizarTexto(produtoNormalizado),
-          normalizarTexto(produto)
+          normalizarTexto(skuOperacional)
         ].filter(Boolean);
 
-        for (const lookupKey of lookupKeys) {
-          if (clientSkuMap[lookupKey]) {
-            const dataItem = clientSkuMap[lookupKey];
+        let found = false;
+        for (const lookupSku of lookupSkus) {
+          if (clientData.skuMap[lookupSku]) {
+            const dataItem = clientData.skuMap[lookupSku];
             q = dataItem.quant;
             v = dataItem.valorUnit;
             d = dataItem.demandaR;
+            found = true;
             break;
+          }
+        }
+
+        // If not found, try to look up in productMap by Normalizado or original Produto
+        if (!found) {
+          const lookupProducts = [
+            normalizarTexto(produtoNormalizado),
+            normalizarTexto(produto)
+          ].filter(Boolean);
+
+          for (const lookupProduct of lookupProducts) {
+            if (clientData.productMap[lookupProduct]) {
+              const dataItem = clientData.productMap[lookupProduct];
+              q = dataItem.quant;
+              v = dataItem.valorUnit;
+              d = dataItem.demandaR;
+              found = true;
+              break;
+            }
           }
         }
       }
@@ -1140,14 +1160,46 @@ function f2dDetectarCabecalhoEColunas_(sheet) {
 
   for (let r = 0; r < values.length; r++) {
     const row = values[r].map(String);
-    const colSku = f2dEncontrarColunaFlex_(row, ['SKU_MASTER', 'SKU MASTER', 'SKU_OPERACIONAL', 'SKU OPERACIONAL', 'SKU']);
-    const colQtd = f2dEncontrarColunaFlex_(row, ['QUANTIDADE', 'QUANT', 'QTD', 'QTDE', 'QUANT_TOTAL', 'QUANT. TOTAL']);
-    const colVal = f2dEncontrarColunaFlex_(row, ['PRECO_REFERENCIA_CLIENTE', 'PRECO_REFERENCIA', 'VALOR_UNITARIO', 'VALOR UNITARIO', 'VALOR_UNIT', 'VALOR UNIT', 'PRECO', 'PRECO_MEDBOX', 'MENOR_VALOR', 'MENOR PRECO', 'PRECO_UNITARIO', 'PRECO UNITARIO']);
 
-    if (colSku !== -1 && colQtd !== -1) {
+    // 1. Look for SKU columns in priority order: SKU_MASTER, SKU_OPERACIONAL, SKU
+    const colSkuMaster = f2dEncontrarColunaFlex_(row, ['SKU_MASTER', 'SKU MASTER']);
+    const colSkuOperacional = f2dEncontrarColunaFlex_(row, ['SKU_OPERACIONAL', 'SKU OPERACIONAL']);
+    const colSkuGeneric = f2dEncontrarColunaFlex_(row, ['SKU']);
+
+    // 2. Look for Product/Description column
+    const colProduto = f2dEncontrarColunaFlex_(row, ['PRODUTOS', 'PRODUTO', 'DESCRICAO DO PRODUTO', 'DESCRIÇÃO DO PRODUTO', 'DESCRICAO', 'DESCRIÇÃO', 'PRODUTO NORMALIZADO', 'DESCRICAO_NORMALIZADA']);
+
+    // 3. Look for Quantity column (REQUIRED)
+    const colQtd = f2dEncontrarColunaFlex_(row, ['QUANTIDADE', 'QUANT', 'QTD', 'QTDE', 'QUANT_TOTAL', 'QUANT. TOTAL']);
+
+    // 4. Look for Unit Price column (OPTIONAL)
+    const colVal = f2dEncontrarColunaFlex_(row, ['PRECO_REFERENCIA_CLIENTE', 'PRECO_REFERENCIA', 'VALOR_UNITARIO', 'VALOR UNITARIO', 'VALOR_UNIT', 'VALOR UNIT', 'PRECO', 'PRECO_MEDBOX', 'MENOR_VALOR', 'MENOR PRECO', 'PRECO_UNITARIO', 'PRECO UNITARIO', 'V UNIT', 'V. UNIT']);
+
+    // Determine target column of identification according to required priority
+    let colId = -1;
+    let tipoId = "";
+
+    if (colSkuMaster !== -1) {
+      colId = colSkuMaster;
+      tipoId = "SKU_MASTER";
+    } else if (colSkuOperacional !== -1) {
+      colId = colSkuOperacional;
+      tipoId = "SKU";
+    } else if (colSkuGeneric !== -1) {
+      colId = colSkuGeneric;
+      tipoId = "SKU";
+    } else if (colProduto !== -1) {
+      colId = colProduto;
+      tipoId = "PRODUTO";
+    }
+
+    if (colId !== -1 && colQtd !== -1) {
       return {
         headerRowIndex: r,
-        colSku: colSku,
+        colId: colId,
+        colSkuMaster: colSkuMaster,
+        colProduto: colProduto,
+        tipoId: tipoId,
         colQtd: colQtd,
         colVal: colVal
       };
@@ -1158,54 +1210,137 @@ function f2dDetectarCabecalhoEColunas_(sheet) {
 
 function f2dCarregarDadosClienteSheet_(sheet) {
   const skuMap = {};
+  const productMap = {};
+
   const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return skuMap;
+  if (lastRow < 2) {
+    return {
+      tipoId: "",
+      headerRowIndex: -1,
+      colId: -1,
+      colQtd: -1,
+      colVal: -1,
+      validRowsCount: 0,
+      ignoredRowsCount: 0,
+      skuMap: skuMap,
+      productMap: productMap
+    };
+  }
 
   const detection = f2dDetectarCabecalhoEColunas_(sheet);
-  if (!detection) return skuMap;
+  if (!detection) {
+    return {
+      tipoId: "",
+      headerRowIndex: -1,
+      colId: -1,
+      colQtd: -1,
+      colVal: -1,
+      validRowsCount: 0,
+      ignoredRowsCount: 0,
+      skuMap: skuMap,
+      productMap: productMap
+    };
+  }
+
+  const result = {
+    tipoId: detection.tipoId,
+    headerRowIndex: detection.headerRowIndex,
+    colId: detection.colId,
+    colQtd: detection.colQtd,
+    colVal: detection.colVal,
+    validRowsCount: 0,
+    ignoredRowsCount: 0,
+    skuMap: skuMap,
+    productMap: productMap
+  };
 
   const values = sheet.getDataRange().getValues();
 
-  const colSku = detection.colSku;
   const colQtd = detection.colQtd;
   const colVal = detection.colVal;
   const startRow = detection.headerRowIndex + 1;
 
   for (let i = startRow; i < values.length; i++) {
     const row = values[i];
-    const skuRaw = String(row[colSku]).trim();
-    if (!skuRaw) continue;
-    const skuKey = normalizarTexto(skuRaw);
 
-    const q = colQtd !== -1 ? toNumber(row[colQtd]) || 0 : 0;
+    // Exigimos quantidade válida!
+    const q = colQtd !== -1 ? toNumber(row[colQtd]) : null;
+    if (q === null || q <= 0) {
+      result.ignoredRowsCount++;
+      continue;
+    }
+
     const v = colVal !== -1 ? toNumber(row[colVal]) : null;
 
-    if (!skuMap[skuKey]) {
-      skuMap[skuKey] = {
+    // Special logic for BD_VivaRio:
+    // "Em BD_VivaRio: usar SKU_MASTER quando preenchido; quando vazio, fazer fallback para Produtos."
+    const isVivaRio = (sheet.getName() === 'BD_VivaRio');
+    let keySku = "";
+    let keyProduct = "";
+
+    if (isVivaRio) {
+      const skuMasterVal = detection.colSkuMaster !== -1 ? String(row[detection.colSkuMaster]).trim() : "";
+      const produtoVal = detection.colProduto !== -1 ? String(row[detection.colProduto]).trim() : "";
+
+      if (skuMasterVal) {
+        keySku = normalizarTexto(skuMasterVal);
+      } else if (produtoVal) {
+        keyProduct = normalizarTexto(produtoVal);
+      }
+    } else {
+      const idRaw = String(row[detection.colId]).trim();
+      if (!idRaw) {
+        result.ignoredRowsCount++;
+        continue;
+      }
+      const idKey = normalizarTexto(idRaw);
+
+      if (detection.tipoId === "PRODUTO") {
+        keyProduct = idKey;
+      } else {
+        keySku = idKey;
+      }
+    }
+
+    if (!keySku && !keyProduct) {
+      result.ignoredRowsCount++;
+      continue;
+    }
+
+    result.validRowsCount++;
+
+    const targetMap = keySku ? result.skuMap : result.productMap;
+    const targetKey = keySku || keyProduct;
+
+    if (!targetMap[targetKey]) {
+      targetMap[targetKey] = {
         quant: 0,
         valorUnit: null,
         demandaR: 0
       };
     }
 
-    skuMap[skuKey].quant += q;
+    targetMap[targetKey].quant += q;
     if (v !== null && v > 0) {
-      if (skuMap[skuKey].valorUnit === null || v < skuMap[skuKey].valorUnit) {
-        skuMap[skuKey].valorUnit = v;
+      if (targetMap[targetKey].valorUnit === null || v < targetMap[targetKey].valorUnit) {
+        targetMap[targetKey].valorUnit = v;
       }
     }
   }
 
-  Object.keys(skuMap).forEach(key => {
-    const item = skuMap[key];
-    if (item.quant > 0 && item.valorUnit !== null) {
-      item.demandaR = item.quant * item.valorUnit;
-    } else {
-      item.demandaR = 0;
-    }
+  // Calculate Demanda R$ for SKU and Product maps
+  [result.skuMap, result.productMap].forEach(m => {
+    Object.keys(m).forEach(key => {
+      const item = m[key];
+      if (item.quant > 0 && item.valorUnit !== null) {
+        item.demandaR = item.quant * item.valorUnit;
+      } else {
+        item.demandaR = 0;
+      }
+    });
   });
 
-  return skuMap;
+  return result;
 }
 
 function f2dEncontrarColunaFlex_(headers, candidates) {
@@ -1214,10 +1349,18 @@ function f2dEncontrarColunaFlex_(headers, candidates) {
     const candidateNorm = candidate.toUpperCase().replace(/[^A-Z0-9]/g, '');
     const idx = headersNorm.indexOf(candidateNorm);
     if (idx !== -1) {
+      const orig = headers[idx].toUpperCase();
+      if (candidateNorm.indexOf('SKU') !== -1 && (orig.indexOf('CODIGO') !== -1 || orig.indexOf('CÓDIGO') !== -1)) {
+        continue;
+      }
       return idx;
     }
     for (let i = 0; i < headersNorm.length; i++) {
       if (headersNorm[i] !== "" && (headersNorm[i].indexOf(candidateNorm) !== -1 || candidateNorm.indexOf(headersNorm[i]) !== -1)) {
+        const orig = headers[i].toUpperCase();
+        if (candidateNorm.indexOf('SKU') !== -1 && (orig.indexOf('CODIGO') !== -1 || orig.indexOf('CÓDIGO') !== -1)) {
+          continue;
+        }
         return i;
       }
     }

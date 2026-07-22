@@ -173,19 +173,32 @@ function diagnosticarMapaDeProdutosEClientes() {
       const clienteName = name.substring(3).trim();
       clientesNomes.push(clienteName);
 
-      // Realizar uma verificação rápida da estrutura de cada aba de cliente
       const rows = sheet.getLastRow();
       const cols = sheet.getLastColumn();
       log.push('  - Aba: "' + name + '" -> Cliente: "' + clienteName.toUpperCase() + '" (' + rows + ' linhas, ' + cols + ' colunas)');
 
       const detection = f2dDetectarCabecalhoEColunas_(sheet);
       if (detection) {
-        log.push('    Mapeamento de colunas (Cabeçalho na linha ' + (detection.headerRowIndex + 1) + '):');
-        log.push('      SKU_MASTER: Coluna ' + (detection.colSku + 1));
-        log.push('      QUANTIDADE: Coluna ' + (detection.colQtd + 1));
-        log.push('      PREÇO CLIENTE: Coluna ' + (detection.colVal + 1));
+        log.push('    Mapeamento de colunas:');
+        log.push('      Linha de cabeçalho: ' + (detection.headerRowIndex + 1));
+
+        // Find column names
+        const headerRow = sheet.getRange(detection.headerRowIndex + 1, 1, 1, cols).getValues()[0].map(String);
+        const colIdName = headerRow[detection.colId] || '';
+        const colQtdName = headerRow[detection.colQtd] || '';
+        const colValName = detection.colVal !== -1 ? (headerRow[detection.colVal] || '') : 'NÃO LOCALIZADA';
+
+        log.push('      Coluna de identificação encontrada: Coluna ' + (detection.colId + 1) + ' ("' + colIdName + '")');
+        log.push('      Tipo de identificação: ' + detection.tipoId);
+        log.push('      Coluna de quantidade: Coluna ' + (detection.colQtd + 1) + ' ("' + colQtdName + '")');
+        log.push('      Coluna de valor: Coluna ' + (detection.colVal !== -1 ? (detection.colVal + 1) + ' ("' + colValName + '")' : 'NÃO LOCALIZADA'));
+
+        // Simulate reading rows counts
+        const clientData = f2dCarregarDadosClienteSheet_(sheet);
+        log.push('      Quantidade de linhas válidas: ' + clientData.validRowsCount);
+        log.push('      Quantidade de linhas ignoradas: ' + clientData.ignoredRowsCount);
       } else {
-        log.push('    ❌ ERRO: Cabeçalho compatível com SKU, Quantidade e Preço não encontrado nas primeiras 5 linhas.');
+        log.push('    ❌ ERRO: Cabeçalho compatível com SKU ou Produto + Quantidade não encontrado nas primeiras 5 linhas.');
       }
     });
     log.push('');
@@ -197,7 +210,7 @@ function diagnosticarMapaDeProdutosEClientes() {
     log.push('  - Total Encontrado: ' + result.totalEncontrado);
     log.push('  - Total Exibido: ' + result.exibidos);
     log.push('  - Quantidade Total Demandada: ' + result.quantidadeTotalDemandada);
-    log.push('  - Valor Total Demandado: ' + result.valorTotalDemandado);
+    log.push('  - Valor Total Demandada: ' + result.valorTotalDemandado);
     log.push('  - Clientes Retornados: ' + result.clientes.join(', '));
     log.push('  - Amostra de Produtos Retornados: ' + result.produtos.length);
 
