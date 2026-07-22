@@ -35,6 +35,18 @@ const MAX_RESULTADOS_MAPA = 500;
 
 const MEDBOX_SPREADSHEET_ID = '1QLurrnKCXorjXUoUtPl6MoSP0Gk32Yz0AWBHxebifCw';
 
+const LISTA_CLIENTES_OFICIAIS = [
+  'BD_VivaRio',
+  'BD_AFNE',
+  'BD_INTS UPA Santo Amaro',
+  'BD_INTS Hospital Dia Cidade Ade',
+  'BD_INTS Hospital Dia Santo Amar',
+  'BD_INTS Hospital Guarapiranga',
+  'BD_Solar',
+  'BD_IGEDES',
+  'BD_SPDM'
+];
+
 function obterPlanilhaMedbox_() {
   return SpreadsheetApp.openById(MEDBOX_SPREADSHEET_ID);
 }
@@ -1105,42 +1117,13 @@ function obterClientesDoMapa(headers) {
 }
 
 function f2dObterAbasClientes_(ss) {
-  const sheets = ss.getSheets();
-  const excludedPatterns = [
-    'SKU MASTER',
-    'SKU_MASTER',
-    'PRECOS',
-    'PRECO',
-    'BACKUP',
-    'REVISAO',
-    'REVISÃO',
-    'RELATORIO',
-    'RELATÓRIO',
-    'LOG',
-    'DASHBOARD',
-    'AUX',
-    'LANCAMENTO',
-    'LANÇAMENTO',
-    'CADASTRO',
-    'SIMULADOR',
-    'ADMIN',
-    'IMPORTACAO',
-    'IMPORTAÇÃO',
-    'DIAGNOSTICO',
-    'DIAGNÓSTICO'
-  ];
   const abasClientes = [];
-  sheets.forEach(sheet => {
-    const name = sheet.getName();
-    const nameUpper = name.toUpperCase();
-    if (nameUpper.indexOf('BD_') === 0) {
-      const suffix = nameUpper.substring(3).trim();
-      const isExcluded = excludedPatterns.some(pat => nameUpper.indexOf(pat) !== -1);
-      if (!isExcluded && suffix.length > 0) {
-        const detection = f2dDetectarCabecalhoEColunas_(sheet);
-        if (detection !== null) {
-          abasClientes.push(sheet);
-        }
+  LISTA_CLIENTES_OFICIAIS.forEach(nomeAba => {
+    const sheet = ss.getSheetByName(nomeAba);
+    if (sheet) {
+      const detection = f2dDetectarCabecalhoEColunas_(sheet);
+      if (detection !== null) {
+        abasClientes.push(sheet);
       }
     }
   });
@@ -1161,7 +1144,7 @@ function f2dDetectarCabecalhoEColunas_(sheet) {
     const colQtd = f2dEncontrarColunaFlex_(row, ['QUANTIDADE', 'QUANT', 'QTD', 'QTDE', 'QUANT_TOTAL', 'QUANT. TOTAL']);
     const colVal = f2dEncontrarColunaFlex_(row, ['PRECO_REFERENCIA_CLIENTE', 'PRECO_REFERENCIA', 'VALOR_UNITARIO', 'VALOR UNITARIO', 'VALOR_UNIT', 'VALOR UNIT', 'PRECO', 'PRECO_MEDBOX', 'MENOR_VALOR', 'MENOR PRECO', 'PRECO_UNITARIO', 'PRECO UNITARIO']);
 
-    if (colSku !== -1 && colQtd !== -1 && colVal !== -1) {
+    if (colSku !== -1 && colQtd !== -1) {
       return {
         headerRowIndex: r,
         colSku: colSku,
@@ -1217,6 +1200,8 @@ function f2dCarregarDadosClienteSheet_(sheet) {
     const item = skuMap[key];
     if (item.quant > 0 && item.valorUnit !== null) {
       item.demandaR = item.quant * item.valorUnit;
+    } else {
+      item.demandaR = 0;
     }
   });
 
@@ -1258,11 +1243,6 @@ function getCell(row, idx, nomeColuna) {
   }
 
   return row[pos];
-}
-
-// Re-add obterPlanilhaMapaMedbox_ for backwards/external compatibilities if called
-function obterPlanilhaMapaMedbox_() {
-  return obterPlanilhaMedbox_();
 }
 
 function limparTexto(valor) {

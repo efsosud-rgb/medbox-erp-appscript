@@ -6,7 +6,7 @@
 
 ### Fontes de Dados
 - **Fonte Anterior (Legada):** `SpreadsheetApp.getActiveSpreadsheet()` (planilha container-bound), com colunas de clientes hardcoded inseridas diretamente na aba `MAPA_ERP` (como `<Cliente> Quant` e `<Cliente> Valor Unit`).
-- **Nova Fonte Oficial:** Planilha `MEDBOX_MAPA_CLIENTES_2026` centralizada com o ID `1QLurrnKCXorjXUoUtPl6MoSP0Gk32Yz0AWBHxebifCw` (Aba central `MAPA_ERP`, abas de cotação individuais `BD_<CLIENTE>` e `BD_PRECOS`, `BD_SKU MASTER`).
+- **Nova Fonte Oficial:** Planilha `MEDBOX_MAPA_CLIENTES_2026` centralizada com o ID `1QLurrnKCXorjXUoUtPl6MoSP0Gk32Yz0AWBHxebifCw` (Aba central `MAPA_ERP` e as abas de cotação individuais `BD_<CLIENTE>`).
 
 ### Arquivos e Funções Alteradas
 - **`Codigo.js` (Backend Principal):**
@@ -14,13 +14,13 @@
   - Adicionadas funções: `obterPlanilhaMedbox_()` para centralizar o acesso.
   - Atualizada `obterOpcoesSistema()`: para carregar as opções de filtros lendo da planilha oficial por ID.
   - Atualizada `pesquisarBuscaAvancada(filtros)`: para pesquisar produtos na planilha centralizada.
-  - Atualizada `obterMapaDeProdutos(filtros)`: para realizar a descoberta de abas dinâmicas, mapeamento flexível de colunas por cliente e consolidação na memória para o Mapa de Produtos.
-  - Atualizada `obterClientesDoMapa(headers)`: agora utiliza descoberta dinâmica das abas com fallback seguro para colunas da planilha.
-  - Adicionada `f2dObterAbasClientes_(ss)`: para filtrar abas que começam com `BD_`, excluindo abas do sistema e administrativas e validando a estrutura de colunas compatíveis.
-  - Adicionada `f2dDetectarCabecalhoEColunas_(sheet)`: para realizar a descoberta dinâmica de cabeçalhos de clientes nas primeiras 5 linhas de cada aba de dados.
-  - Adicionada `f2dCarregarDadosClienteSheet_(sheet)`: para carregar quantidade e menor valor unitário por SKU para cada cliente, suportando cabeçalhos na linha 1, 2 ou 3.
+  - Atualizada `obterMapaDeProdutos(filtros)`: para realizar a descoberta de abas baseada na `LISTA_CLIENTES_OFICIAIS`, mapeamento flexível de colunas por cliente e consolidação na memória para o Mapa de Produtos.
+  - Atualizada `obterClientesDoMapa(headers)`: agora utiliza a descoberta das abas oficiais configuradas com fallback seguro para colunas da planilha.
+  - Adicionada `f2dObterAbasClientes_(ss)`: para retornar apenas as abas presentes na configuração `LISTA_CLIENTES_OFICIAIS` que passarem na validação estrutural de colunas.
+  - Adicionada `f2dDetectarCabecalhoEColunas_(sheet)`: para realizar a descoberta dinâmica de cabeçalhos de clientes nas primeiras 5 linhas de cada aba de dados, validando que contenham colunas compatíveis com SKU/produto e quantidade.
+  - Adicionada `f2dCarregarDadosClienteSheet_(sheet)`: para carregar quantidade e menor valor unitário por SKU para cada cliente, suportando cabeçalhos na linha 1, 2 ou 3 (com valor unitário opcional).
   - Adicionada `f2dEncontrarColunaFlex_(headers, candidates)`: para mapeamento flexível (fuzzy matching) de cabeçalhos de clientes.
-  - Atualizada `acumularGrupoProduto()`: suporta o fluxo de mesclagem dinâmica baseado em consumos por cliente.
+  - Atualizada `acumularGrupoProduto()`: suporta o fluxo de mesclagem baseado em consumos por cliente.
   - Atualizada `finalizarGrupoProduto()`: suporta o filtro dinâmico de cliente e a consolidação de "TODOS".
 - **`Fase2_Dashboard.js`:**
   - Atualizadas referências à planilha ativa para utilizar `obterPlanilhaMedbox_()`.
@@ -29,7 +29,7 @@
   - Adicionada a função `diagnosticarMapaDeProdutosEClientes()` que realiza diagnóstico estrutural completo e simula o processamento do Mapa de Produtos em modo somente leitura (sem gravação).
 
 ### Clientes Detectados & Abas Usadas
-- **Clientes Detectados Dinamicamente:**
+- **Clientes Detectados Dinamicamente baseados na Configuração Oficial:**
   - `VivaRio` (aba `BD_VivaRio`)
   - `AFNE` (aba `BD_AFNE`)
   - `INTS UPA Santo Amaro` (aba `BD_INTS UPA Santo Amaro`)
@@ -41,13 +41,10 @@
   - `SPDM` (aba `BD_SPDM`)
 - **Abas do Sistema Usadas:**
   - `MAPA_ERP` (aba central de produtos com seus SKUs Masters)
-  - `BD_SKU MASTER` (referência do SKU Master)
-  - `BD_PRECOS` (cadastro de tabela de preços e custos)
 
 ### Testes Executados
 - **Verificação de Sintaxe:** Executado `node -c Codigo.js Fase2_Dashboard.js Diagnostico.js` com sucesso (zero erros de sintaxe).
-- **Testes de Integração em Sandbox:**
-  - Criado mock das APIs e abas dinâmicas do Google Sheets executando toda a lógica do motor de cálculo em node.js.
+- **Testes de Unidade Locais:**
   - Validada a detecção dinâmica de cabeçalhos compatíveis na linha 1, 2 ou 3.
   - Validada a consolidação do Mapa de Produtos no modo "TODOS" (soma das quantidades, menor valor unitário dos clientes e demanda total calculada corretamente).
   - Validada a filtragem individual por cliente (exibição apenas de linhas do cliente, soma local e cards de resumo atualizados perfeitamente).
@@ -109,7 +106,7 @@
 - Teste executado sem gravacao: `testarRevisaoCosmosSemGravacao`.
 - Validacao visual e aprovacao/rejeicao real permanecem pendentes para evitar teste sobre produto real sem autorizacao explicita.
 - Limitacao: a fila `REVISAO_COSMOS` e criada/sincronizada ao carregar a tela a partir de sugestoes Cosmos existentes em `BD_PRECOS`.
-- Proximo passo: autorizar um unico item de teste controlado ou copia controlada para validar carregamento visual, simulacao, aprovacao, rejeicao, backup e relatorio automatico ponta a ponta.
+- Proximo passo: autorizar um unico item de teste controlled ou copia controlada para validar carregamento visual, simulacao, aprovacao, rejeicao, backup e relatorio automatico ponta a ponta.
 
 ## Extracao e revisao de cotacao
 
