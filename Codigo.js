@@ -33,6 +33,17 @@ const ABA_AUX = 'AUX_BUSCA';
 const MAX_RESULTADOS_BUSCA = 300;
 const MAX_RESULTADOS_MAPA = 500;
 
+const MEDBOX_SPREADSHEET_ID = '1QLurrnKCXorjXUoUtPl6MoSP0Gk32Yz0AWBHxebifCw';
+const MEDBOX_MAPA_SPREADSHEET_ID = MEDBOX_SPREADSHEET_ID;
+
+function obterPlanilhaMedbox_() {
+  return SpreadsheetApp.openById(MEDBOX_SPREADSHEET_ID);
+}
+
+function obterPlanilhaMapaMedbox_() {
+  return obterPlanilhaMedbox_();
+}
+
 /************************************************************
  * MENU GOOGLE SHEETS
  ************************************************************/
@@ -152,7 +163,7 @@ function processarLoteCosmos50Manual() {
 }
 
 function abrirAbaPorNome_(nomeAba) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = obterPlanilhaMedbox_();
   const ws = ss.getSheetByName(nomeAba);
 
   if (ws) {
@@ -167,7 +178,7 @@ function abrirAbaPorNome_(nomeAba) {
  ************************************************************/
 
 function obterOpcoesSistema() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = obterPlanilhaMedbox_();
 
   const mapa = ss.getSheetByName(ABA_MAPA);
   const aux = ss.getSheetByName(ABA_AUX);
@@ -216,7 +227,7 @@ function obterOpcoesSistema() {
  ************************************************************/
 
 function pesquisarBuscaAvancada(filtros) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = obterPlanilhaMedbox_();
   const mapa = ss.getSheetByName(ABA_MAPA);
 
   if (!mapa) throw new Error('Aba MAPA_ERP não encontrada.');
@@ -340,7 +351,7 @@ function pesquisarBuscaAvancada(filtros) {
  ************************************************************/
 
 function obterMapaDeProdutos(filtros) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = obterPlanilhaMedbox_();
   const mapa = ss.getSheetByName(ABA_MAPA);
 
   if (!mapa) throw new Error('Aba MAPA_ERP não encontrada.');
@@ -370,7 +381,28 @@ function obterMapaDeProdutos(filtros) {
   const markup = normalizarMarkup(filtrosTratados.markup);
   const limite = normalizarLimite(filtrosTratados.limite, MAX_RESULTADOS_MAPA);
 
+  // --- CARREGAMENTO DOS DADOS DE CADA CLIENTE DAS RESPECTIVAS ABAS BD_<CLIENTE> ---
+  const dadosClientesMap = {};
+  const abasClientes = f2dObterAbasClientes_(ss);
+
+  abasClientes.forEach(sheet => {
+    const name = sheet.getName();
+    const clienteName = upperText(name.substring(3).trim());
+
+    if (clienteFiltro && clienteFiltro !== normalizarTexto(clienteName)) {
+      return;
+    }
+
+    dadosClientesMap[clienteName] = f2dCarregarDadosClienteSheet_(sheet);
+  });
+
   const grupos = new Map();
+
+  // Resolve key mismatch: find the matching key from dynamic customers list for lookup
+  let matchingClientKey = "";
+  if (clienteFiltro) {
+    matchingClientKey = clientes.find(c => normalizarTexto(c) === clienteFiltro) || "";
+  }
 
   for (let i = 1; i < values.length; i++) {
     const row = values[i];
@@ -382,7 +414,53 @@ function obterMapaDeProdutos(filtros) {
     const categoriaRow = getCell(row, idx, 'Categoria');
     const fabricanteRow = getCell(row, idx, 'Fabricante Compra 2026');
     const fornecedorRow = getCell(row, idx, 'Fornecedor Compra 2026');
-    const clientesRow = getCell(row, idx, 'Clientes com Consumo');
+
+    // Identificação dinâmica de consumo por cliente
+    let temConsumoQualquerCliente = false;
+    const consumosPorCliente = {};
+
+    clientes.forEach(cliente => {
+      const clientSkuMap = dadosClientesMap[cliente];
+      let q = 0;
+      let v = null;
+      let d = 0;
+
+      if (clientSkuMap) {
+        const lookupKeys = [
+          normalizarTexto(skuMaster),
+          normalizarTexto(skuOperacional),
+          normalizarTexto(produtoNormalizado),
+          normalizarTexto(produto)
+        ].filter(Boolean);
+
+        for (const lookupKey of lookupKeys) {
+          if (clientSkuMap[lookupKey]) {
+            const dataItem = clientSkuMap[lookupKey];
+            q = dataItem.quant;
+            v = dataItem.valorUnit;
+            d = dataItem.demandaR;
+            break;
+          }
+        }
+      }
+
+      if (q > 0) {
+        temConsumoQualquerCliente = true;
+      }
+
+      consumosPorCliente[cliente] = {
+        quant: q,
+        valorUnit: v,
+        demandaR: d
+      };
+    });
+
+    if (clienteFiltro) {
+      const consumoCli = matchingClientKey ? consumosPorCliente[matchingClientKey] : null;
+      if (!consumoCli || consumoCli.quant <= 0) {
+        continue;
+      }
+    }
 
     const textoCompleto = normalizarTexto([
       produto,
@@ -391,18 +469,13 @@ function obterMapaDeProdutos(filtros) {
       produtoNormalizado,
       categoriaRow,
       fabricanteRow,
-      fornecedorRow,
-      clientesRow
+      fornecedorRow
     ].join(' '));
 
     if (termos.length > 0 && !textoAtendeTermos(textoCompleto, produto, termos)) continue;
 
     if (categoria) {
       if (!normalizarTexto(categoriaRow).includes(categoria)) continue;
-    }
-
-    if (clienteFiltro) {
-      if (!normalizarTexto(clientesRow).includes(clienteFiltro)) continue;
     }
 
     if (sku) {
@@ -426,10 +499,10 @@ function obterMapaDeProdutos(filtros) {
       grupos.set(chave, criarGrupoProduto(row, idx, clientes));
     }
 
-    acumularGrupoProduto(grupos.get(chave), row, idx, clientes);
+    acumularGrupoProduto(grupos.get(chave), row, idx, clientes, consumosPorCliente);
   }
 
-  const produtosAgrupados = Array.from(grupos.values()).map(g => finalizarGrupoProduto(g, markup));
+  const produtosAgrupados = Array.from(grupos.values()).map(g => finalizarGrupoProduto(g, markup, matchingClientKey));
 
   produtosAgrupados.sort((a, b) => {
     if ((b.quantTotal || 0) !== (a.quantTotal || 0)) {
@@ -509,7 +582,7 @@ function criarGrupoProduto(row, idx, clientes) {
   return grupo;
 }
 
-function acumularGrupoProduto(grupo, row, idx, clientes) {
+function acumularGrupoProduto(grupo, row, idx, clientes, consumosPorCliente) {
   const quantTotalRow = toNumber(getCell(row, idx, 'Quant. total')) || 0;
   const precoMedioRow = toNumber(getCell(row, idx, 'Preço Médio Clientes'));
   const menorRow = toNumber(getCell(row, idx, 'Menor Valor Unit'));
@@ -541,36 +614,57 @@ function acumularGrupoProduto(grupo, row, idx, clientes) {
     }
   }
 
-  const clientesTexto = upperText(getCell(row, idx, 'Clientes com Consumo'));
+  if (consumosPorCliente) {
+    clientes.forEach(cliente => {
+      const consumo = consumosPorCliente[cliente];
+      if (consumo && consumo.quant > 0) {
+        grupo.clientesValores[cliente].quant += consumo.quant;
 
-  if (clientesTexto) {
-    clientesTexto.split(/[;,]/).forEach(c => {
-      const t = upperText(c);
-      if (t) grupo.clientesComConsumoSet.add(t);
-    });
-  }
-
-  clientes.forEach(cliente => {
-    const q = toNumber(getCell(row, idx, `${cliente} Quant`)) || 0;
-    const v = toNumber(getCell(row, idx, `${cliente} Valor Unit`));
-
-    if (q > 0) {
-      grupo.clientesValores[cliente].quant += q;
-
-      if (v !== null) {
-        if (
-          grupo.clientesValores[cliente].valorUnit === null ||
-          v < grupo.clientesValores[cliente].valorUnit
-        ) {
-          grupo.clientesValores[cliente].valorUnit = v;
+        if (consumo.valorUnit !== null) {
+          if (
+            grupo.clientesValores[cliente].valorUnit === null ||
+            consumo.valorUnit < grupo.clientesValores[cliente].valorUnit
+          ) {
+            grupo.clientesValores[cliente].valorUnit = consumo.valorUnit;
+          }
+          grupo.clientesValores[cliente].demandaR += consumo.demandaR;
         }
 
-        grupo.clientesValores[cliente].demandaR += q * v;
+        grupo.clientesComConsumoSet.add(upperText(cliente));
       }
+    });
+  } else {
+    const clientesTexto = upperText(getCell(row, idx, 'Clientes com Consumo'));
 
-      grupo.clientesComConsumoSet.add(upperText(cliente));
+    if (clientesTexto) {
+      clientesTexto.split(/[;,]/).forEach(c => {
+        const t = upperText(c);
+        if (t) grupo.clientesComConsumoSet.add(t);
+      });
     }
-  });
+
+    clientes.forEach(cliente => {
+      const q = toNumber(getCell(row, idx, `${cliente} Quant`)) || 0;
+      const v = toNumber(getCell(row, idx, `${cliente} Valor Unit`));
+
+      if (q > 0) {
+        grupo.clientesValores[cliente].quant += q;
+
+        if (v !== null) {
+          if (
+            grupo.clientesValores[cliente].valorUnit === null ||
+            v < grupo.clientesValores[cliente].valorUnit
+          ) {
+            grupo.clientesValores[cliente].valorUnit = v;
+          }
+
+          grupo.clientesValores[cliente].demandaR += q * v;
+        }
+
+        grupo.clientesComConsumoSet.add(upperText(cliente));
+      }
+    });
+  }
 
   if (!grupo.fornecedorCompra2026) {
     grupo.fornecedorCompra2026 = upperText(getCell(row, idx, 'Fornecedor Compra 2026'));
@@ -585,36 +679,65 @@ function acumularGrupoProduto(grupo, row, idx, clientes) {
   }
 }
 
-function finalizarGrupoProduto(grupo, markup) {
-  let quantTotalClientes = 0;
+function finalizarGrupoProduto(grupo, markup, matchingClientKey) {
+  let quantTotal = 0;
+  let demandaR = 0;
+  let menorValorUnit = grupo.menorValorUnit;
 
-  Object.keys(grupo.clientesValores).forEach(cliente => {
-    quantTotalClientes += grupo.clientesValores[cliente].quant || 0;
-  });
+  if (matchingClientKey) {
+    const cliVal = grupo.clientesValores[matchingClientKey];
+    if (cliVal) {
+      quantTotal = cliVal.quant || 0;
+      menorValorUnit = cliVal.valorUnit;
+      demandaR = cliVal.demandaR || 0;
+    }
+  } else {
+    let sumQuant = 0;
+    let sumDemanda = 0;
+    let minVal = null;
 
-  const quantTotal = quantTotalClientes > 0 ? quantTotalClientes : grupo.quantTotalFallback;
+    Object.keys(grupo.clientesValores).forEach(cliente => {
+      const cliVal = grupo.clientesValores[cliente];
+      sumQuant += cliVal.quant || 0;
+      sumDemanda += cliVal.demandaR || 0;
+      if (cliVal.valorUnit !== null) {
+        if (minVal === null || cliVal.valorUnit < minVal) {
+          minVal = cliVal.valorUnit;
+        }
+      }
+    });
+
+    quantTotal = sumQuant > 0 ? sumQuant : grupo.quantTotalFallback;
+    menorValorUnit = minVal !== null ? minVal : grupo.menorValorUnit;
+    demandaR = sumDemanda > 0 ? sumDemanda : (menorValorUnit !== null ? menorValorUnit * quantTotal : 0);
+  }
 
   let precoMedioClientes = null;
-
-  if (grupo.precoMedioPeso > 0) {
-    precoMedioClientes = grupo.precoMedioSomaPonderada / grupo.precoMedioPeso;
+  if (matchingClientKey) {
+    const cliVal = grupo.clientesValores[matchingClientKey];
+    precoMedioClientes = cliVal ? cliVal.valorUnit : null;
+  } else {
+    if (grupo.precoMedioPeso > 0) {
+      precoMedioClientes = grupo.precoMedioSomaPonderada / grupo.precoMedioPeso;
+    } else {
+      precoMedioClientes = menorValorUnit;
+    }
   }
 
   const precoMedBox = calcularPrecoMedBox(grupo.skuMaster, grupo.precoCusto, markup);
-  const demandaR = grupo.menorValorUnit === null ? '' : arredondar(grupo.menorValorUnit * quantTotal, 4);
-  const statusComercial = montarStatusComercialMapa(grupo.menorValorUnit, precoMedBox);
+  const statusComercial = montarStatusComercialMapa(menorValorUnit, precoMedBox);
 
   return {
     categoria: grupo.categoria,
     skuMaster: grupo.skuMaster,
     produto: grupo.produto,
     quantTotal: arredondar(quantTotal, 4),
-    precoMedioClientes: precoMedioClientes === null ? '' : arredondar(precoMedioClientes, 4),
-    menorValorUnit: grupo.menorValorUnit,
+    precoMedioClientes: precoMedioClientes === null || precoMedioClientes === '' ? '' : arredondar(precoMedioClientes, 4),
+    menorValorUnit: menorValorUnit,
     maiorValorUnit: grupo.maiorValorUnit,
     precoMedBox: precoMedBox,
     precoCusto: grupo.precoCusto,
-    demandaR: demandaR,
+    demandaR: demandaR === 0 ? '' : arredondar(demandaR, 4),
     statusComercial: statusComercial,
     fornecedorCompra2026: grupo.fornecedorCompra2026,
     fabricanteCompra2026: grupo.fabricanteCompra2026,
@@ -961,11 +1084,136 @@ function textoTemVolumeExato(texto, volume) {
  ************************************************************/
 
 function obterClientesDoMapa(headers) {
-  return headers
-    .filter(h => String(h).trim().endsWith(' Quant'))
-    .map(h => upperText(String(h).replace(' Quant', '').trim()))
-    .filter(Boolean)
-    .sort();
+  try {
+    const ss = obterPlanilhaMapaMedbox_();
+    const abasClientes = f2dObterAbasClientes_(ss);
+    const clientes = abasClientes.map(sheet => {
+      const name = sheet.getName();
+      return upperText(name.substring(3).trim());
+    });
+    const uniqueClientes = Array.from(new Set(clientes)).filter(Boolean).sort();
+    if (uniqueClientes.length > 0) {
+      return uniqueClientes;
+    }
+  } catch (e) {
+    Logger.log("Erro ao carregar clientes dinamicamente: " + e.message);
+  }
+
+  if (headers && headers.length > 0) {
+    return headers
+      .filter(h => String(h).trim().endsWith(' Quant'))
+      .map(h => upperText(String(h).replace(' Quant', '').trim()))
+      .filter(Boolean)
+      .sort();
+  }
+  return [];
+}
+
+function f2dObterAbasClientes_(ss) {
+  const sheets = ss.getSheets();
+  const excludedPatterns = [
+    'SKU MASTER',
+    'SKU_MASTER',
+    'PRECOS',
+    'PRECO',
+    'BACKUP',
+    'REVISAO',
+    'REVISÃO',
+    'RELATORIO',
+    'RELATÓRIO',
+    'LOG',
+    'DASHBOARD',
+    'AUX',
+    'LANCAMENTO',
+    'LANÇAMENTO',
+    'CADASTRO',
+    'SIMULADOR',
+    'ADMIN',
+    'IMPORTACAO',
+    'IMPORTAÇÃO',
+    'DIAGNOSTICO',
+    'DIAGNÓSTICO'
+  ];
+  const abasClientes = [];
+  sheets.forEach(sheet => {
+    const name = sheet.getName();
+    const nameUpper = name.toUpperCase();
+    if (nameUpper.indexOf('BD_') === 0) {
+      const suffix = nameUpper.substring(3).trim();
+      const isExcluded = excludedPatterns.some(pat => nameUpper.indexOf(pat) !== -1);
+      if (!isExcluded && suffix.length > 0) {
+        abasClientes.push(sheet);
+      }
+    }
+  });
+  return abasClientes;
+}
+
+function f2dCarregarDadosClienteSheet_(sheet) {
+  const skuMap = {};
+  if (sheet.getLastRow() < 2) return skuMap;
+
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(String);
+
+  const colSku = f2dEncontrarColunaFlex_(headers, ['SKU_MASTER', 'SKU MASTER', 'SKU_OPERACIONAL', 'SKU OPERACIONAL', 'SKU']);
+  const colQtd = f2dEncontrarColunaFlex_(headers, ['QUANTIDADE', 'QUANT', 'QTD', 'QTDE', 'QUANT_TOTAL', 'QUANT. TOTAL']);
+  const colVal = f2dEncontrarColunaFlex_(headers, ['PRECO_REFERENCIA_CLIENTE', 'PRECO_REFERENCIA', 'VALOR_UNITARIO', 'VALOR UNITARIO', 'VALOR_UNIT', 'VALOR UNIT', 'PRECO', 'PRECO_MEDBOX', 'MENOR_VALOR', 'MENOR PRECO', 'PRECO_UNITARIO', 'PRECO UNITARIO']);
+
+  if (colSku === -1) {
+    return skuMap;
+  }
+
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const skuRaw = String(row[colSku]).trim();
+    if (!skuRaw) continue;
+    const skuKey = normalizarTexto(skuRaw);
+
+    const q = colQtd !== -1 ? toNumber(row[colQtd]) || 0 : 0;
+    const v = colVal !== -1 ? toNumber(row[colVal]) : null;
+
+    if (!skuMap[skuKey]) {
+      skuMap[skuKey] = {
+        quant: 0,
+        valorUnit: null,
+        demandaR: 0
+      };
+    }
+
+    skuMap[skuKey].quant += q;
+    if (v !== null && v > 0) {
+      if (skuMap[skuKey].valorUnit === null || v < skuMap[skuKey].valorUnit) {
+        skuMap[skuKey].valorUnit = v;
+      }
+    }
+  }
+
+  Object.keys(skuMap).forEach(key => {
+    const item = skuMap[key];
+    if (item.quant > 0 && item.valorUnit !== null) {
+      item.demandaR = item.quant * item.valorUnit;
+    }
+  });
+
+  return skuMap;
+}
+
+function f2dEncontrarColunaFlex_(headers, candidates) {
+  const headersNorm = headers.map(h => String(h).trim().toUpperCase().replace(/[^A-Z0-9]/g, ''));
+  for (const candidate of candidates) {
+    const candidateNorm = candidate.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const idx = headersNorm.indexOf(candidateNorm);
+    if (idx !== -1) {
+      return idx;
+    }
+    for (let i = 0; i < headersNorm.length; i++) {
+      if (headersNorm[i].indexOf(candidateNorm) !== -1 || candidateNorm.indexOf(headersNorm[i]) !== -1) {
+        return i;
+      }
+    }
+  }
+  return -1;
 }
 
 function criarIndiceColunas(headers) {

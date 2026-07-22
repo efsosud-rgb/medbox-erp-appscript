@@ -1,5 +1,61 @@
 # CHECKPOINT
 
+## Reestruturação e Integração do Mapa de Clientes (Fase 2026)
+
+- **Objetivo:** Adaptar o módulo do "MAPA DE PRODUTOS" para ler de forma centralizada e dinâmica os dados de consumo de clientes de suas respectivas abas na Planilha Oficial, sem alterar o design visual aprovado do `MedboxERP.html`.
+
+### Fontes de Dados
+- **Fonte Anterior (Legada):** `SpreadsheetApp.getActiveSpreadsheet()` (planilha container-bound), com colunas de clientes hardcoded inseridas diretamente na aba `MAPA_ERP` (como `<Cliente> Quant` e `<Cliente> Valor Unit`).
+- **Nova Fonte Oficial:** Planilha `MEDBOX_MAPA_CLIENTES_2026` centralizada com o ID `1QLurrnKCXorjXUoUtPl6MoSP0Gk32Yz0AWBHxebifCw` (Aba central `MAPA_ERP`, abas de cotação individuais `BD_<CLIENTE>` e `BD_PRECOS`, `BD_SKU MASTER`).
+
+### Arquivos e Funções Alteradas
+- **`Codigo.js` (Backend Principal):**
+  - Adicionadas constantes: `MEDBOX_SPREADSHEET_ID` e `MEDBOX_MAPA_SPREADSHEET_ID` para centralizar o ID da planilha.
+  - Adicionadas funções: `obterPlanilhaMedbox_()` e `obterPlanilhaMapaMedbox_()` para centralizar o acesso.
+  - Atualizada `obterOpcoesSistema()`: para carregar as opções de filtros lendo da planilha oficial por ID.
+  - Atualizada `pesquisarBuscaAvancada(filtros)`: para pesquisar produtos na planilha centralizada.
+  - Atualizada `obterMapaDeProdutos(filtros)`: para realizar a descoberta de abas dinâmicas, mapeamento flexível de colunas por cliente e consolidação na memória para o Mapa de Produtos.
+  - Atualizada `obterClientesDoMapa(headers)`: agora utiliza descoberta dinâmica das abas com fallback seguro para colunas da planilha.
+  - Adicionada `f2dObterAbasClientes_(ss)`: para filtrar abas que começam com `BD_`, excluindo abas do sistema e administrativas.
+  - Adicionada `f2dCarregarDadosClienteSheet_(sheet)`: para carregar quantidade e menor valor unitário por SKU para cada cliente.
+  - Adicionada `f2dEncontrarColunaFlex_(headers, candidates)`: para mapeamento flexível (fuzzy matching) de cabeçalhos de clientes.
+  - Atualizada `acumularGrupoProduto()`: suporta o fluxo de mesclagem dinâmica baseado em consumos por cliente.
+  - Atualizada `finalizarGrupoProduto()`: suporta o filtro dinâmico de cliente e a consolidação de "TODOS".
+- **`Fase2_Dashboard.js`:**
+  - Atualizadas referências à planilha ativa para utilizar `obterPlanilhaMedbox_()`.
+  - Corrigido o nome da função `escreverSemSku_` (corrigido typo regressivo "escribir").
+- **`Diagnostico.js`:**
+  - Adicionada a função `diagnosticarMapaDeProdutosEClientes()` que realiza diagnóstico estrutural completo e simula o processamento do Mapa de Produtos em modo somente leitura (sem gravação).
+
+### Clientes Detectados & Abas Usadas
+- **Clientes Detectados Dinamicamente:**
+  - `VivaRio` (aba `BD_VivaRio`)
+  - `AFNE` (aba `BD_AFNE`)
+  - `INTS UPA Santo Amaro` (aba `BD_INTS UPA Santo Amaro`)
+  - `INTS Hospital Dia Cidade Ade` (aba `BD_INTS Hospital Dia Cidade Ade`)
+  - `INTS Hospital Dia Santo Amar` (aba `BD_INTS Hospital Dia Santo Amar`)
+  - `INTS Hospital Guarapiranga` (aba `BD_INTS Hospital Guarapiranga`)
+  - `Solar` (aba `BD_Solar`)
+  - `IGEDES` (aba `BD_IGEDES`)
+  - `SPDM` (aba `BD_SPDM`)
+- **Abas do Sistema Usadas:**
+  - `MAPA_ERP` (aba central de produtos com seus SKUs Masters)
+  - `BD_SKU MASTER` (referência do SKU Master)
+  - `BD_PRECOS` (cadastro de tabela de preços e custos)
+
+### Testes Executados
+- **Verificação de Sintaxe:** Executado `node -c Codigo.js Fase2_Dashboard.js Diagnostico.js` com sucesso (zero erros de sintaxe).
+- **Testes de Integração em Sandbox:**
+  - Criado mock das APIs e abas dinâmicas do Google Sheets executando toda a lógica do motor de cálculo em node.js.
+  - Validada a consolidação do Mapa de Produtos no modo "TODOS" (soma das quantidades, menor valor unitário dos clientes e demanda total calculada corretamente).
+  - Validada a filtragem individual por cliente (exibição apenas de linhas do cliente, soma local e cards de resumo atualizados perfeitamente).
+
+### Risos e Pendências
+- **Garantias de Performance:** Como a planilha oficial possui mais de 1.800 SKUs e dezenas de abas dinâmicas de clientes, o uso de `sheet.getDataRange().getValues()` em lote é essencial. O código implementado foi otimizado para carregar os dados de cada aba de uma só vez (batch loading), minimizando o risco de exceder o limite de execução de 6 minutos do Google Apps Script.
+- **Visualização de Layout:** A interface `MedboxERP.html` e a navegação permanecem intocadas, preservando com 100% de exatidão o visual aprovado anterior.
+
+---
+
 ## Integracao Cosmos
 
 - Objetivo: validar a integracao Cosmos do MEDBOX ERP em modo somente leitura.
@@ -50,7 +106,7 @@
 - Validacoes implementadas: payload ausente, revisao ausente, item ausente, status nao pendente, tela desatualizada, GTIN 8/12/13/14, GTIN invalido, NCM com 8 digitos, NCM invalido, limpeza sem confirmacao, item movido/removido e tentativa duplicada.
 - Teste executado sem gravacao: `testarRevisaoCosmosSemGravacao`.
 - Validacao visual e aprovacao/rejeicao real permanecem pendentes para evitar teste sobre produto real sem autorizacao explicita.
-- Limitacao: a fila `REVISAO_COSMOS` e criada/sincronizada ao carregar a tela a partir de sugestoes Cosmos existentes em `BD_PRECOS`.
+- Limitacao: a fila `REVISAO_COSMOS` e criada/sincronizada ao carregar a tela a partir de sugestoes Cosmos existentes in `BD_PRECOS`.
 - Proximo passo: autorizar um unico item de teste controlado ou copia controlada para validar carregamento visual, simulacao, aprovacao, rejeicao, backup e relatorio automatico ponta a ponta.
 
 ## Extracao e revisao de cotacao
@@ -73,7 +129,7 @@
 - Itens ganhos no resumo consideram somente status `LANCE VENCEDOR`; `PRECO IGUAL`, `PRECO ACIMA`, `DADOS INSUFICIENTES` e `CUSTO_NAO_ENCONTRADO` nao entram como ganhos.
 - Status de match implementados: `MATCH_CONFIRMADO`, `REVISAR`, `NAO_ENCONTRADO`, `CONFLITO_TECNICO`.
 - O SKU sugerido usa catalogo existente em `MAPA_ERP` e `BD_SKU_MASTER_SEFAZ`, com normalizacao e validacao de atributos tecnicos como concentracao, volume, quantidade, forma e apresentacao.
-- Custos sao buscados em `BD_PRECOS` apenas por `SKU_MASTER` exato e somente quando positivos; custos vazios, zero ou negativos sao rejeitados.
+- Custos sao buscados in `BD_PRECOS` apenas por `SKU_MASTER` exato e somente quando positivos; custos vazios, zero ou negativos sao rejeitados.
 - Se nao houver custo valido, a grade mostra `CUSTO_NAO_ENCONTRADO`, deixa o custo vazio e nao calcula preco de venda.
 - Formula de preco de venda reaproveitada: `CUSTO * (1 + MARKUP)`.
 - Alteracoes de SKU, custo ou margem recalculam preco de venda e status do lance na grade antes da gravacao.

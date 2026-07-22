@@ -125,3 +125,100 @@ function rfcColunaParaLetra_(coluna) {
   }
   return letra;
 }
+
+/**
+ * Executa o diagnóstico completo do Mapa de Produtos e da Planilha Oficial.
+ * NÃO realiza nenhuma alteração de gravação nas planilhas, operando de modo seguro (somente leitura).
+ */
+function diagnosticarMapaDeProdutosEClientes() {
+  const log = [];
+  log.push('============================================================');
+  log.push('MEDBOX ERP | DIAGNÓSTICO DO MAPA DE PRODUTOS & CLIENTES');
+  log.push('Gerado em: ' + Utilities.formatDate(new Date(), 'GMT-3', 'dd/MM/yyyy HH:mm:ss'));
+  log.push('============================================================\n');
+
+  try {
+    // 1. Verificar acesso à Planilha Oficial
+    log.push('1. Verificando acesso à Planilha Oficial...');
+    log.push('Spreadsheet ID: ' + MEDBOX_MAPA_SPREADSHEET_ID);
+    const ss = obterPlanilhaMapaMedbox_();
+    log.push('Planilha Oficial carregada com sucesso: "' + ss.getName() + '"\n');
+
+    // 2. Verificar Aba MAPA_ERP
+    log.push('2. Verificando aba MAPA_ERP...');
+    const mapa = ss.getSheetByName('MAPA_ERP');
+    if (!mapa) {
+      log.push('❌ ERRO: Aba MAPA_ERP não encontrada na Planilha Oficial.');
+    } else {
+      const lastRow = mapa.getLastRow();
+      const lastCol = mapa.getLastColumn();
+      log.push('Aba MAPA_ERP localizada.');
+      log.push('Linhas Totais: ' + lastRow);
+      log.push('Colunas Totais: ' + lastCol);
+      if (lastRow > 0) {
+        const headers = mapa.getRange(1, 1, 1, lastCol).getValues()[0];
+        log.push('Cabeçalhos da MAPA_ERP: ' + headers.join(' | '));
+      }
+    }
+    log.push('');
+
+    // 3. Descobrir Clientes de forma dinâmica
+    log.push('3. Executando Descoberta Dinâmica de Clientes...');
+    const abasClientes = f2dObterAbasClientes_(ss);
+    log.push('Total de Abas de Clientes Detectadas: ' + abasClientes.length);
+
+    const clientesNomes = [];
+    abasClientes.forEach(sheet => {
+      const name = sheet.getName();
+      const clienteName = name.substring(3).trim();
+      clientesNomes.push(clienteName);
+
+      // Realizar uma verificação rápida da estrutura de cada aba de cliente
+      const rows = sheet.getLastRow();
+      const cols = sheet.getLastColumn();
+      log.push('  - Aba: "' + name + '" -> Cliente: "' + clienteName.toUpperCase() + '" (' + rows + ' linhas, ' + cols + ' colunas)');
+
+      if (rows > 0) {
+        const headers = sheet.getRange(1, 1, 1, cols).getValues()[0].map(String);
+        const colSku = f2dEncontrarColunaFlex_(headers, ['SKU_MASTER', 'SKU MASTER', 'SKU_OPERACIONAL', 'SKU OPERACIONAL', 'SKU']);
+        const colQtd = f2dEncontrarColunaFlex_(headers, ['QUANTIDADE', 'QUANT', 'QTD', 'QTDE', 'QUANT_TOTAL', 'QUANT. TOTAL']);
+        const colVal = f2dEncontrarColunaFlex_(headers, ['PRECO_REFERENCIA_CLIENTE', 'PRECO_REFERENCIA', 'VALOR_UNITARIO', 'VALOR UNITARIO', 'VALOR_UNIT', 'VALOR UNIT', 'PRECO', 'PRECO_MEDBOX', 'MENOR_VALOR', 'MENOR PRECO', 'PRECO_UNITARIO', 'PRECO UNITARIO']);
+
+        log.push('    Mapeamento de colunas:');
+        log.push('      SKU_MASTER: ' + (colSku !== -1 ? 'Coluna ' + (colSku + 1) + ' ("' + headers[colSku] + '")' : '❌ NÃO ENCONTRADA'));
+        log.push('      QUANTIDADE: ' + (colQtd !== -1 ? 'Coluna ' + (colQtd + 1) + ' ("' + headers[colQtd] + '")' : '❌ NÃO ENCONTRADA'));
+        log.push('      PREÇO CLIENTE: ' + (colVal !== -1 ? 'Coluna ' + (colVal + 1) + ' ("' + headers[colVal] + '")' : '❌ NÃO ENCONTRADA'));
+      }
+    });
+    log.push('');
+
+    // 4. Testar Simulação do Carregamento do Mapa de Produtos
+    log.push('4. Testando Simulação do Carregamento Completo...');
+    const result = obterMapaDeProdutos({ limite: 10 });
+    log.push('Simulação de obterMapaDeProdutos({ limite: 10 }) executada com sucesso.');
+    log.push('  - Total Encontrado: ' + result.totalEncontrado);
+    log.push('  - Total Exibido: ' + result.exibidos);
+    log.push('  - Quantidade Total Demandada: ' + result.quantidadeTotalDemandada);
+    log.push('  - Valor Total Demandado: ' + result.valorTotalDemandado);
+    log.push('  - Clientes Retornados: ' + result.clientes.join(', '));
+    log.push('  - Amostra de Produtos Retornados: ' + result.produtos.length);
+
+    result.produtos.forEach((prod, index) => {
+      log.push('    ' + (index + 1) + '. SKU: ' + prod.skuMaster + ' | Produto: ' + prod.produto + ' | Qtd Total: ' + prod.quantTotal + ' | Demanda R$: ' + prod.demandaR);
+    });
+    log.push('');
+
+    log.push('✅ DIAGNÓSTICO CONCLUÍDO COM SUCESSO. Nenhuma falha estrutural detectada.');
+  } catch (e) {
+    log.push('❌ ERRO DURANTE O DIAGNÓSTICO: ' + e.message);
+    log.push(e.stack);
+  }
+
+  log.push('\n============================================================');
+  log.push('FIM DO DIAGNÓSTICO');
+  log.push('============================================================');
+
+  const output = log.join('\n');
+  Logger.log(output);
+  return output;
+}

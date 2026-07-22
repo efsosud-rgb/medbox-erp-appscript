@@ -19,7 +19,7 @@ const F2D_ABA_MAPA = 'MAPA_ERP';
 const F2D_ABA_DASHBOARD = 'DASHBOARD';
 
 function calcularDashboardFase2() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = obterPlanilhaMedbox_();
   const mapa = ss.getSheetByName(F2D_ABA_MAPA);
 
   if (!mapa) {
@@ -267,7 +267,7 @@ function calcularDashboardFase2() {
 }
 
 function atualizarDashboardFase2() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = obterPlanilhaMedbox_();
   const ws = ss.getSheetByName(F2D_ABA_DASHBOARD) || ss.insertSheet(F2D_ABA_DASHBOARD);
 
   const data = calcularDashboardFase2();
@@ -311,7 +311,7 @@ function atualizarDashboardFase2() {
 
   f2dRegistrarLog_('DASHBOARD FASE 2D ATUALIZADO.');
 
-  SpreadsheetApp.getUi().alert('Dashboard Fase 2D atualizado com sucesso.');
+  SpreadsheetApp.getUi().alert('Dashboard Fase 2D updated successfully.');
 }
 
 function escreverResumoDashboard_(ws, data) {
@@ -546,7 +546,7 @@ function f2dFormatarCabecalho_(range, corFundo, corFonte) {
 }
 
 function f2dRegistrarLog_(mensagem) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = obterPlanilhaMedbox_();
   let ws = ss.getSheetByName('LOG_PROCESSAMENTO');
 
   if (!ws) {
