@@ -275,7 +275,7 @@
     .cards {
       margin-top: 7px;
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
+      grid-template-columns: repeat(8, 1fr);
       gap: 7px;
     }
 
@@ -303,7 +303,7 @@
     }
 
     .card-value {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 900;
       color: var(--azul);
       white-space: nowrap;
@@ -320,6 +320,7 @@
       border-collapse: collapse;
       font-size: 11px;
       text-transform: uppercase;
+      table-layout: fixed;
     }
 
     th {
@@ -330,8 +331,16 @@
       border: 1px solid #0b416a;
       position: sticky;
       top: 0;
-      z-index: 2;
+      z-index: 4;
       white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th:hover {
+      background: #0b416a;
     }
 
     td {
@@ -339,6 +348,9 @@
       border: 1px solid #e1e6eb;
       vertical-align: top;
       background: white;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     tr:nth-child(even) td { background: #fafbfd; }
@@ -346,8 +358,8 @@
     .results-panel { margin-top: 7px; }
 
     .table-wrap {
-      height: calc(100vh - 505px);
-      min-height: 260px;
+      height: calc(100vh - 460px);
+      min-height: 320px;
       overflow: auto;
       border: 1px solid var(--cinza-borda);
       border-radius: 0 0 9px 9px;
@@ -376,60 +388,6 @@
       white-space: nowrap;
     }
 
-    .cotacao-table th {
-      text-align: center;
-      vertical-align: middle;
-    }
-
-    .cotacao-table .col-center,
-    .cotacao-table .col-center input {
-      text-align: center;
-    }
-
-    .cotacao-table .col-left,
-    .cotacao-table .col-left input {
-      text-align: left;
-    }
-
-    .cotacao-table .col-money,
-    .cotacao-table .col-money input {
-      text-align: right;
-      white-space: nowrap;
-    }
-
-    .cotacao-resumo-grid {
-      display: grid;
-      grid-template-columns: repeat(6, minmax(145px, 1fr));
-      gap: 10px;
-      margin-top: 8px;
-    }
-
-    .cotacao-card {
-      border: 1px solid var(--cinza-borda);
-      border-radius: 6px;
-      background: #fff;
-      padding: 10px 12px;
-      min-height: 72px;
-    }
-
-    .cotacao-card-label {
-      color: var(--cinza-texto);
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0;
-      text-transform: uppercase;
-      line-height: 1.25;
-    }
-
-    .cotacao-card-value {
-      margin-top: 8px;
-      color: var(--azul);
-      font-size: 18px;
-      font-weight: 900;
-      line-height: 1.15;
-      white-space: nowrap;
-    }
-
     .small {
       font-size: 10px;
       color: #687587;
@@ -447,12 +405,6 @@
       display: flex;
       justify-content: space-between;
     }
-
-    .col-produto { min-width: 360px; }
-    .col-sku { min-width: 190px; }
-    .col-fornecedor { min-width: 180px; }
-    .col-fabricante { min-width: 160px; }
-    .col-cliente { min-width: 120px; text-align: right; white-space: nowrap; }
 
     .client-th {
       color: #123;
@@ -476,35 +428,8 @@
     .client-color-6 { background: var(--cliente-7) !important; }
     .client-color-7 { background: var(--cliente-8) !important; }
 
-    .mapa-table thead tr:nth-child(1) th { top: 0; z-index: 4; }
-    .mapa-table thead tr:nth-child(2) th { top: 26px; z-index: 3; }
-
-    .form-page {
-      display: grid;
-      grid-template-columns: minmax(900px, 1fr) 330px;
-      gap: 8px;
-    }
-
-    .result-box {
-      background: #eef7ee;
-      border: 1px solid #b8dfba;
-      border-radius: 8px;
-      padding: 10px;
-      font-weight: 800;
-      color: #115522;
-      min-height: 60px;
-      line-height: 1.5;
-    }
-
-    .warn-box {
-      background: #fff7df;
-      border: 1px solid #e6c15a;
-      color: #6b4a00;
-      border-radius: 8px;
-      padding: 10px;
-      font-weight: 800;
-      line-height: 1.5;
-    }
+    .mapa-table thead tr:nth-child(1) th { top: 0; z-index: 5; }
+    .mapa-table thead tr:nth-child(2) th { top: 24px; z-index: 4; }
 
     .dashboard-grid {
       display: grid;
@@ -513,45 +438,30 @@
       margin-top: 8px;
     }
 
-    .upload-box {
-      border: 2px dashed #8aa6bf;
-      border-radius: 10px;
-      background: #f8fbff;
-      padding: 14px;
-      text-align: center;
-      min-height: 110px;
-    }
-
-    .upload-box strong {
-      color: var(--azul);
-      display: block;
-      font-size: 14px;
-      margin-bottom: 8px;
-    }
-
-    .progress-line {
-      width: 100%;
-      height: 10px;
-      background: #e5e9ef;
-      border-radius: 99px;
-      overflow: hidden;
-      margin-top: 8px;
-    }
-
-    .progress-bar {
+    .th-resizer {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 6px;
       height: 100%;
-      width: 0%;
-      background: var(--verde);
-      transition: width 0.3s ease;
+      cursor: col-resize;
+      z-index: 10;
+    }
+
+    .th-resizer:hover {
+      background: var(--vermelho);
+    }
+
+    .sort-indicator {
+      margin-left: 4px;
+      font-size: 9px;
+      display: inline-block;
     }
 
     @media (max-width: 1200px) {
-      .grid-top, .form-page, .dashboard-grid { grid-template-columns: 1fr; }
+      .grid-top, .dashboard-grid { grid-template-columns: 1fr; }
       .filters, .filters-row2, .filters-mapa, .grid-form, .grid-form-3, .grid-form-2, .cards, .cards4 {
         grid-template-columns: repeat(2, 1fr);
-      }
-      .cotacao-resumo-grid {
-        grid-template-columns: repeat(2, minmax(145px, 1fr));
       }
     }
   </style>
@@ -562,7 +472,7 @@
     <div class="topbar">
       <div class="top-title">
         <h1>MEDBOX ERP | SISTEMA COMERCIAL</h1>
-        <span>BUSCA | MAPA | COTAÇÕES | PREÇOS | IMPORTAÇÃO | SIMULADOR | DASHBOARD</span>
+        <span>BUSCA AVANÇADA | MAPA DE PRODUTOS | DASHBOARD</span>
       </div>
 
       <div class="logo">
@@ -574,10 +484,6 @@
     <div class="tabs">
       <button id="tabBusca" class="tab active" onclick="trocarTela('Busca_Avançada')">🔎 BUSCA_AVANÇADA</button>
       <button id="tabMapa" class="tab" onclick="trocarTela('Mapa_de_Produtos')">🧭 MAPA_DE_PRODUTOS</button>
-      <button id="tabCotacao" class="tab" onclick="trocarTela('Lancar_Cotacao')">📝 LANÇAR COTAÇÃO</button>
-      <button id="tabPreco" class="tab" onclick="trocarTela('Lancar_Preco')">💰 LANÇAR PREÇO</button>
-      <button id="tabImportar" class="tab" onclick="trocarTela('Importar_Tabela')">📥 IMPORTAR TABELA</button>
-      <button id="tabSimulador" class="tab" onclick="trocarTela('Simulador_Precos')">🧮 SIMULADOR</button>
       <button id="tabDashboard" class="tab" onclick="trocarTela('Dashboard')">📊 DASHBOARD</button>
     </div>
 
@@ -617,40 +523,19 @@
               <button class="btn btn-secondary" onclick="limparBusca()">🧹 LIMPAR FILTROS</button>
               <button class="btn btn-secondary" onclick="carregarOpcoes()">🔄 ATUALIZAR OPÇÕES</button>
               <button class="btn btn-secondary" onclick="exportarCsvBusca()">📤 EXPORTAR CSV</button>
+              <button class="btn btn-secondary" onclick="restaurarLargurasColunas('busca_table')">🧹 RESTAURAR LARGURAS</button>
               <div class="status" id="statusBusca">CARREGANDO OPÇÕES...</div>
             </div>
           </div>
         </div>
 
-        <div class="cards">
+        <div class="cards" style="grid-template-columns: repeat(6, 1fr);">
           <div class="card"><div class="card-title">Resultados</div><div class="card-value" id="busca_cardResultados">0</div><div class="card-sub" id="busca_cardExibidos">0 exibidos</div></div>
           <div class="card"><div class="card-title">Qtde. demandada</div><div class="card-value" id="busca_cardQtdDemandada">0</div><div class="card-sub">soma dos itens exibidos</div></div>
           <div class="card"><div class="card-title">Valor demandado</div><div class="card-value" id="busca_cardValorDemandado">R$ 0,00</div><div class="card-sub">menor preço × quantidade</div></div>
-          <div class="card"><div class="card-title">Clientes no mapa</div><div class="card-value" id="cardClientes">0</div><div class="card-sub">detectados no MAPA_ERP</div></div>
+          <div class="card"><div class="card-title">Clientes no mapa</div><div class="card-value" id="cardClientes">0</div><div class="card-sub">detectados</div></div>
           <div class="card"><div class="card-title">Produtos no mapa</div><div class="card-value" id="cardProdutos">0</div><div class="card-sub">base consolidada</div></div>
-          <div class="card"><div class="card-title">Última atualização</div><div class="card-value" id="cardAtualizado" style="font-size:15px;">--</div><div class="card-sub">horário da consulta</div></div>
-        </div>
-
-        <div class="grid-top" style="margin-top:7px;">
-          <div class="panel">
-            <div class="panel-header">COMO USAR</div>
-            <div class="panel-body">
-              1) DIGITE TERMOS COMO SORO, CLORETO, 100ML.<br>
-              2) USE CATEGORIA, CLIENTE, SKU E FABRICANTE PARA REFINAR.<br>
-              3) PREÇO MEDBOX = PREÇO CUSTO × (1 + MARKUP).<br>
-              4) SÓ CALCULA PREÇO MEDBOX QUANDO HOUVER PREÇO CUSTO.
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-header">SUGESTÕES DE SKU</div>
-            <div class="panel-body" style="padding:0;">
-              <table>
-                <thead><tr><th>SKU sugerido</th><th>Tipo</th><th>Score</th></tr></thead>
-                <tbody id="busca_sugestoesBody"><tr><td colspan="3">NENHUMA PESQUISA EXECUTADA AINDA.</td></tr></tbody>
-              </table>
-            </div>
-          </div>
+          <div class="card"><div class="card-title">Última atualização</div><div class="card-value" id="cardAtualizado" style="font-size:11px;">--</div><div class="card-sub">horário da consulta</div></div>
         </div>
 
         <div class="panel results-panel">
@@ -660,22 +545,22 @@
           </div>
 
           <div class="table-wrap">
-            <table>
+            <table id="busca_table">
               <thead>
                 <tr>
-                  <th>Categoria</th>
-                  <th>SKU Master</th>
-                  <th class="col-produto">Produto</th>
-                  <th>Quant. total</th>
-                  <th>Menor Preço</th>
-                  <th>Preço Médio Cliente</th>
-                  <th>Preço Custo</th>
-                  <th>Preço MedBox</th>
-                  <th>Demanda R$</th>
-                  <th>Status</th>
-                  <th>Fornecedor</th>
-                  <th>Fabricante</th>
-                  <th>Clientes</th>
+                  <th style="width: 110px;" onclick="ordenarTabela('busca_table', 0, 'text')">Categoria<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+                  <th style="width: 110px;" onclick="ordenarTabela('busca_table', 1, 'text')">SKU Master<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+                  <th style="width: 260px;" onclick="ordenarTabela('busca_table', 2, 'text')">Produto<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+                  <th style="width: 100px;" onclick="ordenarTabela('busca_table', 3, 'currency')">Preço Custo<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+                  <th style="width: 100px;" onclick="ordenarTabela('busca_table', 4, 'currency')">Preço MedBox<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+                  <th style="width: 120px;" onclick="ordenarTabela('busca_table', 5, 'date')">Última Data Preço<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+                  <th style="width: 100px;" onclick="ordenarTabela('busca_table', 6, 'number')">Última Qtd Cotada<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+                  <th style="width: 110px;" onclick="ordenarTabela('busca_table', 7, 'currency')">Último V.Unit Cotado<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+                  <th style="width: 140px;" onclick="ordenarTabela('busca_table', 8, 'text')">Clientes com Demanda<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+                  <th style="width: 110px;" onclick="ordenarTabela('busca_table', 9, 'text')">Status Cadastro<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+                  <th style="width: 110px;" onclick="ordenarTabela('busca_table', 10, 'text')">Status Preço<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+                  <th style="width: 120px;" onclick="ordenarTabela('busca_table', 11, 'text')">Fornecedor<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+                  <th style="width: 120px;" onclick="ordenarTabela('busca_table', 12, 'text')">Fabricante<span class="sort-indicator"></span><div class="th-resizer"></div></th>
                 </tr>
               </thead>
               <tbody id="busca_resultadosBody"><tr><td colspan="13">NENHUMA PESQUISA EXECUTADA AINDA.</td></tr></tbody>
@@ -720,18 +605,19 @@
               <button class="btn btn-secondary" onclick="limparMapa()">🧹 LIMPAR FILTROS</button>
               <button class="btn btn-secondary" onclick="carregarOpcoes()">🔄 ATUALIZAR OPÇÕES</button>
               <button class="btn btn-secondary" onclick="exportarCsvMapa()">📤 EXPORTAR CSV</button>
+              <button class="btn btn-secondary" onclick="restaurarLargurasColunas('mapa_table')">🧹 RESTAURAR LARGURAS</button>
               <div class="status" id="statusMapa">AGUARDANDO CARREGAMENTO DO MAPA.</div>
             </div>
           </div>
         </div>
 
-        <div class="cards">
+        <div class="cards" style="grid-template-columns: repeat(6, 1fr);">
           <div class="card"><div class="card-title">Produtos encontrados</div><div class="card-value" id="mapa_cardEncontrados">0</div><div class="card-sub" id="mapa_cardExibidos">0 exibidos</div></div>
           <div class="card"><div class="card-title">Qtde. demandada</div><div class="card-value" id="mapa_cardQtdDemandada">0</div><div class="card-sub">soma da pesquisa</div></div>
           <div class="card"><div class="card-title">Valor demandado</div><div class="card-value" id="mapa_cardValorDemandado">R$ 0,00</div><div class="card-sub">menor preço × quantidade</div></div>
           <div class="card"><div class="card-title">Produtos no MAPA_ERP</div><div class="card-value" id="mapa_cardProdutos">0</div><div class="card-sub">base completa</div></div>
           <div class="card"><div class="card-title">Clientes</div><div class="card-value" id="mapa_cardClientes">0</div><div class="card-sub">detectados</div></div>
-          <div class="card"><div class="card-title">Atualizado em</div><div class="card-value" id="mapa_cardAtualizado" style="font-size:15px;">--</div><div class="card-sub">última consulta</div></div>
+          <div class="card"><div class="card-title">Atualizado em</div><div class="card-value" id="mapa_cardAtualizado" style="font-size:11px;">--</div><div class="card-sub">última consulta</div></div>
         </div>
 
         <div class="panel results-panel">
@@ -741,311 +627,21 @@
           </div>
 
           <div class="table-wrap mapa">
-            <table class="mapa-table">
+            <table class="mapa-table" id="mapa_table">
               <thead id="mapa_thead">
                 <tr>
-                  <th>Categoria</th><th>SKU Master</th><th>Produto</th><th>Quant. total</th><th>Menor Preço</th>
-                  <th>Preço Médio</th><th>Preço Custo</th><th>Preço MedBox</th><th>Demanda R$</th>
-                  <th>Status</th><th>Fornecedor</th><th>Fabricante</th><th>Clientes</th>
+                  <th style="width: 100px;">Categoria</th>
+                  <th style="width: 100px;">SKU Master</th>
+                  <th style="width: 250px;">Produto</th>
+                  <th style="width: 90px;">Preço Custo</th>
+                  <th style="width: 90px;">Preço MedBox</th>
+                  <th style="width: 110px;">Fornecedor</th>
+                  <th style="width: 110px;">Fabricante</th>
+                  <th style="width: 120px;">Última At. Preço</th>
                 </tr>
               </thead>
-              <tbody id="mapa_resultadosBody"><tr><td colspan="13">CLIQUE EM CARREGAR MAPA.</td></tr></tbody>
+              <tbody id="mapa_resultadosBody"><tr><td colspan="8">CLIQUE EM CARREGAR MAPA.</td></tr></tbody>
             </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- LANÇAR COTAÇÃO -->
-      <div id="screenCotacao" class="screen">
-        <div class="form-page">
-          <div class="panel">
-            <div class="panel-header">📝 LANÇAMENTO DE NOVA COTAÇÃO</div>
-            <div class="panel-body">
-              <div class="grid-form">
-                <div><label>Data da Cotação</label><input id="cot_dataCotacao" type="date"></div>
-                <div><label>Cliente</label><input id="cot_cliente" list="lista_clientes" placeholder="Cliente"></div>
-                <div><label>Responsável</label><input id="cot_responsavel" placeholder="Responsável"></div>
-                <div><label>Categoria</label><input id="cot_categoria" list="lista_categorias" placeholder="Categoria"></div>
-              </div>
-
-              <div style="margin-top:7px;">
-                <label>Descrição do Item</label>
-                <textarea id="cot_descricaoCliente" placeholder="Descrição recebida do cliente"></textarea>
-              </div>
-
-              <div class="grid-form" style="margin-top:7px;">
-                <div><label>Quantidade</label><input id="cot_quantidade" placeholder="Quantidade"></div>
-                <div><label>Unidade</label><input id="cot_unidade" placeholder="UN / CX / FR"></div>
-                <div><label>Preço Referência Cliente</label><input id="cot_precoReferenciaCliente" placeholder="0,00"></div>
-                <div><label>Markup %</label><input id="cot_markupPercentual" value="50"></div>
-              </div>
-
-              <div class="grid-form-3" style="margin-top:7px;">
-                <div><label>SKU Master</label><input id="cot_skuMaster" list="lista_skus" placeholder="SKU Master"></div>
-                <div><label>SKU Operacional</label><input id="cot_skuOperacional" placeholder="SKU Operacional"></div>
-                <div><label>Marca / Fabricante</label><input id="cot_marcaFabricante" list="lista_fabricantes" placeholder="Marca/Fabricante"></div>
-              </div>
-
-              <div class="grid-form-2" style="margin-top:7px;">
-                <div><label>Status Cotação</label><select id="cot_statusCotacao"><option>NOVA</option><option>EM ANÁLISE</option><option>COTADA</option><option>GANHA</option><option>PERDIDA</option><option>NÃO COTAMOS</option></select></div>
-                <div><label>Origem</label><select id="cot_origem"><option>LANÇAMENTO MANUAL</option><option>E-MAIL</option><option>PLANILHA CLIENTE</option><option>WHATSAPP</option></select></div>
-              </div>
-
-              <div style="margin-top:7px;">
-                <label>Observação</label>
-                <textarea id="cot_observacao" placeholder="Observação"></textarea>
-              </div>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-header">AÇÕES</div>
-            <div class="panel-body actions">
-              <div class="upload-box" id="uploadCotacaoPrincipal" data-versao-ui="upload-cotacao-v23-fix" style="display:block; visibility:visible; opacity:1; min-height:132px;">
-                <strong>ARQUIVO DA COTAÇÃO</strong>
-                <div class="small" style="margin-bottom:6px;">UPLOAD DE COTAÇÃO ATIVO</div>
-                <input id="ext_arquivoCotacao" type="file" accept=".xlsx,.xls,.csv,.txt,.pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="atualizarArquivoCotacaoSelecionado()">
-                <div class="small" id="ext_arquivoInfo" style="margin-top:8px;">NENHUM ARQUIVO SELECIONADO.</div>
-                <div style="display:flex; gap:6px; align-items:center; margin-top:8px; flex-wrap:wrap;">
-                  <button type="button" class="btn btn-secondary" id="ext_removerArquivoBtn" style="flex:1;" onclick="removerArquivoCotacao()" disabled>REMOVER ARQUIVO</button>
-                  <button type="button" class="btn btn-primary" id="ext_extrairArquivoBtn" style="flex:1;" onclick="extrairCotacaoArquivoSelecionado()" disabled>🔍 EXTRAIR COTAÇÃO</button>
-                </div>
-              </div>
-
-              <div style="display:flex; gap:6px;">
-                <button class="btn btn-primary" style="flex:1;" onclick="salvarCotacao()">💾 SALVAR COTAÇÃO</button>
-              </div>
-              <button class="btn btn-secondary" onclick="abrirExtrairCotacao()">📂 CONSULTAR COTAÇÕES JÁ CADASTRADAS</button>
-              <button class="btn btn-secondary" onclick="limparCotacao()">🧹 LIMPAR</button>
-              <button class="btn btn-secondary" onclick="carregarOpcoesFase2()">🔄 ATUALIZAR LISTAS</button>
-              <div class="status" id="statusCotacao">PRONTO PARA LANÇAR COTAÇÃO.</div>
-              <div class="result-box" id="resultadoCotacao">A COTAÇÃO SERÁ SALVA EM BD_COTACOES.</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- CONSULTAR COTAÇÕES JÁ CADASTRADAS -->
-        <div class="panel results-panel" id="painelExtrairCotacao" style="display:none;">
-          <div class="panel-header blue">
-            <span id="ext_tituloPainel">📂 CONSULTAR COTAÇÕES JÁ CADASTRADAS</span>
-            <span id="ext_resultInfo" class="small" style="color:white;">SELECIONE UM ARQUIVO OU CLIENTE</span>
-          </div>
-
-          <div class="panel-body">
-            <div class="filters-mapa" style="grid-template-columns: 1fr auto auto;">
-              <div>
-                <label>Cliente</label>
-                <select id="ext_cliente"><option value="">CARREGANDO CLIENTES...</option></select>
-              </div>
-              <div style="display:flex; align-items:flex-end;">
-                <button type="button" class="btn btn-secondary" onclick="extrairCotacao()">CONSULTAR CLIENTE</button>
-              </div>
-              <div style="display:flex; align-items:flex-end; gap:6px; flex-wrap:wrap;">
-                <button class="btn btn-secondary" id="ext_confirmarImportacaoBtn" onclick="salvarCotacaoExtraida()" disabled>SALVAR COTAÇÃO</button>
-                <button class="btn btn-secondary" id="ext_imprimirCotacaoBtn" onclick="imprimirCotacaoSalva()" disabled>IMPRIMIR COTAÇÃO</button>
-                <button class="btn btn-secondary" id="ext_pdfCotacaoBtn" onclick="salvarPdfCotacaoSalva()" disabled>SALVAR EM PDF</button>
-                <button class="btn btn-secondary" id="ext_novaCotacaoBtn" onclick="novaCotacaoExtraida()" disabled>NOVA COTAÇÃO</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="panel-body" id="ext_resumoCotacao" style="display:none; padding-top:0;"></div>
-
-          <div class="table-wrap">
-            <table class="cotacao-table">
-              <thead>
-                <tr>
-                  <th>Código</th>
-                  <th>Descrição original</th>
-                  <th>Quantidade</th>
-                  <th>Valor compra cliente</th>
-                  <th>Valor total cliente</th>
-                  <th>SKU Master</th>
-                  <th>Custo MedBox</th>
-                  <th>Fornecedor custo</th>
-                  <th>Data custo</th>
-                  <th>Margem %</th>
-                  <th>Preço venda MedBox</th>
-                  <th>Valor total MedBox</th>
-                  <th>Status lance</th>
-                </tr>
-              </thead>
-              <tbody id="ext_resultadosBody"><tr><td colspan="13">SELECIONE UM CLIENTE E CLIQUE EM EXTRAIR COTAÇÃO.</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- LANÇAR PREÇO -->
-      <div id="screenPreco" class="screen">
-        <div class="form-page">
-          <div class="panel">
-            <div class="panel-header">💰 LANÇAMENTO DE PREÇO / TABELA DE FORNECEDOR</div>
-            <div class="panel-body">
-              <div class="grid-form">
-                <div><label>Data Tabela</label><input id="pre_dataTabela" type="date"></div>
-                <div><label>Validade Tabela</label><input id="pre_validadeTabela" type="date"></div>
-                <div><label>Fornecedor</label><input id="pre_fornecedor" list="lista_fornecedores" placeholder="Fornecedor"></div>
-                <div><label>Fabricante / Marca</label><input id="pre_fabricanteMarca" list="lista_fabricantes" placeholder="Fabricante"></div>
-              </div>
-
-              <div style="margin-top:7px;">
-                <label>Descrição Produto Fornecedor</label>
-                <textarea id="pre_descricaoFornecedor" placeholder="Descrição da tabela ou lançamento avulso"></textarea>
-              </div>
-
-              <div class="grid-form" style="margin-top:7px;">
-                <div><label>SKU Master</label><input id="pre_skuMaster" list="lista_skus" placeholder="SKU Master"></div>
-                <div><label>SKU Operacional</label><input id="pre_skuOperacional" placeholder="SKU Operacional"></div>
-                <div><label>Unidade</label><input id="pre_unidade" placeholder="UN / CX / FR"></div>
-                <div><label>Preço Custo</label><input id="pre_precoCusto" placeholder="0,00"></div>
-              </div>
-
-              <div class="grid-form" style="margin-top:7px;">
-                <div><label>NCM</label><input id="pre_ncm" placeholder="NCM"></div>
-                <div><label>EAN</label><input id="pre_ean" placeholder="EAN"></div>
-                <div><label>CST</label><input id="pre_cst" placeholder="CST"></div>
-                <div><label>Origem</label><select id="pre_origem"><option>LANÇAMENTO AVULSO</option><option>TABELA FORNECEDOR</option><option>XML NF-E</option><option>COTAÇÃO FORNECEDOR</option></select></div>
-              </div>
-
-              <div class="grid-form" style="margin-top:7px;">
-                <div><label>IPI %</label><input id="pre_ipiPercentual" placeholder="0"></div>
-                <div><label>ICMS %</label><input id="pre_icmsPercentual" placeholder="0"></div>
-                <div><label>Frete %</label><input id="pre_fretePercentual" placeholder="0"></div>
-                <div><label>Outras Despesas %</label><input id="pre_outrasDespesasPercentual" placeholder="0"></div>
-              </div>
-
-              <div style="margin-top:7px;">
-                <label>Observação</label>
-                <textarea id="pre_observacao" placeholder="Observação"></textarea>
-              </div>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-header">AÇÕES</div>
-            <div class="panel-body actions">
-              <button class="btn btn-primary" onclick="salvarPreco()">💾 SALVAR PREÇO</button>
-              <button class="btn btn-secondary" onclick="limparPreco()">🧹 LIMPAR</button>
-              <button class="btn btn-secondary" onclick="carregarOpcoesFase2()">🔄 ATUALIZAR LISTAS</button>
-              <div class="status" id="statusPreco">PRONTO PARA LANÇAR PREÇO.</div>
-              <div class="result-box" id="resultadoPreco">O PREÇO SERÁ SALVO EM BD_PRECOS.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- IMPORTAR TABELA -->
-      <div id="screenImportar" class="screen">
-        <div class="form-page">
-          <div class="panel">
-            <div class="panel-header">📥 IMPORTADOR UNIVERSAL DE TABELAS DE PREÇO</div>
-            <div class="panel-body">
-              <div class="grid-form">
-                <div><label>Fornecedor</label><input id="imp_fornecedor" list="lista_fornecedores" placeholder="Ex.: NOVA LINEA"></div>
-                <div><label>Fabricante padrão</label><input id="imp_fabricantePadrao" list="lista_fabricantes" placeholder="Opcional"></div>
-                <div><label>Origem</label><select id="imp_origem"><option>TABELA FORNECEDOR</option><option>PROPOSTA FORNECEDOR</option><option>PEDIDO FORNECEDOR</option><option>PDF OCR</option><option>PLANILHA XLSX</option><option>LANÇAMENTO IMPORTADO</option></select></div>
-                <div><label>Data da Tabela</label><input id="imp_dataTabela" type="date"></div>
-              </div>
-
-              <div class="grid-form-2" style="margin-top:7px;">
-                <div><label>Validade da Tabela</label><input id="imp_validadeTabela" type="date"></div>
-                <div><label>Tipo de preço principal</label><select id="imp_tipoPreco"><option>PREÇO CUSTO</option><option>PREÇO VENDA FORNECEDOR</option><option>PREÇO COM ICMS/ST</option><option>MENOR PREÇO DA TABELA</option></select></div>
-              </div>
-
-              <div style="margin-top:10px;" class="upload-box">
-                <strong>ANEXAR ARQUIVO DA TABELA</strong>
-                <input id="imp_arquivo" type="file" accept=".xlsx,.xls,.csv,.txt,.pdf,.doc,.docx,.jpg,.jpeg,.png" onchange="atualizarArquivoImportacaoSelecionado()">
-                <div style="display:flex; gap:6px; align-items:center; margin-top:8px;">
-                  <button type="button" class="btn btn-secondary" id="imp_removerArquivo" onclick="removerArquivoImportacao()" disabled>REMOVER ARQUIVO</button>
-                  <span class="small" id="imp_arquivoInfo">NENHUM ARQUIVO SELECIONADO.</span>
-                </div>
-                <div class="small" style="margin-top:8px;">
-                  FORMATOS: XLSX, XLS, CSV, TXT, PDF, DOC, DOCX, JPEG, PNG.
-                </div>
-                <div class="progress-line"><div class="progress-bar" id="imp_progressBar"></div></div>
-              </div>
-
-              <div style="margin-top:10px;">
-                <label>Observação da importação</label>
-                <textarea id="imp_observacao" placeholder="Ex.: tabela recebida por e-mail, preço válido para cotação, revisar OCR etc."></textarea>
-              </div>
-
-              <div class="warn-box" style="margin-top:8px;">
-                REGRA DE SEGURANÇA: O ARQUIVO SERÁ IMPORTADO PRIMEIRO PARA A ABA
-                REVISAO_IMPORTACAO_PRECOS. SOMENTE LINHAS MARCADAS COMO APROVAR/APROVADO
-                SERÃO ENVIADAS PARA BD_PRECOS.
-              </div>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-header">AÇÕES</div>
-            <div class="panel-body actions">
-              <button class="btn btn-primary" onclick="importarTabelaPreco()">📥 IMPORTAR PARA REVISÃO</button>
-              <button class="btn btn-secondary" onclick="aprovarRevisaoPrecos()">✅ APROVAR REVISÃO PARA BD_PRECOS</button>
-              <button class="btn btn-secondary" onclick="limparImportacao()">🧹 LIMPAR</button>
-              <button class="btn btn-secondary" onclick="carregarOpcoesFase2()">🔄 ATUALIZAR LISTAS</button>
-              <div class="status" id="statusImportar">PRONTO PARA IMPORTAR TABELA.</div>
-              <div class="result-box" id="resultadoImportar">
-                O ARQUIVO SERÁ SALVO NO DRIVE E OS ITENS EXTRAÍDOS IRÃO PARA REVISAO_IMPORTACAO_PRECOS.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- SIMULADOR -->
-      <div id="screenSimulador" class="screen">
-        <div class="form-page">
-          <div class="panel">
-            <div class="panel-header">🧮 SIMULADOR DE PREÇOS COM FRETE E IMPOSTOS</div>
-            <div class="panel-body">
-              <div class="grid-form-2">
-                <div><label>SKU Master / Produto</label><input id="sim_skuMaster" list="lista_skus" placeholder="SKU Master ou descrição"></div>
-                <div><label>Produto</label><input id="sim_produto" placeholder="Produto"></div>
-              </div>
-
-              <div class="grid-form" style="margin-top:7px;">
-                <div><label>Preço Custo</label><input id="sim_precoCusto" placeholder="Vazio = busca por SKU"></div>
-                <div><label>Markup %</label><input id="sim_markupPercentual" value="50"></div>
-                <div><label>Preço Cliente</label><input id="sim_precoCliente" placeholder="0,00"></div>
-                <div><label>Status</label><input id="sim_status" readonly></div>
-              </div>
-
-              <div class="grid-form" style="margin-top:7px;">
-                <div><label>Frete %</label><input id="sim_fretePercentual" placeholder="0"></div>
-                <div><label>Frete R$</label><input id="sim_freteValor" placeholder="0,00"></div>
-                <div><label>Imposto %</label><input id="sim_impostoPercentual" placeholder="0"></div>
-                <div><label>Imposto R$</label><input id="sim_impostoValor" placeholder="0,00"></div>
-              </div>
-
-              <div class="grid-form" style="margin-top:7px;">
-                <div><label>Outras Despesas %</label><input id="sim_outrasDespesasPercentual" placeholder="0"></div>
-                <div><label>Outras Despesas R$</label><input id="sim_outrasDespesasValor" placeholder="0,00"></div>
-                <div><label>Custo Total</label><input id="sim_custoTotal" readonly></div>
-                <div><label>Preço MedBox</label><input id="sim_precoMedbox" readonly></div>
-              </div>
-
-              <div class="grid-form-2" style="margin-top:7px;">
-                <div><label>Diferença R$</label><input id="sim_diferenca" readonly></div>
-                <div><label>Mensagem</label><input id="sim_mensagem" readonly></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="panel-header">AÇÕES</div>
-            <div class="panel-body actions">
-              <button class="btn btn-primary" onclick="simularPreco()">🧮 SIMULAR</button>
-              <button class="btn btn-secondary" onclick="buscarCustoSku()">🔍 BUSCAR CUSTO POR SKU/DESCRIÇÃO</button>
-              <button class="btn btn-secondary" onclick="limparSimulador()">🧹 LIMPAR</button>
-              <div class="status" id="statusSimulador">PRONTO PARA SIMULAR.</div>
-              <div class="warn-box">
-                FÓRMULA: CUSTO TOTAL = CUSTO + FRETE + IMPOSTOS + OUTRAS DESPESAS.<br>
-                PREÇO MEDBOX = CUSTO TOTAL × (1 + MARKUP).
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -1055,48 +651,102 @@
         <div class="panel">
           <div class="panel-header">📊 DASHBOARD COMERCIAL</div>
           <div class="panel-body">
-            <div class="cards">
-              <div class="card"><div class="card-title">Produtos no Mapa</div><div class="card-value" id="dash_produtos">0</div><div class="card-sub">MAPA_ERP</div></div>
-              <div class="card"><div class="card-title">Clientes</div><div class="card-value" id="dash_clientes">0</div><div class="card-sub">detectados</div></div>
-              <div class="card"><div class="card-title">Categorias</div><div class="card-value" id="dash_categorias">0</div><div class="card-sub">detectadas</div></div>
-              <div class="card"><div class="card-title">Com custo</div><div class="card-value" id="dash_fornecedores">0</div><div class="card-sub">produtos precificados</div></div>
-              <div class="card"><div class="card-title">Sem custo</div><div class="card-value" id="dash_fabricantes">0</div><div class="card-sub">precisam cotação</div></div>
-              <div class="card"><div class="card-title">Atualizado</div><div class="card-value" id="dash_atualizado" style="font-size:15px;">--</div><div class="card-sub">consulta</div></div>
+            <div class="cards" style="grid-template-columns: repeat(8, 1fr);">
+              <div class="card"><div class="card-title">Total SKU Master</div><div class="card-value" id="dash_totalSku">0</div><div class="card-sub">Cadastrados</div></div>
+              <div class="card"><div class="card-title">Qtd Total Demandada</div><div class="card-value" id="dash_qtdDemandada">0</div><div class="card-sub">soma das quantidades</div></div>
+              <div class="card"><div class="card-title">Valor Total Demandado</div><div class="card-value" id="dash_valDemandado">R$ 0,00</div><div class="card-sub">menor preço × quantidade</div></div>
+              <div class="card"><div class="card-title">Itens Com Preço de Custo</div><div class="card-value" id="dash_comPreco">0</div><div class="card-sub">com valor unitário</div></div>
+              <div class="card"><div class="card-title">Itens Sem Preço</div><div class="card-value" id="dash_semPreco">0</div><div class="card-sub">sem valor unitário</div></div>
+              <div class="card"><div class="card-title">Itens Sem SKU Master</div><div class="card-value" id="dash_semSku">0</div><div class="card-sub">sem correspondência</div></div>
+              <div class="card"><div class="card-title">Itens Cotados no Mês</div><div class="card-value" id="dash_itensMes">0</div><div class="card-sub">competência atual</div></div>
+              <div class="card"><div class="card-title">Valor Cotado no Mês</div><div class="card-value" id="dash_valorMes">R$ 0,00</div><div class="card-sub">competência atual</div></div>
             </div>
 
             <div class="dashboard-grid">
               <div class="panel">
-                <div class="panel-header blue">STATUS DO DASHBOARD</div>
-                <div class="panel-body" id="dash_status">
-                  CLIQUE NA ABA DASHBOARD PARA CARREGAR OS RANKINGS.
+                <div class="panel-header blue">TOP ITENS POR QUANTIDADE</div>
+                <div class="panel-body" style="padding:0; max-height:220px; overflow:auto;">
+                  <table>
+                    <thead><tr><th style="width: 70%;">SKU / Produto</th><th style="width: 30%; text-align:right;">Quantidade</th></tr></thead>
+                    <tbody id="dash_topQtdBody"><tr><td colspan="2">Sem dados.</td></tr></tbody>
+                  </table>
                 </div>
               </div>
 
               <div class="panel">
-                <div class="panel-header blue">PRÓXIMAS ANÁLISES</div>
-                <div class="panel-body">
-                  ✅ TOP 30 SKU MASTER POR VALOR DEMANDADO<br>
-                  ✅ TOP 30 SKU MASTER POR QUANTIDADE<br>
-                  ✅ PRODUTOS SEM CUSTO<br>
-                  ✅ PRODUTOS SEM SKU MASTER<br>
-                  ✅ CLIENTES COM MAIOR DEMANDA<br>
-                  ✅ CATEGORIAS COM MAIOR DEMANDA
+                <div class="panel-header blue">TOP ITENS POR VALOR</div>
+                <div class="panel-body" style="padding:0; max-height:220px; overflow:auto;">
+                  <table>
+                    <thead><tr><th style="width: 70%;">SKU / Produto</th><th style="width: 30%; text-align:right;">Valor</th></tr></thead>
+                    <tbody id="dash_topValBody"><tr><td colspan="2">Sem dados.</td></tr></tbody>
+                  </table>
                 </div>
               </div>
             </div>
+
+            <div class="dashboard-grid" style="margin-top: 8px;">
+              <div class="panel">
+                <div class="panel-header blue">TOP CLIENTES POR DEMANDA</div>
+                <div class="panel-body" style="padding:0; max-height:220px; overflow:auto;">
+                  <table>
+                    <thead><tr><th style="width: 70%;">Cliente</th><th style="width: 30%; text-align:right;">Demanda R$</th></tr></thead>
+                    <tbody id="dash_topClientesBody"><tr><td colspan="2">Sem dados.</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="panel">
+                <div class="panel-header blue">PRODUTOS SEM CORRELAÇÃO</div>
+                <div class="panel-body" style="padding:0; max-height:220px; overflow:auto;">
+                  <table>
+                    <thead><tr><th>Descrição</th></tr></thead>
+                    <tbody id="dash_semCorrelacaoBody"><tr><td>Sem dados.</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="dashboard-grid" style="margin-top: 8px;">
+              <div class="panel">
+                <div class="panel-header blue">PRODUTOS SEM PREÇO RECENTE</div>
+                <div class="panel-body" style="padding:0; max-height:220px; overflow:auto;">
+                  <table>
+                    <thead><tr><th>Descrição</th></tr></thead>
+                    <tbody id="dash_semPrecoRecenteBody"><tr><td>Sem dados.</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="panel">
+                <div class="panel-header blue">ÚLTIMOS PREÇOS LANÇADOS</div>
+                <div class="panel-body" style="padding:0; max-height:220px; overflow:auto;">
+                  <table>
+                    <thead><tr><th style="width: 50%;">SKU / Produto</th><th style="width: 25%;">Data</th><th style="width: 25%; text-align:right;">Preço</th></tr></thead>
+                    <tbody id="dash_ultimosPrecosBody"><tr><td colspan="3">Sem dados.</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="dashboard-grid" style="margin-top: 8px;">
+              <div class="panel" style="grid-column: span 2;">
+                <div class="panel-header blue">ÚLTIMAS COTAÇÕES LANÇADAS</div>
+                <div class="panel-body" style="padding:0; max-height:220px; overflow:auto;">
+                  <table>
+                    <thead><tr><th style="width: 40%;">Produto</th><th style="width: 20%;">Cliente</th><th style="width: 20%;">Data</th><th style="width: 20%; text-align:right;">Valor Ref</th></tr></thead>
+                    <tbody id="dash_ultimasCotacoesBody"><tr><td colspan="4">Sem dados.</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
 
-      <datalist id="lista_clientes"></datalist>
-      <datalist id="lista_categorias"></datalist>
-      <datalist id="lista_skus"></datalist>
-      <datalist id="lista_fornecedores"></datalist>
-      <datalist id="lista_fabricantes"></datalist>
-
       <div class="footer">
         <span>MEDBOX ERP | APPS SCRIPT HTML</span>
-        <span>MAPA_ERP + AUX_BUSCA + BD_PRECOS + IMPORTADOR UNIVERSAL</span>
+        <span>BUSCA AVANÇADA + MAPA DE PRODUTOS + DASHBOARD COMERCIAL</span>
       </div>
     </div>
   </div>
@@ -1108,12 +758,15 @@
     let resultadosMapaAtuais = [];
     let clientesSistema = [];
 
+    // State of sorting and resizing
+    const ordenacaoTabelas = {};
+    let isResizing = false;
+
     document.addEventListener('DOMContentLoaded', function() {
       ativarMaiusculas();
       carregarOpcoes();
-      carregarOpcoesFase2();
       trocarTela(TELA_INICIAL || 'Busca_Avançada');
-      setHoje();
+      inicializarRedimensionamento();
     });
 
     function ativarMaiusculas() {
@@ -1130,14 +783,6 @@
       });
     }
 
-    function setHoje() {
-      const hoje = new Date().toISOString().slice(0, 10);
-      ['cot_dataCotacao', 'pre_dataTabela', 'imp_dataTabela'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el && !el.value) el.value = hoje;
-      });
-    }
-
     function upper(value) {
       if (value === null || value === undefined) return '';
       return String(value).toUpperCase();
@@ -1147,10 +792,6 @@
       const telas = {
         'Busca_Avançada': ['tabBusca', 'screenBusca'],
         'Mapa_de_Produtos': ['tabMapa', 'screenMapa'],
-        'Lancar_Cotacao': ['tabCotacao', 'screenCotacao'],
-        'Lancar_Preco': ['tabPreco', 'screenPreco'],
-        'Importar_Tabela': ['tabImportar', 'screenImportar'],
-        'Simulador_Precos': ['tabSimulador', 'screenSimulador'],
         'Dashboard': ['tabDashboard', 'screenDashboard']
       };
 
@@ -1194,15 +835,14 @@
           setText('mapa_cardClientes', (data.clientes || []).length);
           setText('mapa_cardAtualizado', data.atualizadoEm || '--');
 
-          setText('dash_produtos', data.totalProdutosMapa || 0);
-          setText('dash_clientes', (data.clientes || []).length);
-          setText('dash_categorias', (data.categorias || []).length);
-          setText('dash_atualizado', data.atualizadoEm || '--');
-
           setText('statusBusca', 'PRONTO PARA PESQUISAR.');
           setText('statusMapa', 'OPÇÕES CARREGADAS. CLIQUE EM CARREGAR MAPA.');
 
           setLoading(false);
+
+          // Apply stored column widths
+          aplicarLargurasSalvas('busca_table');
+          aplicarLargurasSalvas('mapa_table');
         })
         .withFailureHandler(function(err) {
           setLoading(false);
@@ -1210,21 +850,6 @@
           setText('statusMapa', 'ERRO: ' + err.message);
         })
         .obterOpcoesSistema();
-    }
-
-    function carregarOpcoesFase2() {
-      google.script.run
-        .withSuccessHandler(function(data) {
-          preencherDatalist('lista_clientes', data.clientes || []);
-          preencherDatalist('lista_categorias', data.categorias || []);
-          preencherDatalist('lista_skus', data.skuMasters || []);
-          preencherDatalist('lista_fornecedores', data.fornecedores || []);
-          preencherDatalist('lista_fabricantes', data.fabricantes || []);
-        })
-        .withFailureHandler(function(err) {
-          console.log(err);
-        })
-        .obterOpcoesFase2();
     }
 
     function preencherSelect(id, opcoes, labelVazio) {
@@ -1247,19 +872,6 @@
       });
 
       if (atual) select.value = atual;
-    }
-
-    function preencherDatalist(id, opcoes) {
-      const dl = document.getElementById(id);
-      if (!dl) return;
-
-      dl.innerHTML = '';
-
-      opcoes.slice(0, 1000).forEach(item => {
-        const opt = document.createElement('option');
-        opt.value = item;
-        dl.appendChild(opt);
-      });
     }
 
     function setText(id, value) {
@@ -1315,23 +927,7 @@
     }
 
     function renderBuscaSugestoes(sugestoes) {
-      const body = document.getElementById('busca_sugestoesBody');
-      body.innerHTML = '';
-
-      if (!sugestoes.length) {
-        body.innerHTML = '<tr><td colspan="3">NENHUMA SUGESTÃO ENCONTRADA.</td></tr>';
-        return;
-      }
-
-      sugestoes.forEach(function(s) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${escapeHtml(upper(s.sku || ''))}</td>
-          <td>${escapeHtml(upper(s.tipo || ''))}</td>
-          <td>${escapeHtml(String(s.score || ''))}</td>
-        `;
-        body.appendChild(tr);
-      });
+      // Stub or legacy rendering of suggestions is omitted if it was visual-only or handled elsewhere
     }
 
     function renderBuscaResultados(data) {
@@ -1352,20 +948,22 @@
           <td>${escapeHtml(upper(r.categoria))}</td>
           <td>${escapeHtml(upper(r.skuMaster))}</td>
           <td>${escapeHtml(upper(r.produto))}</td>
-          <td class="money">${formatNumero(r.quantTotal)}</td>
-          <td class="money">${formatMoeda(r.menorValorUnit)}</td>
-          <td class="money">${formatMoeda(r.precoMedioClientes)}</td>
-          <td class="money">${formatMoeda(r.precoCusto)}</td>
-          <td class="money"><b>${formatMoeda(r.precoMedBox)}</b></td>
-          <td class="money">${formatMoeda(r.demandaR)}</td>
-          <td>${badgeStatus(r.statusComercial)}</td>
-          <td>${escapeHtml(upper(r.fornecedorCompra2026))}</td>
-          <td>${escapeHtml(upper(r.fabricanteCompra2026))}</td>
-          <td>${escapeHtml(upper(r.clientesComConsumo))}</td>
+          <td class="money">${formatMoeda(r.precoCustoAtual)}</td>
+          <td class="money"><b>${formatMoeda(r.precoMedbox)}</b></td>
+          <td>${formatData(r.dataUltimoPreco)}</td>
+          <td class="money">${formatNumero(r.ultimaQuantidadeCotada)}</td>
+          <td class="money">${formatMoeda(r.ultimoValorUnitarioCotado)}</td>
+          <td>${escapeHtml(upper(r.clientesComDemanda))}</td>
+          <td>${badgeStatus(r.statusCadastro)}</td>
+          <td>${badgeStatus(r.statusPreco)}</td>
+          <td>${escapeHtml(upper(r.fornecedor))}</td>
+          <td>${escapeHtml(upper(r.fabricante))}</td>
         `;
 
         body.appendChild(tr);
       });
+
+      inicializarRedimensionamento('busca_table');
     }
 
     function limparBusca() {
@@ -1434,7 +1032,7 @@
       body.innerHTML = '';
 
       const produtos = data.produtos || [];
-      const colCount = 13 + (clientes.length * 3);
+      const colCount = 8 + (clientes.length * 6);
 
       if (!produtos.length) {
         body.innerHTML = `<tr><td colspan="${colCount}">NENHUM PRODUTO ENCONTRADO.</td></tr>`;
@@ -1448,35 +1046,35 @@
           <td>${escapeHtml(upper(r.categoria))}</td>
           <td>${escapeHtml(upper(r.skuMaster))}</td>
           <td>${escapeHtml(upper(r.produto))}</td>
-          <td class="money">${formatNumero(r.quantTotal)}</td>
-          <td class="money">${formatMoeda(r.menorValorUnit)}</td>
-          <td class="money">${formatMoeda(r.precoMedioClientes)}</td>
           <td class="money">${formatMoeda(r.precoCusto)}</td>
-          <td class="money"><b>${formatMoeda(r.precoMedBox)}</b></td>
-          <td class="money">${formatMoeda(r.demandaR)}</td>
-          <td>${badgeStatus(r.statusComercial)}</td>
-          <td>${escapeHtml(upper(r.fornecedorCompra2026))}</td>
-          <td>${escapeHtml(upper(r.fabricanteCompra2026))}</td>
-          <td>${escapeHtml(upper(r.clientesComConsumo))}</td>
+          <td class="money"><b>${formatMoeda(r.precoMedbox)}</b></td>
+          <td>${escapeHtml(upper(r.fornecedor))}</td>
+          <td>${escapeHtml(upper(r.fabricante))}</td>
+          <td>${formatData(r.dataUltimoPreco)}</td>
         `;
 
         clientes.forEach(function(cliente, idx) {
           const c = (r.clientesValores && r.clientesValores[cliente])
             ? r.clientesValores[cliente]
-            : { quant: 0, valorUnit: null, demandaR: 0 };
+            : { quantidadeAtual: 0, valorUnitarioAtual: null, demandaAtual: 0, dataUltimaCotacao: null, mediaMensalQuantidade: 0, mediaMensalValorUnitario: null };
 
           const colorClass = 'client-color-' + (idx % 8);
 
           html += `
-            <td class="client-td ${colorClass}">${formatNumero(c.quant || '')}</td>
-            <td class="client-td ${colorClass}">${formatMoeda(c.valorUnit)}</td>
-            <td class="client-td ${colorClass}">${formatMoeda(c.demandaR || '')}</td>
+            <td class="client-td ${colorClass}">${formatNumero(c.quantidadeAtual || '')}</td>
+            <td class="client-td ${colorClass}">${formatMoeda(c.valorUnitarioAtual)}</td>
+            <td class="client-td ${colorClass}"><b>${formatMoeda(c.demandaAtual || '')}</b></td>
+            <td class="client-td ${colorClass}">${formatData(c.dataUltimaCotacao)}</td>
+            <td class="client-td ${colorClass}">${formatNumero(c.mediaMensalQuantidade || '')}</td>
+            <td class="client-td ${colorClass}">${formatMoeda(c.mediaMensalValorUnitario)}</td>
           `;
         });
 
         tr.innerHTML = html;
         body.appendChild(tr);
       });
+
+      inicializarRedimensionamento('mapa_table');
     }
 
     function renderMapaHeader(clientes) {
@@ -1484,24 +1082,19 @@
 
       let row1 = `
         <tr>
-          <th rowspan="2">Categoria</th>
-          <th rowspan="2">SKU Master</th>
-          <th rowspan="2">Produto</th>
-          <th rowspan="2">Quant. total</th>
-          <th rowspan="2">Menor Preço</th>
-          <th rowspan="2">Preço Médio</th>
-          <th rowspan="2">Preço Custo</th>
-          <th rowspan="2">Preço MedBox</th>
-          <th rowspan="2">Demanda R$</th>
-          <th rowspan="2">Status</th>
-          <th rowspan="2">Fornecedor</th>
-          <th rowspan="2">Fabricante</th>
-          <th rowspan="2">Clientes</th>
+          <th style="width: 100px;" rowspan="2" onclick="ordenarTabela('mapa_table', 0, 'text')">Categoria<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+          <th style="width: 100px;" rowspan="2" onclick="ordenarTabela('mapa_table', 1, 'text')">SKU Master<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+          <th style="width: 250px;" rowspan="2" onclick="ordenarTabela('mapa_table', 2, 'text')">Produto<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+          <th style="width: 90px;" rowspan="2" onclick="ordenarTabela('mapa_table', 3, 'currency')">Preço Custo<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+          <th style="width: 90px;" rowspan="2" onclick="ordenarTabela('mapa_table', 4, 'currency')">Preço MedBox<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+          <th style="width: 110px;" rowspan="2" onclick="ordenarTabela('mapa_table', 5, 'text')">Fornecedor<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+          <th style="width: 110px;" rowspan="2" onclick="ordenarTabela('mapa_table', 6, 'text')">Fabricante<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+          <th style="width: 120px;" rowspan="2" onclick="ordenarTabela('mapa_table', 7, 'date')">Última At. Preço<span class="sort-indicator"></span><div class="th-resizer"></div></th>
       `;
 
       clientes.forEach(function(cliente, idx) {
         const colorClass = 'client-color-' + (idx % 8);
-        row1 += `<th colspan="3" class="client-th ${colorClass}">${escapeHtml(upper(cliente))}</th>`;
+        row1 += `<th colspan="6" class="client-th ${colorClass}">${escapeHtml(upper(cliente))}</th>`;
       });
 
       row1 += '</tr>';
@@ -1510,16 +1103,21 @@
 
       clientes.forEach(function(cliente, idx) {
         const colorClass = 'client-color-' + (idx % 8);
+        const colStart = 8 + (idx * 6);
         row2 += `
-          <th class="${colorClass}">Qtd</th>
-          <th class="${colorClass}">Valor Unit</th>
-          <th class="${colorClass}">Demanda R$</th>
+          <th style="width: 80px;" class="${colorClass}" onclick="ordenarTabela('mapa_table', ${colStart}, 'number')">Qtd Atual<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+          <th style="width: 90px;" class="${colorClass}" onclick="ordenarTabela('mapa_table', ${colStart + 1}, 'currency')">V. Unit Atual<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+          <th style="width: 100px;" class="${colorClass}" onclick="ordenarTabela('mapa_table', ${colStart + 2}, 'currency')">Demanda Atual<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+          <th style="width: 110px;" class="${colorClass}" onclick="ordenarTabela('mapa_table', ${colStart + 3}, 'date')">Última Cotação<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+          <th style="width: 90px;" class="${colorClass}" onclick="ordenarTabela('mapa_table', ${colStart + 4}, 'number')">Média Mensal Qtd<span class="sort-indicator"></span><div class="th-resizer"></div></th>
+          <th style="width: 110px;" class="${colorClass}" onclick="ordenarTabela('mapa_table', ${colStart + 5}, 'currency')">Média Mensal V. Unit<span class="sort-indicator"></span><div class="th-resizer"></div></th>
         `;
       });
 
       row2 += '</tr>';
 
       thead.innerHTML = row1 + row2;
+      aplicarLargurasSalvas('mapa_table');
     }
 
     function limparMapa() {
@@ -1532,1062 +1130,276 @@
     }
 
     /************************************************************
-     * LANÇAMENTO COTAÇÃO
-     ************************************************************/
-
-    function salvarCotacao() {
-      const dados = {
-        dataCotacao: val('cot_dataCotacao'),
-        cliente: val('cot_cliente'),
-        responsavel: val('cot_responsavel'),
-        categoria: val('cot_categoria'),
-        descricaoCliente: val('cot_descricaoCliente'),
-        quantidade: val('cot_quantidade'),
-        unidade: val('cot_unidade'),
-        precoReferenciaCliente: val('cot_precoReferenciaCliente'),
-        markupPercentual: val('cot_markupPercentual'),
-        skuMaster: val('cot_skuMaster'),
-        skuOperacional: val('cot_skuOperacional'),
-        marcaFabricante: val('cot_marcaFabricante'),
-        statusCotacao: val('cot_statusCotacao'),
-        origem: val('cot_origem'),
-        observacao: val('cot_observacao')
-      };
-
-      if (!dados.cliente || !dados.descricaoCliente || !dados.quantidade) {
-        setText('statusCotacao', 'PREENCHA CLIENTE, DESCRIÇÃO E QUANTIDADE.');
-        return;
-      }
-
-      setLoading(true, 'SALVANDO COTAÇÃO...', 'statusCotacao');
-
-      google.script.run
-        .withSuccessHandler(function(resp) {
-          setLoading(false, 'COTAÇÃO SALVA.', 'statusCotacao');
-          document.getElementById('resultadoCotacao').innerHTML =
-            'ID: ' + escapeHtml(resp.idCotacao) + '<br>' +
-            'STATUS: ' + escapeHtml(resp.statusComercial || '') + '<br>' +
-            'PREÇO CUSTO: ' + formatMoeda(resp.precoCusto) + '<br>' +
-            'PREÇO MEDBOX: ' + formatMoeda(resp.precoMedbox);
-          carregarOpcoesFase2();
-        })
-        .withFailureHandler(function(err) {
-          setLoading(false, 'ERRO: ' + err.message, 'statusCotacao');
-        })
-        .salvarCotacaoFase2(dados);
-    }
-
-    function limparCotacao() {
-      [
-        'cot_cliente','cot_responsavel','cot_categoria','cot_descricaoCliente','cot_quantidade','cot_unidade',
-        'cot_precoReferenciaCliente','cot_skuMaster','cot_skuOperacional','cot_marcaFabricante','cot_observacao'
-      ].forEach(id => setVal(id, ''));
-
-      setVal('cot_markupPercentual', '50');
-      setVal('cot_statusCotacao', 'NOVA');
-      setVal('cot_origem', 'LANÇAMENTO MANUAL');
-      setHoje();
-      setText('statusCotacao', 'FORMULÁRIO LIMPO.');
-      document.getElementById('resultadoCotacao').textContent = 'A COTAÇÃO SERÁ SALVA EM BD_COTACOES.';
-    }
-
-    /************************************************************
-     * EXTRAIR COTAÇÃO POR CLIENTE
-     ************************************************************/
-
-    let itensExtracaoCotacao = [];
-    let cotacaoSalvaAtual = null;
-
-    function abrirExtrairCotacao() {
-      document.getElementById('painelExtrairCotacao').style.display = 'block';
-      setText('ext_tituloPainel', '📂 CONSULTAR COTAÇÕES JÁ CADASTRADAS');
-      atualizarArquivoCotacaoSelecionado();
-      carregarClientesComCotacao();
-    }
-
-    function carregarClientesComCotacao() {
-      const select = document.getElementById('ext_cliente');
-      select.innerHTML = '<option value="">CARREGANDO CLIENTES...</option>';
-
-      google.script.run
-        .withSuccessHandler(function(clientes) {
-          select.innerHTML = '<option value="">SELECIONE UM CLIENTE...</option>';
-
-          (clientes || []).forEach(function(c) {
-            const opt = document.createElement('option');
-            opt.value = c;
-            opt.textContent = c;
-            select.appendChild(opt);
-          });
-
-          if (!clientes || clientes.length === 0) {
-            select.innerHTML = '<option value="">SEM CLIENTES COM COTAÇÃO</option>';
-          }
-        })
-        .withFailureHandler(function(err) {
-          select.innerHTML = '<option value="">ERRO AO CARREGAR CLIENTES</option>';
-          setText('ext_resultInfo', 'ERRO: ' + err.message);
-        })
-        .listarClientesComCotacao();
-    }
-
-    function extrairCotacao() {
-      const cliente = val('ext_cliente');
-      if (!cliente) {
-        alert('SELECIONE UM CLIENTE.');
-        return;
-      }
-
-      setText('ext_resultInfo', 'CARREGANDO...');
-      setLoading(true);
-
-      google.script.run
-        .withSuccessHandler(function(itens) {
-          setLoading(false);
-          itensExtracaoCotacao = itens || [];
-          renderResultadosExtrairCotacao(itens);
-          const confirmar = document.getElementById('ext_confirmarImportacaoBtn');
-          if (confirmar) confirmar.disabled = !itensExtracaoCotacao.length;
-          atualizarResumoExtracaoCotacao();
-          atualizarBotoesCotacaoSalva();
-        })
-        .withFailureHandler(function(err) {
-          setLoading(false);
-          setText('ext_resultInfo', 'ERRO: ' + err.message);
-        })
-        .extrairCotacaoCliente(cliente);
-    }
-
-    function extrairCotacaoArquivoSelecionado() {
-      const fileInput = document.getElementById('ext_arquivoCotacao');
-      const file = fileInput && fileInput.files && fileInput.files[0];
-      const extrair = document.getElementById('ext_extrairArquivoBtn');
-      const confirmar = document.getElementById('ext_confirmarImportacaoBtn');
-
-      if (!file) {
-        setText('ext_resultInfo', 'SELECIONE UM ARQUIVO DA COTAÇÃO.');
-        return;
-      }
-
-      document.getElementById('painelExtrairCotacao').style.display = 'block';
-      setText('ext_tituloPainel', '🔍 PRÉVIA EXTRAÍDA DO ARQUIVO');
-      setText('ext_resultInfo', 'PROCESSANDO ARQUIVO...');
-      if (extrair) extrair.disabled = true;
-      if (confirmar) confirmar.disabled = true;
-      setLoading(true);
-
-      const reader = new FileReader();
-
-      reader.onload = function(e) {
-        const payload = {
-          nomeArquivo: file.name,
-          mimeType: file.type || detectarMimePorNome(file.name),
-          base64: e.target.result
-        };
-
-        google.script.run
-          .withSuccessHandler(function(resp) {
-            setLoading(false);
-            if (extrair) extrair.disabled = false;
-
-            const itens = resp && resp.itens ? resp.itens : [];
-            itensExtracaoCotacao = itens;
-            cotacaoSalvaAtual = null;
-            renderResultadosExtrairCotacao(itens);
-
-            if (resp && resp.clienteIdentificado) {
-              setVal('cot_cliente', resp.clienteIdentificado);
-            }
-
-            if (confirmar) confirmar.disabled = itens.length === 0;
-            atualizarResumoExtracaoCotacao(resp && resp.resumo);
-            atualizarBotoesCotacaoSalva();
-
-            setText(
-              'ext_resultInfo',
-              'ARQUIVO PROCESSADO: ' + itens.length + ' ITENS | ABA: ' +
-                ((resp && resp.abaSelecionada) || 'NÃO IDENTIFICADA') +
-                ' | CABEÇALHO: ' + ((resp && resp.linhaCabecalho) || '-') +
-                ' | IGNORADAS: ' + ((resp && resp.linhasIgnoradas) || 0) +
-                ' | CLIENTE: ' + (resp && resp.clienteIdentificado ? resp.clienteIdentificado : 'NÃO IDENTIFICADO')
-            );
-          })
-          .withFailureHandler(function(err) {
-            setLoading(false);
-            if (extrair) extrair.disabled = false;
-            setText('ext_resultInfo', 'ERRO AO EXTRAIR ARQUIVO: ' + (err.message || String(err)));
-          })
-          .extrairCotacaoArquivoSemGravacao(payload);
-      };
-
-      reader.onerror = function() {
-        setLoading(false);
-        if (extrair) extrair.disabled = false;
-        setText('ext_resultInfo', 'ERRO AO LER O ARQUIVO.');
-      };
-
-      reader.readAsDataURL(file);
-    }
-
-    function atualizarArquivoCotacaoSelecionado() {
-      const fileInput = document.getElementById('ext_arquivoCotacao');
-      const file = fileInput && fileInput.files && fileInput.files[0];
-      const info = document.getElementById('ext_arquivoInfo');
-      const remover = document.getElementById('ext_removerArquivoBtn');
-      const extrair = document.getElementById('ext_extrairArquivoBtn');
-
-      if (!file) {
-        if (info) info.textContent = 'NENHUM ARQUIVO SELECIONADO.';
-        if (remover) remover.disabled = true;
-        if (extrair) extrair.disabled = true;
-        return;
-      }
-
-      if (info) info.textContent = file.name + ' | ' + formatTamanhoArquivo(file.size);
-      if (remover) remover.disabled = false;
-      if (extrair) extrair.disabled = false;
-      setText('ext_resultInfo', 'ARQUIVO SELECIONADO. PRONTO PARA EXTRAIR.');
-    }
-
-    function removerArquivoCotacao() {
-      const fileInput = document.getElementById('ext_arquivoCotacao');
-      const info = document.getElementById('ext_arquivoInfo');
-      const remover = document.getElementById('ext_removerArquivoBtn');
-      const extrair = document.getElementById('ext_extrairArquivoBtn');
-      const body = document.getElementById('ext_resultadosBody');
-      const confirmar = document.getElementById('ext_confirmarImportacaoBtn');
-
-      if (fileInput) fileInput.value = '';
-      if (info) info.textContent = 'NENHUM ARQUIVO SELECIONADO.';
-      if (remover) remover.disabled = true;
-      if (extrair) extrair.disabled = true;
-      if (confirmar) confirmar.disabled = true;
-      if (body) body.innerHTML = '<tr><td colspan="13">SELECIONE UM ARQUIVO E CLIQUE EM EXTRAIR COTAÇÃO.</td></tr>';
-      itensExtracaoCotacao = [];
-      cotacaoSalvaAtual = null;
-      atualizarResumoExtracaoCotacao();
-      atualizarBotoesCotacaoSalva();
-      setText('ext_resultInfo', 'ARQUIVO REMOVIDO. NENHUMA EXTRAÇÃO EXECUTADA.');
-    }
-
-    function renderResultadosExtrairCotacao(itens) {
-      const body = document.getElementById('ext_resultadosBody');
-      body.innerHTML = '';
-
-      if (!itens || itens.length === 0) {
-        body.innerHTML = '<tr><td colspan="13">NENHUM ITEM COTADO ENCONTRADO PARA ESTE CLIENTE.</td></tr>';
-        setText('ext_resultInfo', '0 ITENS ENCONTRADOS');
-        atualizarResumoExtracaoCotacao();
-        return;
-      }
-
-      itens.forEach(function(item, index) {
-        recalcularItemExtracao(item);
-        const tr = document.createElement('tr');
-        const skuReadOnly = item.editavelSku ? '' : 'readonly';
-        const custo = item.custoMedBox !== undefined ? item.custoMedBox : item.custoMedbox;
-        const margem = item.margemPercentual !== undefined && item.margemPercentual !== '' ? item.margemPercentual : (item.margem || 80);
-        const detalheMatch = [
-          item.statusMatchInterno || item.statusMatch || '',
-          item.scoreInterno || item.scoreMatch ? 'Score: ' + (item.scoreInterno || item.scoreMatch) : '',
-          item.motivoRevisaoInterno || item.motivoRevisao || ''
-        ].filter(Boolean).join(' | ');
-
-        tr.innerHTML = `
-          <td class="col-center">${escapeHtml(item.codigo || item.codigoFornecedor || '')}</td>
-          <td class="col-left">${escapeHtml(item.descricaoOriginal || '')}</td>
-          <td class="col-center">${escapeHtml(formatQuantidadeCotacao(item.quantidade))}${item.unidade ? ' ' + escapeHtml(item.unidade) : ''}</td>
-          <td class="col-money">${formatMoedaCotacao(item.valorCompraClienteUnitario)}</td>
-          <td class="col-money">${formatMoedaCotacao(item.valorCompraClienteTotal)}</td>
-          <td class="col-center"><input class="table-input ext-sku" title="${escapeHtml(detalheMatch)}" value="${escapeHtml(item.skuMaster || '')}" ${skuReadOnly} onchange="alterarSkuExtracao(${index}, this)"></td>
-          <td class="col-money"><input class="table-input ext-custo-input" value="${escapeHtml(formatNumeroInputCotacao(custo))}" onchange="alterarCustoExtracao(${index}, this)"></td>
-          <td class="col-left ext-fornecedor">${escapeHtml(item.fornecedorCusto || '—')}</td>
-          <td class="col-center ext-data-custo">${escapeHtml(item.dataCusto || '—')}</td>
-          <td class="col-center"><input type="text" class="table-input ext-margem" value="${escapeHtml(formatPercentualInputCotacao(margem))}" oninput="alterarMargemExtracao(${index}, this)"></td>
-          <td class="col-money"><b class="ext-preco-venda">${formatMoedaCotacao(item.precoVendaMedBox || item.precoVenda)}</b></td>
-          <td class="col-money"><b>${formatMoedaCotacao(item.valorTotalMedBox)}</b></td>
-          <td class="col-center ext-status-lance">${badgeStatus(item.statusLance || '')}</td>
-        `;
-
-        body.appendChild(tr);
-      });
-
-      setText('ext_resultInfo', itens.length + ' ITENS ENCONTRADOS');
-      atualizarResumoExtracaoCotacao();
-    }
-
-    function alterarSkuExtracao(index, input) {
-      const item = itensExtracaoCotacao[index];
-      if (!item) return;
-
-      item.skuMaster = upper(input.value);
-      if (!item.skuMaster) return;
-
-      google.script.run
-        .withSuccessHandler(function(resp) {
-          if (!resp || !resp.ok) {
-            item.custoMedbox = '';
-            item.custoMedBox = '';
-            item.statusCusto = 'CUSTO_NAO_ENCONTRADO';
-            item.fornecedorCusto = '';
-            item.dataCusto = '';
-            item.origemCusto = '';
-            item.precoVenda = '';
-            item.precoVendaMedBox = '';
-            item.valorTotalMedBox = '';
-            item.statusLance = 'CUSTO_NAO_ENCONTRADO';
-            renderResultadosExtrairCotacao(itensExtracaoCotacao);
-            return;
-          }
-
-          if (item.custoEditado && !confirm('O custo foi editado manualmente. Substituir pelo menor custo vinculado ao SKU?')) {
-            return;
-          }
-
-          item.custoMedbox = resp.custoMedbox;
-          item.custoMedBox = resp.custoMedbox;
-          item.statusCusto = resp.statusCusto;
-          item.fornecedorCusto = resp.fornecedorCusto || '';
-          item.dataCusto = resp.dataCusto || '';
-          item.origemCusto = resp.origemCusto || '';
-          item.custoEditado = false;
-          recalcularItemExtracao(item);
-          renderResultadosExtrairCotacao(itensExtracaoCotacao);
-        })
-        .withFailureHandler(function(err) {
-          setText('ext_resultInfo', 'ERRO AO BUSCAR CUSTO: ' + err.message);
-        })
-        .buscarCustoMedboxPorSkuCotacao(item.skuMaster);
-    }
-
-    function alterarCustoExtracao(index, input) {
-      const item = itensExtracaoCotacao[index];
-      if (!item) return;
-
-      item.custoMedbox = parseNumeroLocal(input.value);
-      item.custoMedBox = item.custoMedbox;
-      item.custoEditado = true;
-      if (!item.custoMedbox || item.custoMedbox <= 0) {
-        item.custoMedbox = '';
-        item.custoMedBox = '';
-        item.precoVenda = '';
-        item.precoVendaMedBox = '';
-        item.valorTotalMedBox = '';
-        item.statusLance = 'CUSTO_NAO_ENCONTRADO';
-      } else {
-        recalcularItemExtracao(item);
-      }
-      renderResultadosExtrairCotacao(itensExtracaoCotacao);
-    }
-
-    function alterarMargemExtracao(index, input) {
-      const item = itensExtracaoCotacao[index];
-      if (!item) return;
-
-      item.margem = parseNumeroLocal(input.value);
-      item.margemPercentual = item.margem;
-      recalcularItemExtracao(item);
-      renderResultadosExtrairCotacao(itensExtracaoCotacao);
-    }
-
-    function recalcularItemExtracao(item) {
-      const custo = parseNumeroCotacao(item.custoMedBox !== undefined ? item.custoMedBox : item.custoMedbox);
-      const margemValor = item.margemPercentual !== undefined && item.margemPercentual !== '' ? item.margemPercentual : item.margem;
-      const margemNumero = parseNumeroCotacao(margemValor);
-      const margem = (margemNumero === null ? 0 : margemNumero) / 100;
-      const quantidadeInfo = parseQuantidadeCotacao(item.quantidade);
-      const quantidade = quantidadeInfo.ok ? quantidadeInfo.valor : null;
-      const valorCliente = parseNumeroCotacao(item.valorCompraClienteUnitario || item.precoOsinfo);
-      item.valorCompraClienteTotal = quantidade !== null && quantidade > 0 && valorCliente !== null && valorCliente >= 0
-        ? Math.round((quantidade * valorCliente) * 100) / 100
-        : '';
-
-      if (custo === null || custo <= 0) {
-        item.precoVenda = '';
-        item.precoVendaMedBox = '';
-        item.valorTotalMedBox = '';
-        item.statusLance = 'DADOS INSUFICIENTES';
-        return;
-      }
-
-      // Regra comercial: o rotulo exibido e "Margem",
-      // mas o calculo aplicado e markup sobre o custo.
-      item.precoVenda = Math.round((custo * (1 + margem)) * 10000) / 10000;
-      item.precoVendaMedBox = item.precoVenda;
-      item.valorTotalMedBox = quantidade !== null && quantidade > 0 ? Math.round((item.precoVenda * quantidade) * 10000) / 10000 : '';
-      if (valorCliente === null || valorCliente <= 0) {
-        item.statusLance = 'DADOS INSUFICIENTES';
-      } else {
-        if (Math.abs(item.precoVenda - valorCliente) < 0.000001) item.statusLance = 'PRECO IGUAL';
-        else item.statusLance = item.precoVenda < valorCliente ? 'LANCE VENCEDOR' : 'PRECO ACIMA';
-      }
-    }
-
-    function atualizarResumoExtracaoCotacao(resumoServidor) {
-      const box = document.getElementById('ext_resumoCotacao');
-      if (!box) return;
-
-      if (!itensExtracaoCotacao.length) {
-        box.style.display = 'none';
-        box.innerHTML = '';
-        return;
-      }
-
-      const resumo = resumoServidor || calcularResumoExtracaoCotacao();
-      box.style.display = 'block';
-      box.innerHTML = `
-        <div class="cotacao-resumo-grid">
-          <div class="cotacao-card"><div class="cotacao-card-label">TOTAL DE ITENS COTADOS</div><div class="cotacao-card-value">${formatQuantidadeCotacao(resumo.totalItensCotados || 0)}</div></div>
-          <div class="cotacao-card"><div class="cotacao-card-label">VALOR TOTAL COTADO</div><div class="cotacao-card-value">${formatMoedaCotacao(resumo.valorTotalCotado || 0)}</div></div>
-          <div class="cotacao-card"><div class="cotacao-card-label">TOTAL DE ITENS GANHOS</div><div class="cotacao-card-value">${formatQuantidadeCotacao(resumo.totalItensGanhos || 0)}</div></div>
-          <div class="cotacao-card"><div class="cotacao-card-label">VALOR TOTAL GANHO MEDBOX</div><div class="cotacao-card-value">${formatMoedaCotacao(resumo.valorTotalGanhoMedBox || 0)}</div></div>
-          <div class="cotacao-card"><div class="cotacao-card-label">% ITENS GANHOS</div><div class="cotacao-card-value">${formatPercentualCotacao(resumo.percentualItensGanhos || 0)}</div></div>
-          <div class="cotacao-card"><div class="cotacao-card-label">ITENS SEM PREÇO</div><div class="cotacao-card-value">${formatQuantidadeCotacao(resumo.itensSemPreco || 0)}</div></div>
-        </div>
-      `;
-    }
-
-    function calcularResumoExtracaoCotacao() {
-      const resumo = {
-        totalItensCotados: itensExtracaoCotacao.length,
-        valorTotalCotado: 0,
-        totalItensGanhos: 0,
-        valorTotalGanhoMedBox: 0,
-        percentualItensGanhos: 0,
-        itensSemPreco: 0
-      };
-
-      itensExtracaoCotacao.forEach(function(item) {
-        const precoVenda = parseNumeroCotacao(item.precoVendaMedBox || item.precoVenda);
-        const totalMedBox = parseNumeroCotacao(item.valorTotalMedBox);
-        const status = upper(item.statusLance || '');
-
-        if (precoVenda !== null && precoVenda > 0 && totalMedBox !== null && totalMedBox > 0) {
-          resumo.valorTotalCotado += totalMedBox;
-
-          if (status === 'LANCE VENCEDOR') {
-            resumo.totalItensGanhos++;
-            resumo.valorTotalGanhoMedBox += totalMedBox;
-          }
-        } else {
-          resumo.itensSemPreco++;
-        }
-      });
-
-      resumo.valorTotalCotado = Math.round(resumo.valorTotalCotado * 100) / 100;
-      resumo.valorTotalGanhoMedBox = Math.round(resumo.valorTotalGanhoMedBox * 100) / 100;
-      resumo.percentualItensGanhos = resumo.totalItensCotados > 0
-        ? Math.round((resumo.totalItensGanhos / resumo.totalItensCotados) * 10000) / 100
-        : 0;
-      return resumo;
-    }
-
-    function atualizarBotoesCotacaoSalva() {
-      const salva = Boolean(cotacaoSalvaAtual && cotacaoSalvaAtual.numeroCotacao);
-      const salvar = document.getElementById('ext_confirmarImportacaoBtn');
-      const imprimir = document.getElementById('ext_imprimirCotacaoBtn');
-      const pdf = document.getElementById('ext_pdfCotacaoBtn');
-      const nova = document.getElementById('ext_novaCotacaoBtn');
-
-      if (salvar) salvar.disabled = salva || !itensExtracaoCotacao.length;
-      if (imprimir) imprimir.disabled = !salva;
-      if (pdf) pdf.disabled = !salva;
-      if (nova) nova.disabled = !itensExtracaoCotacao.length && !salva;
-    }
-
-    function salvarCotacaoExtraida() {
-      if (!itensExtracaoCotacao.length) {
-        setText('ext_resultInfo', 'NADA PARA SALVAR.');
-        return;
-      }
-
-      const resumo = calcularResumoExtracaoCotacao();
-      if (!confirm('Salvar cotação revisada? Itens cotados: ' + resumo.totalItensCotados + ' | Valor total cotado: ' + formatMoedaCotacao(resumo.valorTotalCotado) + '.')) return;
-
-      setLoading(true, 'SIMULANDO SALVAMENTO DA COTAÇÃO...', 'ext_resultInfo');
-
-      google.script.run
-        .withSuccessHandler(function(resp) {
-          setLoading(false);
-          if (!resp || !resp.ok) {
-            setText('ext_resultInfo', 'SIMULAÇÃO COM ERROS. FALHAS: ' + ((resp && resp.erros && resp.erros.length) || 0));
-            return;
-          }
-          cotacaoSalvaAtual = {
-            numeroCotacao: resp.numeroCotacaoPrevisto,
-            cliente: val('cot_cliente'),
-            projeto: '',
-            responsavel: '',
-            categoria: '',
-            itens: itensExtracaoCotacao,
-            resumo: resumo
-          };
-          atualizarBotoesCotacaoSalva();
-          setText('ext_resultInfo', 'COTAÇÃO SALVA EM MODO SIMULAÇÃO: ' + resp.numeroCotacaoPrevisto + '. NENHUMA GRAVAÇÃO REAL EXECUTADA.');
-        })
-        .withFailureHandler(function(err) {
-          setLoading(false);
-          setText('ext_resultInfo', 'ERRO AO SIMULAR SALVAMENTO: ' + err.message);
-        })
-        .simularSalvarCotacaoExtraida({ itens: itensExtracaoCotacao });
-    }
-
-    function imprimirCotacaoSalva() {
-      abrirDocumentoCotacaoSalva(true);
-    }
-
-    function salvarPdfCotacaoSalva() {
-      abrirDocumentoCotacaoSalva(true);
-    }
-
-    function abrirDocumentoCotacaoSalva(imprimir) {
-      if (!cotacaoSalvaAtual) {
-        setText('ext_resultInfo', 'SALVE A COTAÇÃO ANTES DE IMPRIMIR OU GERAR PDF.');
-        return;
-      }
-
-      const html = montarDocumentoCotacaoHtml(cotacaoSalvaAtual);
-      const win = window.open('', '_blank');
-      if (!win) {
-        setText('ext_resultInfo', 'NÃO FOI POSSÍVEL ABRIR A JANELA DE IMPRESSÃO.');
-        return;
-      }
-      win.document.open();
-      win.document.write(html);
-      win.document.close();
-      if (imprimir) {
-        win.focus();
-        setTimeout(function() { win.print(); }, 300);
-      }
-    }
-
-    function montarDocumentoCotacaoHtml(cotacao) {
-      const itens = cotacao.itens || [];
-      const total = itens.reduce(function(acc, item) {
-        return acc + Number(item.valorTotalMedBox || 0);
-      }, 0);
-      const linhas = itens.map(function(item) {
-        return '<tr>' +
-          '<td>' + escapeHtml(formatQuantidadeCotacao(item.quantidade || '')) + '</td>' +
-          '<td>' + escapeHtml(item.descricaoOriginal || '') + '</td>' +
-          '<td>' + escapeHtml(item.skuMaster || '') + '</td>' +
-          '<td>' + escapeHtml(formatMoeda(item.precoVendaMedBox || item.precoVenda || '')) + '</td>' +
-          '<td>' + escapeHtml(formatMoeda(item.valorTotalMedBox || '')) + '</td>' +
-          '<td></td>' +
-        '</tr>';
-      }).join('');
-      return '<!doctype html><html><head><meta charset="utf-8"><title>COTACAO MEDBOX</title>' +
-        '<style>body{font-family:Arial,sans-serif;color:#111;margin:28px}h1{margin:0 0 4px}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{border:1px solid #ddd;padding:7px;text-align:left}th{background:#f2f5f8}.right{text-align:right}@media print{button{display:none}}</style>' +
-        '</head><body><h1>MedBox</h1><h2>Cotação ' + escapeHtml(cotacao.numeroCotacao || '') + '</h2>' +
-        '<p>Data: ' + escapeHtml(new Date().toLocaleDateString('pt-BR')) + '</p>' +
-        '<p>Cliente: ' + escapeHtml(cotacao.cliente || '') + '</p>' +
-        '<p>Projeto: ' + escapeHtml(cotacao.projeto || '') + '</p>' +
-        '<p>Responsável: ' + escapeHtml(cotacao.responsavel || '') + '</p>' +
-        '<p>Categoria: ' + escapeHtml(cotacao.categoria || '') + '</p>' +
-        '<table><thead><tr><th>Quantidade</th><th>Descrição</th><th>Marca</th><th>Preço unitário MedBox</th><th>Preço total MedBox</th><th>Observação</th></tr></thead><tbody>' + linhas + '</tbody></table>' +
-        '<h3 class="right">Valor total da proposta: ' + escapeHtml(formatMoeda(total)) + '</h3>' +
-        '<p>Condições comerciais: conforme proposta aprovada.</p><p>Dados da MedBox: atendimento comercial MEDBOX ERP.</p></body></html>';
-    }
-
-    function novaCotacaoExtraida() {
-      cotacaoSalvaAtual = null;
-      itensExtracaoCotacao = [];
-      const body = document.getElementById('ext_resultadosBody');
-      if (body) body.innerHTML = '<tr><td colspan="13">SELECIONE UM ARQUIVO E CLIQUE EM EXTRAIR COTAÇÃO.</td></tr>';
-      atualizarResumoExtracaoCotacao();
-      atualizarBotoesCotacaoSalva();
-      setText('ext_resultInfo', 'PRONTO PARA NOVA COTAÇÃO.');
-    }
-
-    function parseNumeroLocal(valor) {
-      return parseNumeroCotacao(valor);
-    }
-
-    /************************************************************
-     * LANÇAMENTO PREÇO
-     ************************************************************/
-
-    function salvarPreco() {
-      const dados = {
-        dataTabela: val('pre_dataTabela'),
-        validadeTabela: val('pre_validadeTabela'),
-        fornecedor: val('pre_fornecedor'),
-        fabricanteMarca: val('pre_fabricanteMarca'),
-        descricaoFornecedor: val('pre_descricaoFornecedor'),
-        skuMaster: val('pre_skuMaster'),
-        skuOperacional: val('pre_skuOperacional'),
-        unidade: val('pre_unidade'),
-        precoCusto: val('pre_precoCusto'),
-        ncm: val('pre_ncm'),
-        ean: val('pre_ean'),
-        cst: val('pre_cst'),
-        origem: val('pre_origem'),
-        ipiPercentual: val('pre_ipiPercentual'),
-        icmsPercentual: val('pre_icmsPercentual'),
-        fretePercentual: val('pre_fretePercentual'),
-        outrasDespesasPercentual: val('pre_outrasDespesasPercentual'),
-        observacao: val('pre_observacao')
-      };
-
-      if (!dados.fornecedor || !dados.descricaoFornecedor || !dados.precoCusto) {
-        setText('statusPreco', 'PREENCHA FORNECEDOR, DESCRIÇÃO E PREÇO CUSTO.');
-        return;
-      }
-
-      setLoading(true, 'SALVANDO PREÇO...', 'statusPreco');
-
-      google.script.run
-        .withSuccessHandler(function(resp) {
-          setLoading(false, 'PREÇO SALVO.', 'statusPreco');
-          document.getElementById('resultadoPreco').innerHTML =
-            'ID: ' + escapeHtml(resp.idPreco) + '<br>' +
-            'CUSTO TOTAL ESTIMADO: ' + formatMoeda(resp.custoTotalEstimado);
-          carregarOpcoesFase2();
-        })
-        .withFailureHandler(function(err) {
-          setLoading(false, 'ERRO: ' + err.message, 'statusPreco');
-        })
-        .salvarPrecoFase2(dados);
-    }
-
-    function limparPreco() {
-      [
-        'pre_validadeTabela','pre_fornecedor','pre_fabricanteMarca','pre_descricaoFornecedor','pre_skuMaster',
-        'pre_skuOperacional','pre_unidade','pre_precoCusto','pre_ncm','pre_ean','pre_cst',
-        'pre_ipiPercentual','pre_icmsPercentual','pre_fretePercentual','pre_outrasDespesasPercentual','pre_observacao'
-      ].forEach(id => setVal(id, ''));
-
-      setVal('pre_origem', 'LANÇAMENTO AVULSO');
-      setHoje();
-      setText('statusPreco', 'FORMULÁRIO LIMPO.');
-      document.getElementById('resultadoPreco').textContent = 'O PREÇO SERÁ SALVO EM BD_PRECOS.';
-    }
-
-    /************************************************************
-     * IMPORTADOR UNIVERSAL
-     ************************************************************/
-
-    function importarTabelaPreco() {
-      const fileInput = document.getElementById('imp_arquivo');
-      const file = fileInput && fileInput.files && fileInput.files[0];
-
-      if (!file) {
-        setText('statusImportar', 'SELECIONE UM ARQUIVO PARA IMPORTAR.');
-        return;
-      }
-
-      const fornecedor = val('imp_fornecedor');
-
-      if (!fornecedor) {
-        setText('statusImportar', 'PREENCHA O FORNECEDOR ANTES DE IMPORTAR.');
-        return;
-      }
-
-      setProgressImportacao(5);
-      setLoading(true, 'LENDO ARQUIVO...', 'statusImportar');
-
-      const reader = new FileReader();
-
-      reader.onload = function(e) {
-        setProgressImportacao(35);
-
-        const payload = {
-          nomeArquivo: file.name,
-          mimeType: file.type || detectarMimePorNome(file.name),
-          base64: e.target.result,
-          fornecedor: fornecedor,
-          fabricantePadrao: val('imp_fabricantePadrao'),
-          origem: val('imp_origem'),
-          dataTabela: val('imp_dataTabela'),
-          validadeTabela: val('imp_validadeTabela'),
-          tipoPreco: val('imp_tipoPreco'),
-          observacao: val('imp_observacao')
-        };
-
-        setText('statusImportar', 'ENVIANDO PARA O IMPORTADOR...');
-        setProgressImportacao(60);
-
-        google.script.run
-          .withSuccessHandler(function(resp) {
-            setLoading(false, 'IMPORTAÇÃO ENVIADA PARA REVISÃO.', 'statusImportar');
-            setProgressImportacao(100);
-
-            document.getElementById('resultadoImportar').innerHTML =
-              'IMPORTAÇÃO CONCLUÍDA.<br>' +
-              'ID: ' + escapeHtml(resp.idImportacao || '') + '<br>' +
-              'ARQUIVO: ' + escapeHtml(resp.nomeArquivo || '') + '<br>' +
-              'LINHAS LIDAS: ' + formatNumero(resp.linhasLidas || 0) + '<br>' +
-              'LINHAS EXTRAÍDAS: ' + formatNumero(resp.linhasExtraidas || 0) + '<br>' +
-              'LINHAS VÁLIDAS: ' + formatNumero(resp.linhasValidas || 0) + '<br>' +
-              'LINHAS IGNORADAS: ' + formatNumero(resp.linhasIgnoradas || 0) + '<br>' +
-              'DESTINO: REVISAO_IMPORTACAO_PRECOS';
-
-            carregarOpcoesFase2();
-          })
-          .withFailureHandler(function(err) {
-            setLoading(false, 'ERRO NA IMPORTAÇÃO: ' + err.message, 'statusImportar');
-            setProgressImportacao(0);
-
-            document.getElementById('resultadoImportar').innerHTML =
-              'ERRO NA IMPORTAÇÃO.<br>' +
-              escapeHtml(err.message || String(err));
-          })
-          .importarArquivoTabelaPrecoFase2H(payload);
-      };
-
-      reader.onerror = function() {
-        setLoading(false, 'ERRO AO LER O ARQUIVO.', 'statusImportar');
-        setProgressImportacao(0);
-      };
-
-      reader.readAsDataURL(file);
-    }
-
-    function atualizarArquivoImportacaoSelecionado() {
-      const fileInput = document.getElementById('imp_arquivo');
-      const file = fileInput && fileInput.files && fileInput.files[0];
-      const info = document.getElementById('imp_arquivoInfo');
-      const remover = document.getElementById('imp_removerArquivo');
-
-      if (!file) {
-        if (info) info.textContent = 'NENHUM ARQUIVO SELECIONADO.';
-        if (remover) remover.disabled = true;
-        return;
-      }
-
-      if (info) info.textContent = file.name + ' | ' + formatTamanhoArquivo(file.size);
-      if (remover) remover.disabled = false;
-      setText('statusImportar', 'ARQUIVO SELECIONADO. PRONTO PARA IMPORTAR.');
-    }
-
-    function removerArquivoImportacao() {
-      const fileInput = document.getElementById('imp_arquivo');
-      const info = document.getElementById('imp_arquivoInfo');
-      const remover = document.getElementById('imp_removerArquivo');
-
-      if (fileInput) fileInput.value = '';
-      if (info) info.textContent = 'NENHUM ARQUIVO SELECIONADO.';
-      if (remover) remover.disabled = true;
-      setProgressImportacao(0);
-      setText('statusImportar', 'ARQUIVO REMOVIDO. NENHUMA IMPORTACAO EXECUTADA.');
-      document.getElementById('resultadoImportar').textContent =
-        'O ARQUIVO SERA SALVO NO DRIVE E OS ITENS EXTRAIDOS IRAO PARA REVISAO_IMPORTACAO_PRECOS.';
-    }
-
-    function formatTamanhoArquivo(bytes) {
-      const n = Number(bytes || 0);
-      if (n >= 1048576) return (n / 1048576).toFixed(2).replace('.', ',') + ' MB';
-      if (n >= 1024) return (n / 1024).toFixed(1).replace('.', ',') + ' KB';
-      return n + ' B';
-    }
-
-    function aprovarRevisaoPrecos() {
-      setLoading(true, 'APROVANDO LINHAS MARCADAS COMO APROVAR...', 'statusImportar');
-
-      google.script.run
-        .withSuccessHandler(function(resp) {
-          setLoading(false, 'APROVAÇÃO CONCLUÍDA.', 'statusImportar');
-
-          document.getElementById('resultadoImportar').innerHTML =
-            'APROVAÇÃO CONCLUÍDA.<br>' +
-            'ENVIADAS PARA BD_PRECOS: ' + formatNumero(resp.aprovadas || 0) + '<br>' +
-            'DUPLICADAS IGNORADAS: ' + formatNumero(resp.duplicadas || 0) + '<br>' +
-            'IGNORADAS: ' + formatNumero(resp.ignoradas || 0);
-
-          carregarOpcoesFase2();
-        })
-        .withFailureHandler(function(err) {
-          setLoading(false, 'ERRO AO APROVAR: ' + err.message, 'statusImportar');
-
-          document.getElementById('resultadoImportar').innerHTML =
-            'ERRO AO APROVAR REVISÃO.<br>' +
-            escapeHtml(err.message || String(err));
-        })
-        .aprovarRevisaoImportacaoPrecosFase2H();
-    }
-
-    function limparImportacao() {
-      [
-        'imp_fornecedor',
-        'imp_fabricantePadrao',
-        'imp_validadeTabela',
-        'imp_observacao'
-      ].forEach(id => setVal(id, ''));
-
-      setVal('imp_origem', 'TABELA FORNECEDOR');
-      setVal('imp_tipoPreco', 'PREÇO CUSTO');
-      setHoje();
-
-      const fileInput = document.getElementById('imp_arquivo');
-      if (fileInput) fileInput.value = '';
-      atualizarArquivoImportacaoSelecionado();
-
-      setProgressImportacao(0);
-      setText('statusImportar', 'FORMULÁRIO DE IMPORTAÇÃO LIMPO.');
-      document.getElementById('resultadoImportar').textContent =
-        'O ARQUIVO SERÁ SALVO NO DRIVE E OS ITENS EXTRAÍDOS IRÃO PARA REVISAO_IMPORTACAO_PRECOS.';
-    }
-
-    function setProgressImportacao(percent) {
-      const bar = document.getElementById('imp_progressBar');
-      if (bar) bar.style.width = String(percent || 0) + '%';
-    }
-
-    function detectarMimePorNome(nome) {
-      const n = String(nome || '').toLowerCase();
-
-      if (n.endsWith('.xlsx')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-      if (n.endsWith('.xls')) return 'application/vnd.ms-excel';
-      if (n.endsWith('.csv')) return 'text/csv';
-      if (n.endsWith('.txt')) return 'text/plain';
-      if (n.endsWith('.pdf')) return 'application/pdf';
-      if (n.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      if (n.endsWith('.doc')) return 'application/msword';
-      if (n.endsWith('.jpg') || n.endsWith('.jpeg')) return 'image/jpeg';
-      if (n.endsWith('.png')) return 'image/png';
-
-      return 'application/octet-stream';
-    }
-
-    /************************************************************
-     * SIMULADOR
-     ************************************************************/
-
-    function buscarCustoSku() {
-      const sku = val('sim_skuMaster') || val('sim_produto');
-
-      if (!sku) {
-        setText('statusSimulador', 'INFORME O SKU MASTER OU PRODUTO.');
-        return;
-      }
-
-      setLoading(true, 'BUSCANDO CUSTO...', 'statusSimulador');
-
-      google.script.run
-        .withSuccessHandler(function(resp) {
-          setLoading(false, 'BUSCA CONCLUÍDA.', 'statusSimulador');
-
-          if (resp.encontrado) {
-            setVal('sim_precoCusto', String(resp.precoCusto).replace('.', ','));
-            setVal('sim_mensagem', 'CUSTO ENCONTRADO.');
-          } else {
-            setVal('sim_mensagem', 'SEM CUSTO PARA ESTE SKU/DESCRIÇÃO.');
-          }
-        })
-        .withFailureHandler(function(err) {
-          setLoading(false, 'ERRO: ' + err.message, 'statusSimulador');
-        })
-        .buscarPrecoCustoPorSkuFase2(sku);
-    }
-
-    function simularPreco() {
-      const dados = {
-        skuMaster: val('sim_skuMaster'),
-        produto: val('sim_produto'),
-        precoCusto: val('sim_precoCusto'),
-        markupPercentual: val('sim_markupPercentual'),
-        fretePercentual: val('sim_fretePercentual'),
-        freteValor: val('sim_freteValor'),
-        impostoPercentual: val('sim_impostoPercentual'),
-        impostoValor: val('sim_impostoValor'),
-        outrasDespesasPercentual: val('sim_outrasDespesasPercentual'),
-        outrasDespesasValor: val('sim_outrasDespesasValor'),
-        precoCliente: val('sim_precoCliente')
-      };
-
-      setLoading(true, 'SIMULANDO...', 'statusSimulador');
-
-      google.script.run
-        .withSuccessHandler(function(resp) {
-          setLoading(false, 'SIMULAÇÃO CONCLUÍDA.', 'statusSimulador');
-
-          if (!resp.ok) {
-            setVal('sim_status', resp.status || 'SEM CUSTO');
-            setVal('sim_mensagem', resp.mensagem || '');
-            return;
-          }
-
-          setVal('sim_precoCusto', formatDecimal(resp.precoCusto));
-          setVal('sim_custoTotal', formatMoeda(resp.custoTotal));
-          setVal('sim_precoMedbox', formatMoeda(resp.precoMedbox));
-          setVal('sim_diferenca', formatMoeda(resp.diferenca));
-          setVal('sim_status', resp.status || '');
-          setVal('sim_mensagem', 'SIMULAÇÃO OK.');
-        })
-        .withFailureHandler(function(err) {
-          setLoading(false, 'ERRO: ' + err.message, 'statusSimulador');
-        })
-        .simularPrecoFase2(dados);
-    }
-
-    function limparSimulador() {
-      [
-        'sim_skuMaster','sim_produto','sim_precoCusto','sim_fretePercentual','sim_freteValor','sim_impostoPercentual',
-        'sim_impostoValor','sim_outrasDespesasPercentual','sim_outrasDespesasValor','sim_precoCliente',
-        'sim_status','sim_custoTotal','sim_precoMedbox','sim_diferenca','sim_mensagem'
-      ].forEach(id => setVal(id, ''));
-
-      setVal('sim_markupPercentual', '50');
-      setText('statusSimulador', 'FORMULÁRIO LIMPO.');
-    }
-
-    /************************************************************
-     * DASHBOARD REAL
+     * DASHBOARD
      ************************************************************/
 
     function carregarDashboardReal() {
-      setText('dash_status', 'CARREGANDO DASHBOARD REAL...');
+      setText('dash_produtos', 'CARREGANDO...');
 
       google.script.run
         .withSuccessHandler(function(data) {
           const resumo = data.resumo || {};
 
-          setText('dash_produtos', resumo.totalProdutos || 0);
-          setText('dash_clientes', resumo.clientesAtivos || 0);
-          setText('dash_categorias', resumo.categoriasAtivas || 0);
-          setText('dash_fornecedores', resumo.produtosComCusto || 0);
-          setText('dash_fabricantes', resumo.produtosSemCusto || 0);
-          setText('dash_atualizado', data.atualizadoEm || '--');
+          setText('dash_totalSku', resumo.totalSkuMaster || 0);
+          setText('dash_qtdDemandada', formatNumero(resumo.quantidadeTotalDemandada || 0));
+          setText('dash_valDemandado', formatMoeda(resumo.valorTotalDemandado || 0));
+          setText('dash_comPreco', resumo.itensComPrecoCusto || 0);
+          setText('dash_semPreco', resumo.itensSemPreco || 0);
+          setText('dash_semSku', resumo.itensSemSkuMaster || 0);
+          setText('dash_itensMes', resumo.itensCotadosNoMes || 0);
+          setText('dash_valorMes', formatMoeda(resumo.valorCotadoNoMes || 0));
 
-          const html = `
-            <div class="cards" style="margin-bottom:8px;">
-              <div class="card">
-                <div class="card-title">SKU AGRUPADOS</div>
-                <div class="card-value">${formatNumero(resumo.totalSkuAgrupados || 0)}</div>
-                <div class="card-sub">por SKU Master / operacional</div>
-              </div>
+          // Top Quantidade
+          const topQtdBody = document.getElementById('dash_topQtdBody');
+          topQtdBody.innerHTML = '';
+          if (!data.topQuantidade || !data.topQuantidade.length) {
+            topQtdBody.innerHTML = '<tr><td colspan="2">Sem dados.</td></tr>';
+          } else {
+            data.topQuantidade.forEach(item => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td>${escapeHtml(upper(item.skuMaster || item.produto))}</td><td style="text-align:right;">${formatNumero(item.quantidade)}</td>`;
+              topQtdBody.appendChild(tr);
+            });
+          }
 
-              <div class="card">
-                <div class="card-title">QTDE. DEMANDADA</div>
-                <div class="card-value">${formatNumero(resumo.totalQuantidadeDemandada || 0)}</div>
-                <div class="card-sub">soma geral</div>
-              </div>
+          // Top Valor
+          const topValBody = document.getElementById('dash_topValBody');
+          topValBody.innerHTML = '';
+          if (!data.topValor || !data.topValor.length) {
+            topValBody.innerHTML = '<tr><td colspan="2">Sem dados.</td></tr>';
+          } else {
+            data.topValor.forEach(item => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td>${escapeHtml(upper(item.skuMaster || item.produto))}</td><td style="text-align:right;">${formatMoeda(item.valor)}</td>`;
+              topValBody.appendChild(tr);
+            });
+          }
 
-              <div class="card">
-                <div class="card-title">VALOR DEMANDADO</div>
-                <div class="card-value">${formatMoeda(resumo.totalValorDemandado || 0)}</div>
-                <div class="card-sub">menor preço × quantidade</div>
-              </div>
+          // Top Clientes
+          const topClientesBody = document.getElementById('dash_topClientesBody');
+          topClientesBody.innerHTML = '';
+          if (!data.topClientes || !data.topClientes.length) {
+            topClientesBody.innerHTML = '<tr><td colspan="2">Sem dados.</td></tr>';
+          } else {
+            data.topClientes.forEach(item => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td>${escapeHtml(upper(item.cliente))}</td><td style="text-align:right;">${formatMoeda(item.demanda)}</td>`;
+              topClientesBody.appendChild(tr);
+            });
+          }
 
-              <div class="card">
-                <div class="card-title">SEM SKU MASTER</div>
-                <div class="card-value">${formatNumero(resumo.produtosSemSku || 0)}</div>
-                <div class="card-sub">precisam cadastro</div>
-              </div>
+          // Sem Correlação
+          const semSkuBody = document.getElementById('dash_semCorrelacaoBody');
+          semSkuBody.innerHTML = '';
+          if (!data.semSku || !data.semSku.length) {
+            semSkuBody.innerHTML = '<tr><td>Sem dados.</td></tr>';
+          } else {
+            data.semSku.forEach(item => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td>${escapeHtml(upper(item.produto))}</td>`;
+              semSkuBody.appendChild(tr);
+            });
+          }
 
-              <div class="card">
-                <div class="card-title">SEM PREÇO CUSTO</div>
-                <div class="card-value">${formatNumero(resumo.produtosSemCusto || 0)}</div>
-                <div class="card-sub">precisam cotação fornecedor</div>
-              </div>
+          // Sem Preço Recente
+          const semPrecoBody = document.getElementById('dash_semPrecoRecenteBody');
+          semPrecoBody.innerHTML = '';
+          if (!data.semPreco || !data.semPreco.length) {
+            semPrecoBody.innerHTML = '<tr><td>Sem dados.</td></tr>';
+          } else {
+            data.semPreco.forEach(item => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td>${escapeHtml(upper(item.produto || item.skuMaster))}</td>`;
+              semPrecoBody.appendChild(tr);
+            });
+          }
 
-              <div class="card">
-                <div class="card-title">COM CUSTO</div>
-                <div class="card-value">${formatNumero(resumo.produtosComCusto || 0)}</div>
-                <div class="card-sub">base precificada</div>
-              </div>
-            </div>
+          // Últimos Preços
+          const ultimosPrecosBody = document.getElementById('dash_ultimosPrecosBody');
+          ultimosPrecosBody.innerHTML = '';
+          if (!data.ultimosPrecos || !data.ultimosPrecos.length) {
+            ultimosPrecosBody.innerHTML = '<tr><td colspan="3">Sem dados.</td></tr>';
+          } else {
+            data.ultimosPrecos.forEach(item => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td>${escapeHtml(upper(item.produto || item.skuMaster))}</td><td>${formatData(item.data)}</td><td style="text-align:right;">${formatMoeda(item.preco)}</td>`;
+              ultimosPrecosBody.appendChild(tr);
+            });
+          }
 
-            <div class="dashboard-grid">
-              ${renderTabelaDashboard(
-                'TOP 30 SKU MASTER POR VALOR DEMANDADO',
-                data.topValor || [],
-                ['SKU MASTER', 'VALOR DEMANDADO', 'QUANTIDADE'],
-                function(item) {
-                  return [
-                    escapeHtml(item.skuMaster || ''),
-                    formatMoeda(item.valorDemandado || 0),
-                    formatNumero(item.quantidade || 0)
-                  ];
-                }
-              )}
-
-              ${renderTabelaDashboard(
-                'TOP 30 SKU MASTER POR QUANTIDADE',
-                data.topQuantidade || [],
-                ['SKU MASTER', 'QUANTIDADE', 'VALOR DEMANDADO'],
-                function(item) {
-                  return [
-                    escapeHtml(item.skuMaster || ''),
-                    formatNumero(item.quantidade || 0),
-                    formatMoeda(item.valorDemandado || 0)
-                  ];
-                }
-              )}
-            </div>
-
-            <div class="dashboard-grid" style="margin-top:8px;">
-              ${renderTabelaDashboard(
-                'TOP PRODUTOS SEM PREÇO CUSTO',
-                data.semCusto || [],
-                ['SKU / PRODUTO', 'VALOR DEMANDADO', 'QUANTIDADE'],
-                function(item) {
-                  return [
-                    escapeHtml(item.skuMaster || item.produtoExemplo || ''),
-                    formatMoeda(item.valorDemandado || 0),
-                    formatNumero(item.quantidade || 0)
-                  ];
-                }
-              )}
-
-              ${renderTabelaDashboard(
-                'TOP PRODUTOS SEM SKU MASTER',
-                data.semSku || [],
-                ['PRODUTO', 'VALOR DEMANDADO', 'QUANTIDADE'],
-                function(item) {
-                  return [
-                    escapeHtml(item.produtoExemplo || item.skuMaster || ''),
-                    formatMoeda(item.valorDemandado || 0),
-                    formatNumero(item.quantidade || 0)
-                  ];
-                }
-              )}
-            </div>
-          `;
-
-          document.getElementById('dash_status').innerHTML = html;
+          // Últimas Cotações
+          const ultimasCotacoesBody = document.getElementById('dash_ultimasCotacoesBody');
+          ultimasCotacoesBody.innerHTML = '';
+          if (!data.ultimasCotacoes || !data.ultimasCotacoes.length) {
+            ultimasCotacoesBody.innerHTML = '<tr><td colspan="4">Sem dados.</td></tr>';
+          } else {
+            data.ultimasCotacoes.forEach(item => {
+              const tr = document.createElement('tr');
+              tr.innerHTML = `<td>${escapeHtml(upper(item.produto))}</td><td>${escapeHtml(upper(item.cliente))}</td><td>${formatData(item.data)}</td><td style="text-align:right;">${formatMoeda(item.valorRef)}</td>`;
+              ultimasCotacoesBody.appendChild(tr);
+            });
+          }
         })
         .withFailureHandler(function(err) {
-          setText('dash_status', 'ERRO AO CARREGAR DASHBOARD: ' + err.message);
+          console.log('Erro ao carregar Dashboard:', err.message);
         })
         .calcularDashboardFase2();
     }
 
-    function renderTabelaDashboard(titulo, lista, headers, rowBuilder) {
-      let html = `
-        <div class="panel">
-          <div class="panel-header blue">${escapeHtml(titulo)}</div>
-          <div class="panel-body" style="padding:0; max-height:360px; overflow:auto;">
-            <table>
-              <thead>
-                <tr>
-                  ${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}
-                </tr>
-              </thead>
-              <tbody>
-      `;
+    /************************************************************
+     * INTERATIVE RESIZING & SORTING
+     ************************************************************/
 
-      if (!lista || !lista.length) {
-        html += `<tr><td colspan="${headers.length}">SEM DADOS.</td></tr>`;
-      } else {
-        lista.slice(0, 30).forEach(function(item) {
-          const cols = rowBuilder(item);
-          html += `
-            <tr>
-              ${cols.map(c => `<td>${c}</td>`).join('')}
-            </tr>
-          `;
+    function inicializarRedimensionamento(tableId) {
+      if (isResizing) return;
+      const tables = tableId ? [document.getElementById(tableId)] : document.querySelectorAll('table');
+
+      tables.forEach(table => {
+        if (!table) return;
+        const headers = table.querySelectorAll('th');
+        headers.forEach(header => {
+          let resizer = header.querySelector('.th-resizer');
+          if (!resizer) {
+            resizer = document.createElement('div');
+            resizer.className = 'th-resizer';
+            header.appendChild(resizer);
+          }
+
+          resizer.addEventListener('mousedown', function(e) {
+            isResizing = true;
+            e.stopPropagation();
+            e.preventDefault();
+
+            const startX = e.pageX;
+            const startWidth = header.offsetWidth;
+
+            function onMouseMove(moveEvent) {
+              const currentWidth = Math.max(50, startWidth + (moveEvent.pageX - startX));
+              header.style.width = currentWidth + 'px';
+            }
+
+            function onMouseUp() {
+              isResizing = false;
+              document.removeEventListener('mousemove', onMouseMove);
+              document.removeEventListener('mouseup', onMouseUp);
+              salvarLargurasColunas(table.id);
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+          });
         });
+      });
+    }
+
+    function salvarLargurasColunas(tableId) {
+      const table = document.getElementById(tableId);
+      if (!table) return;
+      const widths = [];
+      table.querySelectorAll('th').forEach(th => {
+        widths.push(th.style.width || th.offsetWidth + 'px');
+      });
+      localStorage.setItem('widths_' + tableId, JSON.stringify(widths));
+    }
+
+    function aplicarLargurasSalvas(tableId) {
+      const table = document.getElementById(tableId);
+      if (!table) return;
+      const widthsStr = localStorage.getItem('widths_' + tableId);
+      if (!widthsStr) return;
+      try {
+        const widths = JSON.parse(widthsStr);
+        const ths = table.querySelectorAll('th');
+        ths.forEach((th, idx) => {
+          if (widths[idx]) {
+            th.style.width = widths[idx];
+          }
+        });
+      } catch (e) {
+        console.log("Erro ao aplicar larguras:", e);
+      }
+    }
+
+    function restaurarLargurasColunas(tableId) {
+      localStorage.removeItem('widths_' + tableId);
+      const table = document.getElementById(tableId);
+      if (!table) return;
+      table.querySelectorAll('th').forEach(th => {
+        th.style.width = '';
+      });
+      if (tableId === 'mapa_table' && clientesSistema.length) {
+        renderMapaHeader(clientesSistema);
+      }
+    }
+
+    function ordenarTabela(tableId, colIdx, tipo) {
+      if (isResizing) return;
+      const table = document.getElementById(tableId);
+      if (!table) return;
+      const tbody = table.querySelector('tbody');
+      if (!tbody) return;
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      if (rows.length <= 1 && rows[0] && rows[0].cells.length <= 1) return; // empty or single empty line
+
+      if (!ordenacaoTabelas[tableId]) {
+        ordenacaoTabelas[tableId] = { col: -1, asc: true };
       }
 
-      html += `
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
+      const state = ordenacaoTabelas[tableId];
+      if (state.col === colIdx) {
+        state.asc = !state.asc;
+      } else {
+        state.col = colIdx;
+        state.asc = true;
+      }
 
-      return html;
+      // Reset indicators
+      table.querySelectorAll('th .sort-indicator').forEach(ind => {
+        ind.textContent = '';
+      });
+
+      const th = table.querySelectorAll('thead tr th')[colIdx] || table.querySelectorAll('thead th')[colIdx];
+      if (th) {
+        const ind = th.querySelector('.sort-indicator');
+        if (ind) ind.textContent = state.asc ? ' ▲' : ' ▼';
+      }
+
+      rows.sort((a, b) => {
+        const cellA = a.cells[colIdx] ? a.cells[colIdx].textContent.trim() : '';
+        const cellB = b.cells[colIdx] ? b.cells[colIdx].textContent.trim() : '';
+
+        if (cellA === '—' || cellA === '') return 1;
+        if (cellB === '—' || cellB === '') return -1;
+
+        let valA = cellA;
+        let valB = cellB;
+
+        if (tipo === 'currency' || tipo === 'number') {
+          valA = parseNumeroCotacao(cellA) || 0;
+          valB = parseNumeroCotacao(cellB) || 0;
+          return state.asc ? valA - valB : valB - valA;
+        }
+
+        if (tipo === 'date') {
+          valA = parseDataISO(cellA);
+          valB = parseDataISO(cellB);
+          return state.asc ? valA - valB : valB - valA;
+        }
+
+        return state.asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      });
+
+      rows.forEach(r => tbody.appendChild(r));
+    }
+
+    function parseDataISO(str) {
+      if (!str || str === '—') return new Date(0);
+      const parts = str.split('/');
+      if (parts.length === 3) {
+        // dd/mm/yyyy
+        return new Date(parts[2], parts[1] - 1, parts[0]);
+      }
+      return new Date(str);
     }
 
     /************************************************************
@@ -2600,12 +1412,12 @@
         return;
       }
 
-      const headers = ['Categoria','SKU Master','Produto','Quant. total','Menor Preço','Preço Médio Cliente','Preço Custo','Preço MedBox','Demanda R$','Status','Fornecedor','Fabricante','Clientes'];
+      const headers = ['Categoria','SKU Master','Produto','Preço Custo Atual','Preço MedBox','Última Data Preço','Última Quantidade Cotada','Último Valor Unitário Cotado','Clientes com Demanda','Status Cadastro','Status Preço','Fornecedor','Fabricante'];
 
       const rows = resultadosBuscaAtuais.map(r => [
-        upper(r.categoria), upper(r.skuMaster), upper(r.produto), r.quantTotal, r.menorValorUnit,
-        r.precoMedioClientes, r.precoCusto, r.precoMedBox, r.demandaR, upper(r.statusComercial),
-        upper(r.fornecedorCompra2026), upper(r.fabricanteCompra2026), upper(r.clientesComConsumo)
+        upper(r.categoria), upper(r.skuMaster), upper(r.produto), r.precoCustoAtual, r.precoMedbox,
+        formatData(r.dataUltimoPreco), r.ultimaQuantidadeCotada, r.ultimoValorUnitarioCotado,
+        upper(r.clientesComDemanda), upper(r.statusCadastro), upper(r.statusPreco), upper(r.fornecedor), upper(r.fabricante)
       ]);
 
       baixarCsv('medbox_busca_avancada.csv', headers, rows);
@@ -2620,26 +1432,32 @@
 
       const clientes = clientesSistema || [];
 
-      let headers = ['Categoria','SKU Master','Produto','Quant. total','Menor Preço','Preço Médio','Preço Custo','Preço MedBox','Demanda R$','Status','Fornecedor','Fabricante','Clientes'];
+      let headers = ['Categoria','SKU Master','Produto','Preço Custo','Preço MedBox','Fornecedor','Fabricante','Última Atualização de Preço'];
 
       clientes.forEach(c => {
-        headers.push(upper(c) + ' Qtd');
-        headers.push(upper(c) + ' Valor Unit');
-        headers.push(upper(c) + ' Demanda R$');
+        const cUpper = upper(c);
+        headers.push(cUpper + ' Qtd Atual');
+        headers.push(cUpper + ' V. Unit Atual');
+        headers.push(cUpper + ' Demanda Atual');
+        headers.push(cUpper + ' Última Cotação');
+        headers.push(cUpper + ' Média Mensal Qtd');
+        headers.push(cUpper + ' Média Mensal V. Unit');
       });
 
       const rows = resultadosMapaAtuais.map(r => {
         const row = [
-          upper(r.categoria), upper(r.skuMaster), upper(r.produto), r.quantTotal, r.menorValorUnit,
-          r.precoMedioClientes, r.precoCusto, r.precoMedBox, r.demandaR, upper(r.statusComercial),
-          upper(r.fornecedorCompra2026), upper(r.fabricanteCompra2026), upper(r.clientesComConsumo)
+          upper(r.categoria), upper(r.skuMaster), upper(r.produto), r.precoCusto, r.precoMedbox,
+          upper(r.fornecedor), upper(r.fabricante), formatData(r.dataUltimoPreco)
         ];
 
         clientes.forEach(c => {
-          const obj = r.clientesValores && r.clientesValores[c] ? r.clientesValores[c] : { quant: 0, valorUnit: '', demandaR: 0 };
-          row.push(obj.quant || '');
-          row.push(obj.valorUnit || '');
-          row.push(obj.demandaR || '');
+          const obj = r.clientesValores && r.clientesValores[c] ? r.clientesValores[c] : { quantidadeAtual: 0, valorUnitarioAtual: '', demandaAtual: 0, dataUltimaCotacao: '', mediaMensalQuantidade: 0, mediaMensalValorUnitario: '' };
+          row.push(obj.quantidadeAtual || '');
+          row.push(obj.valorUnitarioAtual || '');
+          row.push(obj.demandaAtual || '');
+          row.push(formatData(obj.dataUltimaCotacao));
+          row.push(obj.mediaMensalQuantidade || '');
+          row.push(obj.mediaMensalValorUnitario || '');
         });
 
         return row;
@@ -2673,34 +1491,43 @@
 
     function badgeStatus(status) {
       const s = upper(status || '');
+      if (s === '—' || s === '') return '—';
       let classe = 'badge-warn';
 
       if (s === 'GANHANDO ITEM') classe = 'badge-ok';
       if (s === 'COMPETITIVO') classe = 'badge-ok';
+      if (s === 'ATIVO') classe = 'badge-ok';
+      if (s === 'CONCLUÍDO') classe = 'badge-ok';
       if (s === 'ACIMA DO CLIENTE') classe = 'badge-danger';
+      if (s === 'ATENÇÃO') classe = 'badge-danger';
       if (s === 'SEM CUSTO') classe = 'badge-warn';
       if (s === 'SEM REFERÊNCIA') classe = 'badge-warn';
-      if (s === 'SEM PREÇO CLIENTE') classe = 'badge-warn';
+      if (s === 'PENDENTE') classe = 'badge-warn';
 
       return `<span class="badge ${classe}">${escapeHtml(s)}</span>`;
     }
 
     function formatMoeda(v) {
       const n = parseNumeroCotacao(v);
-      if (n === null) return '';
+      if (n === null) return '—';
       return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     }
 
     function formatNumero(v) {
       const n = parseNumeroCotacao(v);
-      if (n === null) return '';
+      if (n === null) return '—';
       return n.toLocaleString('pt-BR');
     }
 
-    function formatDecimal(v) {
-      const n = parseNumeroCotacao(v);
-      if (n === null) return '';
-      return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+    function formatData(v) {
+      if (!v) return '—';
+      try {
+        const d = new Date(v);
+        if (isNaN(d.getTime())) return '—';
+        return d.toLocaleDateString('pt-BR');
+      } catch (e) {
+        return '—';
+      }
     }
 
     function parseNumeroCotacao(valor) {
@@ -2715,7 +1542,7 @@
         .replace(/%/g, '')
         .replace(/\s+/g, '');
 
-      if (!txt || txt === '-' || txt === '--') return null;
+      if (!txt || txt === '-' || txt === '--' || txt === '—') return null;
       if (txt.includes(',')) {
         txt = txt.replace(/\./g, '').replace(',', '.');
       } else if (/^-?\d{1,3}(\.\d{3})+$/.test(txt)) {
@@ -2726,84 +1553,6 @@
       if (!txt || txt === '-') return null;
       const n = Number(txt);
       return Number.isFinite(n) ? n : null;
-    }
-
-    function parseQuantidadeCotacao(valor) {
-      if (valor === null || valor === undefined || valor === '') return { ok: false, valor: null, motivo: 'QUANTIDADE_VAZIA' };
-      if (typeof valor === 'number') {
-        return Number.isFinite(valor)
-          ? { ok: true, valor: valor, motivo: '' }
-          : { ok: false, valor: null, motivo: 'QUANTIDADE_INVALIDA' };
-      }
-
-      let txt = String(valor).replace(/[\u00A0\u200B-\u200D\uFEFF]/g, '').trim();
-      if (!txt || txt === '-' || txt === '--') return { ok: false, valor: null, motivo: 'QUANTIDADE_VAZIA' };
-      if (/^-?\d+(?:[,.]\d+)?\s+-?\d+(?:[,.]\d+)?$/.test(txt)) {
-        return { ok: false, valor: null, motivo: 'QUANTIDADE_AMBIGUA' };
-      }
-
-      txt = txt.replace(/\s+/g, '');
-      if (txt.includes(',')) {
-        txt = txt.replace(/\./g, '').replace(',', '.');
-      } else if (/^-?\d{1,3}(\.\d{3})+(?:\.\d+)?$/.test(txt)) {
-        txt = txt.replace(/\./g, '');
-      }
-
-      if (!/^-?\d+(?:\.\d+)?$/.test(txt)) return { ok: false, valor: null, motivo: 'QUANTIDADE_INVALIDA' };
-      const n = Number(txt);
-      return Number.isFinite(n)
-        ? { ok: true, valor: n, motivo: '' }
-        : { ok: false, valor: null, motivo: 'QUANTIDADE_INVALIDA' };
-    }
-
-    function formatQuantidadeCotacao(valor) {
-      const parsed = parseQuantidadeCotacao(valor);
-      if (!parsed.ok) return '—';
-      const n = parsed.valor;
-      const temFracao = Math.abs(n - Math.round(n)) > 0.000001;
-      return n.toLocaleString('pt-BR', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: temFracao ? 3 : 0
-      });
-    }
-
-    function formatMoedaCotacao(valor) {
-      const n = parseNumeroCotacao(valor);
-      if (n === null) return '—';
-      return n.toLocaleString('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
-    }
-
-    function formatPercentualCotacao(valor) {
-      const n = parseNumeroCotacao(valor);
-      if (n === null) return '0,00%';
-      return n.toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }) + '%';
-    }
-
-    function formatPercentualInputCotacao(valor) {
-      const n = parseNumeroCotacao(valor);
-      if (n === null) return '';
-      const temFracao = Math.abs(n - Math.round(n)) > 0.000001;
-      return n.toLocaleString('pt-BR', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: temFracao ? 2 : 0
-      });
-    }
-
-    function formatNumeroInputCotacao(valor) {
-      const n = parseNumeroCotacao(valor);
-      if (n === null) return '';
-      return n.toLocaleString('pt-BR', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 4
-      });
     }
 
     function escapeHtml(value) {

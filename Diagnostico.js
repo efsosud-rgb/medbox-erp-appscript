@@ -210,7 +210,7 @@ function diagnosticarMapaDeProdutosEClientes() {
     log.push('  - Total Encontrado: ' + result.totalEncontrado);
     log.push('  - Total Exibido: ' + result.exibidos);
     log.push('  - Quantidade Total Demandada: ' + result.quantidadeTotalDemandada);
-    log.push('  - Valor Total Demandada: ' + result.valorTotalDemandado);
+    log.push('  - Valor Total Demandado: ' + result.valorTotalDemandado);
     log.push('  - Clientes Retornados: ' + result.clientes.join(', '));
     log.push('  - Amostra de Produtos Retornados: ' + result.produtos.length);
 

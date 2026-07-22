@@ -7,10 +7,6 @@
  * Telas HTML:
  * - Busca_Avançada
  * - Mapa_de_Produtos
- * - Lançar Cotação
- * - Lançar Preço
- * - Importar Tabela
- * - Simulador
  * - Dashboard
  *
  * Abas técnicas usadas:
@@ -62,25 +58,10 @@ function onOpen() {
     .addSeparator()
     .addItem('🔎 Abrir Busca_Avançada', 'abrirBuscaAvancada')
     .addItem('🧭 Abrir Mapa_de_Produtos', 'abrirMapaProdutos')
-    .addItem('📥 Abrir Importar Tabela', 'abrirImportarTabela')
-    .addItem('🧾 Abrir Lançar Cotação', 'abrirLancarCotacao')
-    .addItem('💰 Abrir Lançar Preço', 'abrirLancarPreco')
-    .addItem('🧮 Abrir Simulador', 'abrirSimulador')
     .addItem('📊 Abrir Dashboard', 'abrirDashboard')
-    .addSeparator()
-    .addSubMenu(
-      SpreadsheetApp.getUi()
-        .createMenu('Cosmos')
-        .addItem('Consultar produtos', 'executarLoteVarreduraFiscalCosmos')
-        .addItem('Revisar e aprovar resultados', 'abrirRevisaoCosmos')
-    )
-    .addSeparator()
-    .addItem('🔍 Buscar Dados Fiscais (Cosmos)', 'executarLoteVarreduraFiscalCosmos')
-    .addItem('📦 Processar Lote Cosmos (50 produtos)', 'processarLoteCosmos50Manual')
     .addSeparator()
     .addItem('📄 Ir para aba MAPA_ERP', 'abrirAbaMapaErp')
     .addItem('📄 Ir para aba BD_PRECOS', 'abrirAbaBdPrecos')
-    .addItem('📄 Ir para aba REVISAO_IMPORTACAO_PRECOS', 'abrirAbaRevisaoPrecos')
     .addToUi();
 }
 
@@ -117,22 +98,6 @@ function abrirMapaProdutos() {
   abrirModalMedbox_('Mapa_de_Produtos', 'MEDBOX ERP | Mapa_de_Produtos');
 }
 
-function abrirImportarTabela() {
-  abrirModalMedbox_('Importar_Tabela', 'MEDBOX ERP | Importar Tabela');
-}
-
-function abrirLancarCotacao() {
-  abrirModalMedbox_('Lancar_Cotacao', 'MEDBOX ERP | Lançar Cotação');
-}
-
-function abrirLancarPreco() {
-  abrirModalMedbox_('Lancar_Preco', 'MEDBOX ERP | Lançar Preço');
-}
-
-function abrirSimulador() {
-  abrirModalMedbox_('Simulador', 'MEDBOX ERP | Simulador');
-}
-
 function abrirDashboard() {
   abrirModalMedbox_('Dashboard', 'MEDBOX ERP | Dashboard');
 }
@@ -159,14 +124,6 @@ function abrirAbaMapaErp() {
 
 function abrirAbaBdPrecos() {
   abrirAbaPorNome_('BD_PRECOS');
-}
-
-function abrirAbaRevisaoPrecos() {
-  abrirAbaPorNome_('REVISAO_IMPORTACAO_PRECOS');
-}
-
-function processarLoteCosmos50Manual() {
-  processarLoteCosmos(50);
 }
 
 function abrirAbaPorNome_(nomeAba) {
@@ -752,28 +709,41 @@ function finalizarGrupoProduto(grupo, markup, matchingClientKey) {
   }
 
   const precoMedBox = calcularPrecoMedBox(grupo.skuMaster, grupo.precoCusto, markup);
-  const statusComercial = montarStatusComercialMapa(menorValorUnit, precoMedBox);
+  const statusCadastro = grupo.skuMaster ? 'ATIVO' : 'PENDENTE';
+  const statusPreco = grupo.precoCusto ? 'CONCLUÍDO' : 'SEM CUSTO';
+
+  // Format clientesValores to follow client contract exactly
+  const formattedClientesValores = {};
+  Object.keys(grupo.clientesValores).forEach(c => {
+    const val = grupo.clientesValores[c];
+    formattedClientesValores[c] = {
+      quantidadeAtual: val.quant || 0,
+      valorUnitarioAtual: val.valorUnit || null,
+      demandaAtual: val.demandaR || 0,
+      dataUltimaCotacao: null, // Placeholder
+      mediaMensalQuantidade: null, // Placeholder
+      mediaMensalValorUnitario: null // Placeholder
+    };
+  });
 
   return {
     categoria: grupo.categoria,
-    skuMaster: grupo.skuMaster,
     produto: grupo.produto,
-    quantTotal: arredondar(quantTotal, 4),
-    precoMedioClientes: precoMedioClientes === null || precoMedioClientes === '' ? '' : arredondar(precoMedioClientes, 4),
-    menorValorUnit: menorValorUnit,
-    maiorValorUnit: grupo.maiorValorUnit,
-    precoMedBox: precoMedBox,
+    skuMaster: grupo.skuMaster,
+    fabricante: grupo.fabricanteCompra2026,
+    fornecedor: grupo.fornecedorCompra2026,
+    precoCustoAtual: grupo.precoCusto || null,
+    precoMedbox: precoMedBox || null,
+    dataUltimoPreco: grupo.dataCompra2026 ? new Date(grupo.dataCompra2026).toISOString() : null,
+    clientesValores: formattedClientesValores,
+    statusCadastro: statusCadastro,
+    statusPreco: statusPreco,
+
+    // keeps compatibility for sums
+    quantTotal: quantTotal,
     precoCusto: grupo.precoCusto,
-    demandaR: demandaR === 0 ? '' : arredondar(demandaR, 4),
-    statusComercial: statusComercial,
-    fornecedorCompra2026: grupo.fornecedorCompra2026,
-    fabricanteCompra2026: grupo.fabricanteCompra2026,
-    dataCompra2026: grupo.dataCompra2026,
-    produtoCompra2026: grupo.produtoCompra2026,
-    clientesComConsumo: Array.from(grupo.clientesComConsumoSet).sort().join('; '),
-    skuOperacional: grupo.skuOperacional,
-    produtoNormalizado: grupo.produtoNormalizado,
-    clientesValores: grupo.clientesValores
+    precoMedbox: precoMedBox,
+    demandaR: demandaR
   };
 }
 
@@ -792,30 +762,30 @@ function calcularPrecoMedBox(skuMaster, precoCusto, markup) {
 }
 
 function montarLinhaResultadoBusca(row, idx, precoMedBox, precoCusto) {
-  const precoMedio = toNumber(getCell(row, idx, 'Preço Médio Clientes'));
-  const menorValor = toNumber(getCell(row, idx, 'Menor Valor Unit'));
-  const quantTotal = toNumber(getCell(row, idx, 'Quant. total')) || 0;
-  const demandaR = menorValor === null ? '' : arredondar(menorValor * quantTotal, 4);
+  const skuMaster = upperText(getCell(row, idx, 'SKU Master'));
+  const statusCadastro = skuMaster ? 'ATIVO' : 'PENDENTE';
+  const statusPreco = precoCusto ? 'CONCLUÍDO' : 'SEM CUSTO';
+  const dataCompra = getCell(row, idx, 'Data Compra 2026');
 
   return {
     categoria: upperText(getCell(row, idx, 'Categoria')),
-    skuMaster: upperText(getCell(row, idx, 'SKU Master')),
     produto: upperText(getCell(row, idx, 'Produto')),
-    quantTotal: quantTotal,
-    precoMedioClientes: precoMedio,
-    menorValorUnit: menorValor,
-    maiorValorUnit: toNumber(getCell(row, idx, 'Maior Valor Unit')),
-    precoMedBox: precoMedBox,
-    precoCusto: precoCusto,
-    demandaR: demandaR,
-    fornecedorCompra2026: upperText(getCell(row, idx, 'Fornecedor Compra 2026')),
-    fabricanteCompra2026: upperText(getCell(row, idx, 'Fabricante Compra 2026')),
-    dataCompra2026: upperText(getCell(row, idx, 'Data Compra 2026')),
-    produtoCompra2026: upperText(getCell(row, idx, 'Produto Compra 2026')),
-    clientesComConsumo: upperText(getCell(row, idx, 'Clientes com Consumo')),
-    skuOperacional: upperText(getCell(row, idx, 'SKU Operacional')),
-    produtoNormalizado: upperText(getCell(row, idx, 'Produto Normalizado')),
-    statusComercial: montarStatusComercialMapa(menorValor, precoMedBox)
+    skuMaster: skuMaster,
+    fabricante: upperText(getCell(row, idx, 'Fabricante Compra 2026')),
+    fornecedor: upperText(getCell(row, idx, 'Fornecedor Compra 2026')),
+    precoCustoAtual: precoCusto || null,
+    precoMedbox: precoMedBox || null,
+    dataUltimoPreco: dataCompra ? new Date(dataCompra).toISOString() : null,
+    clientesValores: {},
+    statusCadastro: statusCadastro,
+    statusPreco: statusPreco,
+    ultimaQuantidadeCotada: null, // Placeholder
+    ultimoValorUnitarioCotado: null, // Placeholder
+    clientesComDemanda: upperText(getCell(row, idx, 'Clientes com Consumo')),
+
+    // keeps compatibility
+    quantTotal: toNumber(getCell(row, idx, 'Quant. total')) || 0,
+    menorValorUnit: toNumber(getCell(row, idx, 'Menor Valor Unit'))
   };
 }
 
