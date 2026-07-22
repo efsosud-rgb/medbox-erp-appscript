@@ -1046,18 +1046,21 @@ function f2dObterAbasClientes_(ss) {
     // Deve começar com BD_
     if (!upperName.startsWith("BD_")) return;
 
-    // Excluir BD_SKU MASTER e BD_PRECOS
-    if (upperName === "BD_SKU MASTER" || upperName === "BD_SKU_MASTER" || upperName === "BD_PRECOS") {
-      return;
-    }
-
-    // Excluir abas administrativas, backup, revisão, relatório, log
-    const exclusions = [
-      "ADMIN", "BACKUP", "REVISAO", "REVISÃO", "RELATORIO", "RELATÓRIO", "LOG", "AUX", "MAPA"
+    // Excluir abas de sistema e referência técnica por nome normalizado
+    // Deve ocorrer antes da validação de schema
+    const exclusionTerms = [
+      "COTACOES", "COTAÇÕES",
+      "SKU_MASTER", "SKU MASTER",
+      "PRECOS", "PREÇOS",
+      "SEFAZ",
+      "ADMIN", "BACKUP",
+      "REVISAO", "REVISÃO",
+      "RELATORIO", "RELATÓRIO",
+      "LOG", "AUX", "MAPA"
     ];
     let isExcluded = false;
-    for (const excl of exclusions) {
-      if (upperName.indexOf(excl) !== -1) {
+    for (const term of exclusionTerms) {
+      if (upperName.indexOf(term) !== -1) {
         isExcluded = true;
         break;
       }
