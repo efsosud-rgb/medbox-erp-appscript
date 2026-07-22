@@ -31,18 +31,6 @@ const MAX_RESULTADOS_MAPA = 500;
 
 const MEDBOX_SPREADSHEET_ID = '1QLurrnKCXorjXUoUtPl6MoSP0Gk32Yz0AWBHxebifCw';
 
-const LISTA_CLIENTES_OFICIAIS = [
-  'BD_VivaRio',
-  'BD_AFNE',
-  'BD_INTS UPA Santo Amaro',
-  'BD_INTS Hospital Dia Cidade Ade',
-  'BD_INTS Hospital Dia Santo Amar',
-  'BD_INTS Hospital Guarapiranga',
-  'BD_Solar',
-  'BD_IGEDES',
-  'BD_SPDM'
-];
-
 function obterPlanilhaMedbox_() {
   return SpreadsheetApp.openById(MEDBOX_SPREADSHEET_ID);
 }
@@ -155,7 +143,7 @@ function obterOpcoesSistema() {
   if (mapaValues.length < 2) throw new Error('MAPA_ERP está vazio.');
 
   const headers = mapaValues[0].map(String);
-  const idx = criarIndiceColunas(headers);
+  const mapCols = f2dMapearColunasMapaErp_(headers);
 
   const clientes = obterClientesDoMapa(headers);
 
@@ -166,9 +154,9 @@ function obterOpcoesSistema() {
   for (let i = 1; i < mapaValues.length; i++) {
     const row = mapaValues[i];
 
-    const categoria = upperText(getCell(row, idx, 'Categoria'));
-    const fabricante = upperText(getCell(row, idx, 'Fabricante Compra 2026'));
-    const fornecedor = upperText(getCell(row, idx, 'Fornecedor Compra 2026'));
+    const categoria = upperText(f2dGetMapCell_(row, mapCols, 'categoria'));
+    const fabricante = upperText(f2dGetMapCell_(row, mapCols, 'fabricante'));
+    const fornecedor = upperText(f2dGetMapCell_(row, mapCols, 'fornecedor'));
 
     if (categoria) categoriasSet.add(categoria);
     if (fabricante) fabricantesSet.add(fabricante);
@@ -201,7 +189,7 @@ function pesquisarBuscaAvancada(filtros) {
   if (values.length < 2) throw new Error('MAPA_ERP está vazio.');
 
   const headers = values[0].map(String);
-  const idx = criarIndiceColunas(headers);
+  const mapCols = f2dMapearColunasMapaErp_(headers);
 
   const filtrosTratados = filtros || {};
 
@@ -223,14 +211,18 @@ function pesquisarBuscaAvancada(filtros) {
   for (let i = 1; i < values.length; i++) {
     const row = values[i];
 
-    const produto = getCell(row, idx, 'Produto');
-    const skuMaster = getCell(row, idx, 'SKU Master');
-    const skuOperacional = getCell(row, idx, 'SKU Operacional');
-    const produtoNormalizado = getCell(row, idx, 'Produto Normalizado');
-    const categoriaRow = getCell(row, idx, 'Categoria');
-    const fabricanteRow = getCell(row, idx, 'Fabricante Compra 2026');
-    const fornecedorRow = getCell(row, idx, 'Fornecedor Compra 2026');
-    const clientesRow = getCell(row, idx, 'Clientes com Consumo');
+    const produto = f2dGetMapCell_(row, mapCols, 'produto');
+    const skuMaster = f2dGetMapCell_(row, mapCols, 'skuMaster');
+    const skuOperacional = f2dGetMapCell_(row, mapCols, 'skuOperacional');
+    const produtoNormalizado = f2dGetMapCell_(row, mapCols, 'produtoNormalizado');
+    const categoriaRow = f2dGetMapCell_(row, mapCols, 'categoria');
+    const fabricanteRow = f2dGetMapCell_(row, mapCols, 'fabricante');
+    const fornecedorRow = f2dGetMapCell_(row, mapCols, 'fornecedor');
+    const clientesRow = f2dGetMapCell_(row, mapCols, 'clientesComConsumo');
+
+    if (!produto && !skuMaster && !skuOperacional) {
+      continue;
+    }
 
     const textoCompleto = normalizarTexto([
       produto,
@@ -261,13 +253,13 @@ function pesquisarBuscaAvancada(filtros) {
     }
 
     if (fabricante) {
-      if (!medboxAtendeFiltroFabricanteMarca_(row, idx, fabricante)) continue;
+      if (!medboxAtendeFiltroFabricanteMarca_(row, mapCols, fabricante)) continue;
     }
 
     encontrados.push({
       row,
-      qtd: toNumber(getCell(row, idx, 'Quant. total')) || 0,
-      preco: toNumber(getCell(row, idx, 'Preço Médio Clientes')) || 999999999
+      qtd: toNumber(f2dGetMapCell_(row, mapCols, 'quantTotal')) || 0,
+      preco: toNumber(f2dGetMapCell_(row, mapCols, 'precoMedioClientes')) || 999999999
     });
   }
 
@@ -275,8 +267,8 @@ function pesquisarBuscaAvancada(filtros) {
     if (b.qtd !== a.qtd) return b.qtd - a.qtd;
     if (a.preco !== b.preco) return a.preco - b.preco;
 
-    const pa = normalizarTexto(getCell(a.row, idx, 'Produto'));
-    const pb = normalizarTexto(getCell(b.row, idx, 'Produto'));
+    const pa = normalizarTexto(f2dGetMapCell_(a.row, mapCols, 'produto'));
+    const pb = normalizarTexto(f2dGetMapCell_(b.row, mapCols, 'produto'));
 
     return pa.localeCompare(pb);
   });
@@ -287,14 +279,14 @@ function pesquisarBuscaAvancada(filtros) {
   const resultados = limitados.map(obj => {
     const row = obj.row;
 
-    const skuMaster = limparTexto(getCell(row, idx, 'SKU Master'));
-    const precoCusto = toNumber(getCell(row, idx, 'Custo Compra 2026'));
+    const skuMaster = limparTexto(f2dGetMapCell_(row, mapCols, 'skuMaster'));
+    const precoCusto = toNumber(f2dGetMapCell_(row, mapCols, 'custo'));
     const precoMedBox = calcularPrecoMedBox(skuMaster, precoCusto, markup);
 
-    return montarLinhaResultadoBusca(row, idx, precoMedBox, precoCusto);
+    return montarLinhaResultadoBusca(row, mapCols, precoMedBox, precoCusto);
   });
 
-  const sugestoes = gerarSugestoesSkuBusca(limitados, idx);
+  const sugestoes = gerarSugestoesSkuBusca(limitados, mapCols);
   const resumo = calcularResumoBusca(resultados);
 
   return {
@@ -325,7 +317,7 @@ function obterMapaDeProdutos(filtros) {
   if (values.length < 2) throw new Error('MAPA_ERP está vazio.');
 
   const headers = values[0].map(String);
-  const idx = criarIndiceColunas(headers);
+  const mapCols = f2dMapearColunasMapaErp_(headers);
   const clientes = obterClientesDoMapa(headers);
 
   const filtrosTratados = filtros || {};
@@ -371,13 +363,17 @@ function obterMapaDeProdutos(filtros) {
   for (let i = 1; i < values.length; i++) {
     const row = values[i];
 
-    const produto = getCell(row, idx, 'Produto');
-    const skuMaster = getCell(row, idx, 'SKU Master');
-    const skuOperacional = getCell(row, idx, 'SKU Operacional');
-    const produtoNormalizado = getCell(row, idx, 'Produto Normalizado');
-    const categoriaRow = getCell(row, idx, 'Categoria');
-    const fabricanteRow = getCell(row, idx, 'Fabricante Compra 2026');
-    const fornecedorRow = getCell(row, idx, 'Fornecedor Compra 2026');
+    const produto = f2dGetMapCell_(row, mapCols, 'produto');
+    const skuMaster = f2dGetMapCell_(row, mapCols, 'skuMaster');
+    const skuOperacional = f2dGetMapCell_(row, mapCols, 'skuOperacional');
+    const produtoNormalizado = f2dGetMapCell_(row, mapCols, 'produtoNormalizado');
+    const categoriaRow = f2dGetMapCell_(row, mapCols, 'categoria');
+    const fabricanteRow = f2dGetMapCell_(row, mapCols, 'fabricante');
+    const fornecedorRow = f2dGetMapCell_(row, mapCols, 'fornecedor');
+
+    if (!skuMaster && !skuOperacional && !produtoNormalizado && !produto) {
+      continue;
+    }
 
     // Identificação dinâmica de consumo por cliente
     let temConsumoQualquerCliente = false;
@@ -390,40 +386,47 @@ function obterMapaDeProdutos(filtros) {
       let d = 0;
 
       if (clientData) {
-        // First try to look up in skuMap by SKU Master or SKU Operational
-        const lookupSkus = [
-          normalizarTexto(skuMaster),
-          normalizarTexto(skuOperacional)
-        ].filter(Boolean);
+        // Prioridade 1: SKU_MASTER da aba cliente × SKU Master da MAPA_ERP
+        const skuMasterKey = normalizarTexto(skuMaster);
+        const skuOperacionalKey = normalizarTexto(skuOperacional);
 
         let found = false;
-        for (const lookupSku of lookupSkus) {
-          if (clientData.skuMap[lookupSku]) {
-            const dataItem = clientData.skuMap[lookupSku];
+
+        if (skuMasterKey && clientData.skuMap[skuMasterKey]) {
+          const dataItem = clientData.skuMap[skuMasterKey];
+          q = dataItem.quant;
+          v = dataItem.valorUnit;
+          d = dataItem.demandaR;
+          found = true;
+        } else if (skuOperacionalKey && clientData.skuMap[skuOperacionalKey]) {
+          const dataItem = clientData.skuMap[skuOperacionalKey];
+          q = dataItem.quant;
+          v = dataItem.valorUnit;
+          d = dataItem.demandaR;
+          found = true;
+        }
+
+        // Prioridade 2: Produtos normalizado × Produto Normalizado da MAPA_ERP
+        if (!found) {
+          const prodNormKey = normalizarTexto(produtoNormalizado);
+          if (prodNormKey && clientData.productMap[prodNormKey]) {
+            const dataItem = clientData.productMap[prodNormKey];
             q = dataItem.quant;
             v = dataItem.valorUnit;
             d = dataItem.demandaR;
             found = true;
-            break;
           }
         }
 
-        // If not found, try to look up in productMap by Normalizado or original Produto
+        // Prioridade 3: Produtos normalizado × Produto da MAPA_ERP
         if (!found) {
-          const lookupProducts = [
-            normalizarTexto(produtoNormalizado),
-            normalizarTexto(produto)
-          ].filter(Boolean);
-
-          for (const lookupProduct of lookupProducts) {
-            if (clientData.productMap[lookupProduct]) {
-              const dataItem = clientData.productMap[lookupProduct];
-              q = dataItem.quant;
-              v = dataItem.valorUnit;
-              d = dataItem.demandaR;
-              found = true;
-              break;
-            }
+          const prodKey = normalizarTexto(produto);
+          if (prodKey && clientData.productMap[prodKey]) {
+            const dataItem = clientData.productMap[prodKey];
+            q = dataItem.quant;
+            v = dataItem.valorUnit;
+            d = dataItem.demandaR;
+            found = true;
           }
         }
       }
@@ -470,20 +473,21 @@ function obterMapaDeProdutos(filtros) {
     }
 
     if (fabricante) {
-      if (!medboxAtendeFiltroFabricanteMarca_(row, idx, fabricante)) continue;
+      if (!medboxAtendeFiltroFabricanteMarca_(row, mapCols, fabricante)) continue;
     }
 
     if (fornecedor) {
       if (!normalizarTexto(fornecedorRow).includes(fornecedor)) continue;
     }
 
-    const chave = montarChaveProduto(row, idx);
+    const chave = skuMaster ? normalizarTexto(skuMaster) : montarChaveProduto(row, mapCols);
+    if (!chave) continue;
 
     if (!grupos.has(chave)) {
-      grupos.set(chave, criarGrupoProduto(row, idx, clientes));
+      grupos.set(chave, criarGrupoProduto(row, mapCols, clientes));
     }
 
-    acumularGrupoProduto(grupos.get(chave), row, idx, clientes, consumosPorCliente);
+    acumularGrupoProduto(grupos.get(chave), row, mapCols, clientes, consumosPorCliente);
   }
 
   const produtosAgrupados = Array.from(grupos.values()).map(g => finalizarGrupoProduto(g, markup, matchingClientKey));
@@ -493,8 +497,8 @@ function obterMapaDeProdutos(filtros) {
       return (b.quantTotal || 0) - (a.quantTotal || 0);
     }
 
-    const precoA = a.precoMedioClientes || 999999999;
-    const precoB = b.precoMedioClientes || 999999999;
+    const precoA = a.precoCustoAtual || 999999999;
+    const precoB = b.precoCustoAtual || 999999999;
 
     if (precoA !== precoB) return precoA - precoB;
 
@@ -524,34 +528,34 @@ function obterMapaDeProdutos(filtros) {
  ************************************************************/
 
 function montarChaveProduto(row, idx) {
-  const skuMaster = limparTexto(getCell(row, idx, 'SKU Master'));
-  const skuOperacional = limparTexto(getCell(row, idx, 'SKU Operacional'));
-  const produtoNormalizado = limparTexto(getCell(row, idx, 'Produto Normalizado'));
-  const produto = limparTexto(getCell(row, idx, 'Produto'));
+  const skuMaster = f2dGetMapCell_(row, idx, 'skuMaster');
+  const skuOperacional = f2dGetMapCell_(row, idx, 'skuOperacional');
+  const produtoNormalizado = f2dGetMapCell_(row, idx, 'produtoNormalizado');
+  const produto = f2dGetMapCell_(row, idx, 'produto');
 
   const base = skuMaster || skuOperacional || produtoNormalizado || produto;
 
   return normalizarTexto(base);
 }
 
-function criarGrupoProduto(row, idx, clientes) {
+function criarGrupoProduto(row, mapCols, clientes) {
   const grupo = {
-    categoria: upperText(getCell(row, idx, 'Categoria')),
-    skuMaster: upperText(getCell(row, idx, 'SKU Master')),
-    produto: upperText(getCell(row, idx, 'Produto')),
+    categoria: upperText(f2dGetMapCell_(row, mapCols, 'categoria')),
+    skuMaster: upperText(f2dGetMapCell_(row, mapCols, 'skuMaster')),
+    produto: upperText(f2dGetMapCell_(row, mapCols, 'produto')),
     precoMedioSomaPonderada: 0,
     precoMedioPeso: 0,
     quantTotalFallback: 0,
     menorValorUnit: null,
     maiorValorUnit: null,
     precoCusto: null,
-    fornecedorCompra2026: upperText(getCell(row, idx, 'Fornecedor Compra 2026')),
-    fabricanteCompra2026: upperText(getCell(row, idx, 'Fabricante Compra 2026')),
-    dataCompra2026: upperText(getCell(row, idx, 'Data Compra 2026')),
-    produtoCompra2026: upperText(getCell(row, idx, 'Produto Compra 2026')),
+    fornecedorCompra2026: upperText(f2dGetMapCell_(row, mapCols, 'fornecedor')),
+    fabricanteCompra2026: upperText(f2dGetMapCell_(row, mapCols, 'fabricante')),
+    dataCompra2026: upperText(f2dGetMapCell_(row, mapCols, 'dataCompra')),
+    produtoCompra2026: upperText(f2dGetMapCell_(row, mapCols, 'produto')),
     clientesComConsumoSet: new Set(),
-    skuOperacional: upperText(getCell(row, idx, 'SKU Operacional')),
-    produtoNormalizado: upperText(getCell(row, idx, 'Produto Normalizado')),
+    skuOperacional: upperText(f2dGetMapCell_(row, mapCols, 'skuOperacional')),
+    produtoNormalizado: upperText(f2dGetMapCell_(row, mapCols, 'produtoNormalizado')),
     clientesValores: {}
   };
 
@@ -566,12 +570,11 @@ function criarGrupoProduto(row, idx, clientes) {
   return grupo;
 }
 
-function acumularGrupoProduto(grupo, row, idx, clientes, consumosPorCliente) {
-  const quantTotalRow = toNumber(getCell(row, idx, 'Quant. total')) || 0;
-  const precoMedioRow = toNumber(getCell(row, idx, 'Preço Médio Clientes'));
-  const menorRow = toNumber(getCell(row, idx, 'Menor Valor Unit'));
-  const maiorRow = toNumber(getCell(row, idx, 'Maior Valor Unit'));
-  const custoRow = toNumber(getCell(row, idx, 'Custo Compra 2026'));
+function acumularGrupoProduto(grupo, row, mapCols, clientes, consumosPorCliente) {
+  const quantTotalRow = toNumber(f2dGetMapCell_(row, mapCols, 'quantTotal')) || 0;
+  const precoMedioRow = toNumber(f2dGetMapCell_(row, mapCols, 'precoMedioClientes'));
+  const menorRow = toNumber(f2dGetMapCell_(row, mapCols, 'menorValorUnit'));
+  const custoRow = toNumber(f2dGetMapCell_(row, mapCols, 'custo'));
 
   grupo.quantTotalFallback += quantTotalRow;
 
@@ -584,11 +587,8 @@ function acumularGrupoProduto(grupo, row, idx, clientes, consumosPorCliente) {
     if (grupo.menorValorUnit === null || menorRow < grupo.menorValorUnit) {
       grupo.menorValorUnit = menorRow;
     }
-  }
-
-  if (maiorRow !== null) {
-    if (grupo.maiorValorUnit === null || maiorRow > grupo.maiorValorUnit) {
-      grupo.maiorValorUnit = maiorRow;
+    if (grupo.maiorValorUnit === null || menorRow > grupo.maiorValorUnit) {
+      grupo.maiorValorUnit = menorRow;
     }
   }
 
@@ -611,55 +611,23 @@ function acumularGrupoProduto(grupo, row, idx, clientes, consumosPorCliente) {
           ) {
             grupo.clientesValores[cliente].valorUnit = consumo.valorUnit;
           }
-          grupo.clientesValores[cliente].demandaR += consumo.demandaR;
         }
-
-        grupo.clientesComConsumoSet.add(upperText(cliente));
-      }
-    });
-  } else {
-    const clientesTexto = upperText(getCell(row, idx, 'Clientes com Consumo'));
-
-    if (clientesTexto) {
-      clientesTexto.split(/[;,]/).forEach(c => {
-        const t = upperText(c);
-        if (t) grupo.clientesComConsumoSet.add(t);
-      });
-    }
-
-    clientes.forEach(cliente => {
-      const q = toNumber(getCell(row, idx, `${cliente} Quant`)) || 0;
-      const v = toNumber(getCell(row, idx, `${cliente} Valor Unit`));
-
-      if (q > 0) {
-        grupo.clientesValores[cliente].quant += q;
-
-        if (v !== null) {
-          if (
-            grupo.clientesValores[cliente].valorUnit === null ||
-            v < grupo.clientesValores[cliente].valorUnit
-          ) {
-            grupo.clientesValores[cliente].valorUnit = v;
-          }
-
-          grupo.clientesValores[cliente].demandaR += q * v;
-        }
-
+        grupo.clientesValores[cliente].demandaR += consumo.demandaR;
         grupo.clientesComConsumoSet.add(upperText(cliente));
       }
     });
   }
 
   if (!grupo.fornecedorCompra2026) {
-    grupo.fornecedorCompra2026 = upperText(getCell(row, idx, 'Fornecedor Compra 2026'));
+    grupo.fornecedorCompra2026 = upperText(f2dGetMapCell_(row, mapCols, 'fornecedor'));
   }
 
   if (!grupo.fabricanteCompra2026) {
-    grupo.fabricanteCompra2026 = upperText(getCell(row, idx, 'Fabricante Compra 2026'));
+    grupo.fabricanteCompra2026 = upperText(f2dGetMapCell_(row, mapCols, 'fabricante'));
   }
 
   if (!grupo.produtoCompra2026) {
-    grupo.produtoCompra2026 = upperText(getCell(row, idx, 'Produto Compra 2026'));
+    grupo.produtoCompra2026 = upperText(f2dGetMapCell_(row, mapCols, 'produto'));
   }
 }
 
@@ -728,8 +696,8 @@ function finalizarGrupoProduto(grupo, markup, matchingClientKey) {
 
   return {
     categoria: grupo.categoria,
-    produto: grupo.produto,
     skuMaster: grupo.skuMaster,
+    produto: grupo.produto,
     fabricante: grupo.fabricanteCompra2026,
     fornecedor: grupo.fornecedorCompra2026,
     precoCustoAtual: grupo.precoCusto || null,
@@ -762,17 +730,17 @@ function calcularPrecoMedBox(skuMaster, precoCusto, markup) {
 }
 
 function montarLinhaResultadoBusca(row, idx, precoMedBox, precoCusto) {
-  const skuMaster = upperText(getCell(row, idx, 'SKU Master'));
+  const skuMaster = upperText(f2dGetMapCell_(row, idx, 'skuMaster'));
   const statusCadastro = skuMaster ? 'ATIVO' : 'PENDENTE';
   const statusPreco = precoCusto ? 'CONCLUÍDO' : 'SEM CUSTO';
-  const dataCompra = getCell(row, idx, 'Data Compra 2026');
+  const dataCompra = f2dGetMapCell_(row, idx, 'dataCompra');
 
   return {
-    categoria: upperText(getCell(row, idx, 'Categoria')),
-    produto: upperText(getCell(row, idx, 'Produto')),
+    categoria: upperText(f2dGetMapCell_(row, idx, 'categoria')),
+    produto: upperText(f2dGetMapCell_(row, idx, 'produto')),
     skuMaster: skuMaster,
-    fabricante: upperText(getCell(row, idx, 'Fabricante Compra 2026')),
-    fornecedor: upperText(getCell(row, idx, 'Fornecedor Compra 2026')),
+    fabricante: upperText(f2dGetMapCell_(row, idx, 'fabricante')),
+    fornecedor: upperText(f2dGetMapCell_(row, idx, 'fornecedor')),
     precoCustoAtual: precoCusto || null,
     precoMedbox: precoMedBox || null,
     dataUltimoPreco: dataCompra ? new Date(dataCompra).toISOString() : null,
@@ -781,11 +749,11 @@ function montarLinhaResultadoBusca(row, idx, precoMedBox, precoCusto) {
     statusPreco: statusPreco,
     ultimaQuantidadeCotada: null, // Placeholder
     ultimoValorUnitarioCotado: null, // Placeholder
-    clientesComDemanda: upperText(getCell(row, idx, 'Clientes com Consumo')),
+    clientesComDemanda: upperText(f2dGetMapCell_(row, idx, 'clientesComConsumo')),
 
     // keeps compatibility
-    quantTotal: toNumber(getCell(row, idx, 'Quant. total')) || 0,
-    menorValorUnit: toNumber(getCell(row, idx, 'Menor Valor Unit'))
+    quantTotal: toNumber(f2dGetMapCell_(row, idx, 'quantTotal')) || 0,
+    menorValorUnit: toNumber(f2dGetMapCell_(row, idx, 'menorValorUnit'))
   };
 }
 
@@ -795,10 +763,10 @@ function gerarSugestoesSkuBusca(limitados, idx) {
   for (const obj of limitados) {
     const row = obj.row;
 
-    const skuMaster = upperText(getCell(row, idx, 'SKU Master'));
-    const skuOperacional = upperText(getCell(row, idx, 'SKU Operacional'));
-    const produto = upperText(getCell(row, idx, 'Produto'));
-    const qtd = toNumber(getCell(row, idx, 'Quant. total')) || 0;
+    const skuMaster = upperText(f2dGetMapCell_(row, idx, 'skuMaster'));
+    const skuOperacional = upperText(f2dGetMapCell_(row, idx, 'skuOperacional'));
+    const produto = upperText(f2dGetMapCell_(row, idx, 'produto'));
+    const qtd = toNumber(f2dGetMapCell_(row, idx, 'quantTotal')) || 0;
 
     const skuFinal = skuMaster || skuOperacional;
 
@@ -899,36 +867,18 @@ function medboxAtendeFiltroFabricanteMarca_(row, idx, filtroFabricanteMarca) {
 
 function medboxMontarTextoFabricanteMarca_(row, idx) {
   const campos = [
-    'Fabricante Compra 2026',
-    'Fornecedor Compra 2026',
-    'Fabricante',
-    'Marca',
-    'Marca / Fabricante',
-    'Fabricante / Marca',
-    'FABRICANTE',
-    'MARCA',
-    'FABRICANTE_MARCA',
-    'FORNECEDOR',
-    'Fornecedor',
-    'Produto',
-    'PRODUTO',
-    'Produto Normalizado',
-    'DESCRICAO_NORMALIZADA',
-    'DESCRICAO_FORNECEDOR',
-    'Descrição',
-    'Descricao',
-    'Descrição do Produto',
-    'SKU Master',
-    'SKU_MASTER',
-    'SKU Operacional',
-    'SKU_OPERACIONAL',
-    'Produto Compra 2026'
+    'fabricante',
+    'fornecedor',
+    'produto',
+    'produtoNormalizado',
+    'skuMaster',
+    'skuOperacional'
   ];
 
   const partes = [];
 
   campos.forEach(function(nomeColuna) {
-    const valor = medboxGetCellFlex_(row, idx, nomeColuna);
+    const valor = f2dGetMapCell_(row, idx, nomeColuna);
 
     if (valor !== null && valor !== undefined && String(valor).trim() !== '') {
       partes.push(String(valor));
@@ -936,27 +886,6 @@ function medboxMontarTextoFabricanteMarca_(row, idx) {
   });
 
   return normalizarTexto(partes.join(' '));
-}
-
-function medboxGetCellFlex_(row, idx, nomeColuna) {
-  if (!idx || !row) return '';
-
-  if (idx[nomeColuna] !== undefined && idx[nomeColuna] !== null) {
-    return row[idx[nomeColuna]];
-  }
-
-  const nomeNorm = normalizarTexto(nomeColuna);
-  const chaves = Object.keys(idx);
-
-  for (let i = 0; i < chaves.length; i++) {
-    const chave = chaves[i];
-
-    if (normalizarTexto(chave) === nomeNorm) {
-      return row[idx[chave]];
-    }
-  }
-
-  return '';
 }
 
 /************************************************************
@@ -1107,16 +1036,41 @@ function obterClientesDoMapa(headers) {
 }
 
 function f2dObterAbasClientes_(ss) {
+  const sheets = ss.getSheets();
   const abasClientes = [];
-  LISTA_CLIENTES_OFICIAIS.forEach(nomeAba => {
-    const sheet = ss.getSheetByName(nomeAba);
-    if (sheet) {
-      const detection = f2dDetectarCabecalhoEColunas_(sheet);
-      if (detection !== null) {
-        abasClientes.push(sheet);
+
+  sheets.forEach(sheet => {
+    const name = sheet.getName();
+    const upperName = name.trim().toUpperCase();
+
+    // Deve começar com BD_
+    if (!upperName.startsWith("BD_")) return;
+
+    // Excluir BD_SKU MASTER e BD_PRECOS
+    if (upperName === "BD_SKU MASTER" || upperName === "BD_SKU_MASTER" || upperName === "BD_PRECOS") {
+      return;
+    }
+
+    // Excluir abas administrativas, backup, revisão, relatório, log
+    const exclusions = [
+      "ADMIN", "BACKUP", "REVISAO", "REVISÃO", "RELATORIO", "RELATÓRIO", "LOG", "AUX", "MAPA"
+    ];
+    let isExcluded = false;
+    for (const excl of exclusions) {
+      if (upperName.indexOf(excl) !== -1) {
+        isExcluded = true;
+        break;
       }
     }
+    if (isExcluded) return;
+
+    // Se passar nas exclusões, verificar se tem estrutura válida
+    const detection = f2dDetectarCabecalhoEColunas_(sheet);
+    if (detection !== null) {
+      abasClientes.push(sheet);
+    }
   });
+
   return abasClientes;
 }
 
@@ -1225,51 +1179,47 @@ function f2dCarregarDadosClienteSheet_(sheet) {
   };
 
   const values = sheet.getDataRange().getValues();
+  const headers = values[detection.headerRowIndex].map(String);
 
-  const colQtd = detection.colQtd;
-  const colVal = detection.colVal;
+  // Mapear colunas exatas do cliente
+  const colSkuMaster = f2dEncontrarColunaFlex_(headers, ['SKU_MASTER', 'SKU MASTER']);
+  const colProdutos = f2dEncontrarColunaFlex_(headers, ['Produtos', 'Produto', 'DESCRICAO']);
+  const colQuant = f2dEncontrarColunaFlex_(headers, ['Quant', 'QUANTIDADE', 'QTD']);
+  const colVUnit = f2dEncontrarColunaFlex_(headers, ['V. Unit', 'VALOR_UNITARIO', 'V UNIT', 'PRECO']);
+  const colVTotal = f2dEncontrarColunaFlex_(headers, ['V. Total', 'VALOR_TOTAL', 'V TOTAL', 'VALOR TOTAL']);
+
   const startRow = detection.headerRowIndex + 1;
 
   for (let i = startRow; i < values.length; i++) {
     const row = values[i];
 
-    // Exigimos quantidade válida!
-    const q = colQtd !== -1 ? toNumber(row[colQtd]) : null;
+    // Ler Quant
+    const q = colQuant !== -1 ? toNumber(row[colQuant]) : null;
     if (q === null || q <= 0) {
       result.ignoredRowsCount++;
       continue;
     }
 
-    const v = colVal !== -1 ? toNumber(row[colVal]) : null;
+    // Ler V. Unit
+    const vUnit = colVUnit !== -1 ? toNumber(row[colVUnit]) : null;
 
-    // Special logic for BD_VivaRio:
-    // "Em BD_VivaRio: usar SKU_MASTER quando preenchido; quando vazio, fazer fallback para Produtos."
-    const isVivaRio = (sheet.getName() === 'BD_VivaRio');
+    // Ler V. Total
+    let vTotal = colVTotal !== -1 ? toNumber(row[colVTotal]) : null;
+    if (vTotal === null && q !== null && vUnit !== null) {
+      vTotal = q * vUnit;
+    }
+
+    // Usar SKU_MASTER quando preenchido, Produtos quando vazio, nunca usar Código
+    const skuMasterVal = colSkuMaster !== -1 ? String(row[colSkuMaster]).trim() : "";
+    const produtoVal = colProdutos !== -1 ? String(row[colProdutos]).trim() : "";
+
     let keySku = "";
     let keyProduct = "";
 
-    if (isVivaRio) {
-      const skuMasterVal = detection.colSkuMaster !== -1 ? String(row[detection.colSkuMaster]).trim() : "";
-      const produtoVal = detection.colProduto !== -1 ? String(row[detection.colProduto]).trim() : "";
-
-      if (skuMasterVal) {
-        keySku = normalizarTexto(skuMasterVal);
-      } else if (produtoVal) {
-        keyProduct = normalizarTexto(produtoVal);
-      }
-    } else {
-      const idRaw = String(row[detection.colId]).trim();
-      if (!idRaw) {
-        result.ignoredRowsCount++;
-        continue;
-      }
-      const idKey = normalizarTexto(idRaw);
-
-      if (detection.tipoId === "PRODUTO") {
-        keyProduct = idKey;
-      } else {
-        keySku = idKey;
-      }
+    if (skuMasterVal) {
+      keySku = normalizarTexto(skuMasterVal);
+    } else if (produtoVal) {
+      keyProduct = normalizarTexto(produtoVal);
     }
 
     if (!keySku && !keyProduct) {
@@ -1291,21 +1241,22 @@ function f2dCarregarDadosClienteSheet_(sheet) {
     }
 
     targetMap[targetKey].quant += q;
-    if (v !== null && v > 0) {
-      if (targetMap[targetKey].valorUnit === null || v < targetMap[targetKey].valorUnit) {
-        targetMap[targetKey].valorUnit = v;
+    if (vUnit !== null && vUnit > 0) {
+      if (targetMap[targetKey].valorUnit === null || vUnit < targetMap[targetKey].valorUnit) {
+        targetMap[targetKey].valorUnit = vUnit;
       }
+    }
+    if (vTotal !== null && vTotal > 0) {
+      targetMap[targetKey].demandaR += vTotal;
     }
   }
 
-  // Calculate Demanda R$ for SKU and Product maps
+  // Se demandaR não foi preenchida ou é 0, calcula como quant * valorUnit
   [result.skuMap, result.productMap].forEach(m => {
     Object.keys(m).forEach(key => {
       const item = m[key];
-      if (item.quant > 0 && item.valorUnit !== null) {
+      if (item.demandaR === 0 && item.quant > 0 && item.valorUnit !== null) {
         item.demandaR = item.quant * item.valorUnit;
-      } else {
-        item.demandaR = 0;
       }
     });
   });
@@ -1336,6 +1287,31 @@ function f2dEncontrarColunaFlex_(headers, candidates) {
     }
   }
   return -1;
+}
+
+function f2dMapearColunasMapaErp_(headers) {
+  const map = {
+    categoria: f2dEncontrarColunaFlex_(headers, ['Categoria']),
+    produto: f2dEncontrarColunaFlex_(headers, ['Produtos', 'Produto']),
+    skuMaster: f2dEncontrarColunaFlex_(headers, ['SKU_MASTER', 'SKU MASTER']),
+    skuOperacional: f2dEncontrarColunaFlex_(headers, ['SKU_OPERACIONAL', 'SKU OPERACIONAL']),
+    produtoNormalizado: f2dEncontrarColunaFlex_(headers, ['Produto Normalizado', 'DESCRICAO_NORMALIZADA']),
+    custo: f2dEncontrarColunaFlex_(headers, ['Custo Compra 2026']),
+    fornecedor: f2dEncontrarColunaFlex_(headers, ['Fornecedor Compra 2026']),
+    fabricante: f2dEncontrarColunaFlex_(headers, ['Fabricante Compra 2026']),
+    dataCompra: f2dEncontrarColunaFlex_(headers, ['Data Compra 2026']),
+    quantTotal: f2dEncontrarColunaFlex_(headers, ['Quant. total', 'Quant total', 'QUANTIDADE', 'QUANT']),
+    precoMedioClientes: f2dEncontrarColunaFlex_(headers, ['Preço Médio Clientes']),
+    menorValorUnit: f2dEncontrarColunaFlex_(headers, ['Menor Valor Unit']),
+    clientesComConsumo: f2dEncontrarColunaFlex_(headers, ['Clientes com Consumo', 'Clientes com Consumo Set'])
+  };
+  return map;
+}
+
+function f2dGetMapCell_(row, map, colName) {
+  const idx = map[colName];
+  if (idx === undefined || idx === null || idx < 0) return '';
+  return row[idx];
 }
 
 function criarIndiceColunas(headers) {

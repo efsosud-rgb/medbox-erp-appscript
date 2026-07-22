@@ -1,5 +1,5 @@
 /************************************************************
- * MEDBOX ERP | DIAGNÓSTICO ROBÔ FISCAL
+ * MEDBOX ERP | DIAGNÓSTICO ROBÔ FISCAL & MAPA DE PRODUTOS
  *
  * Arquivo: Diagnostico.js
  *
@@ -12,7 +12,7 @@
  * Executa o diagnóstico da aba BD_PRECOS e gera um relatório.
  */
 function varredura_BD_PRECOS() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = obterPlanilhaMedbox_();
   const abaBdPrecos = ss.getSheetByName('BD_PRECOS');
 
   if (!abaBdPrecos) {
@@ -156,7 +156,7 @@ function diagnosticarMapaDeProdutosEClientes() {
       log.push('Linhas Totais: ' + lastRow);
       log.push('Colunas Totais: ' + lastCol);
       if (lastRow > 0) {
-        const headers = mapa.getRange(1, 1, 1, lastCol).getValues()[0];
+        const headers = mapa.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
         log.push('Cabeçalhos da MAPA_ERP: ' + headers.join(' | '));
       }
     }
