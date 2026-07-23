@@ -470,11 +470,16 @@ function mvpConsolidarDados_(markup) {
 
   const produtosMap = {};
   const clientesDetectados = [];
+  const linhasValidasPorCliente = {};
+  const abasDetectadas = [];
 
   abasClientes.forEach(function(sheetInfo) {
     clientesDetectados.push(sheetInfo.nomeCliente);
+    abasDetectadas.push(sheetInfo.sheet.getName());
 
     const itens = mvpCarregarAbaCliente_(sheetInfo, skuMasterIndex);
+    linhasValidasPorCliente[sheetInfo.nomeCliente] = itens.length;
+
     itens.forEach(function(item) {
       if (!produtosMap[item.chave]) {
         produtosMap[item.chave] = mvpCriarProdutoBase_(item);
@@ -494,11 +499,113 @@ function mvpConsolidarDados_(markup) {
 
   clientesDetectados.sort();
 
+  const regSku = skuMasterIndex.porDescricao ? Object.keys(skuMasterIndex.porDescricao).length : 0;
+  const regPrecos = precosIndex.porSku ? Object.keys(precosIndex.porSku).length : 0;
+  const regPrecosDesc = precosIndex.porDescricao ? Object.keys(precosIndex.porDescricao).length : 0;
+
   return {
     clientes: clientesDetectados,
     produtos: produtosFinais,
-    atualizadoEm: formatarDataHora(new Date())
+    atualizadoEm: formatarDataHora(new Date()),
+    _diagnostico: {
+      abasClientes: abasDetectadas,
+      linhasValidasPorCliente: linhasValidasPorCliente,
+      registrosSkuMaster: regSku,
+      registrosPrecos: regPrecos + regPrecosDesc
+    }
   };
+}
+
+function diagnosticarMvpSomenteLeitura() {
+  const dados = mvpConsolidarDados_(0.8);
+  const produtos = dados.produtos;
+  const diag = dados._diagnostico;
+
+  var totalComSku = 0;
+  var totalSemSku = 0;
+  var totalComPreco = 0;
+  var totalSemPreco = 0;
+  var quantidadeTotal = 0;
+  var valorTotal = 0;
+
+  produtos.forEach(function(p) {
+    quantidadeTotal += p.quantTotal || 0;
+    valorTotal += p.demandaR || 0;
+    if (p.skuMaster) { totalComSku++; } else { totalSemSku++; }
+    if (p.precoCustoAtual && p.precoCustoAtual > 0) { totalComPreco++; } else { totalSemPreco++; }
+  });
+
+  var exemplosProdutos = [];
+  for (var i = 0; i < Math.min(10, produtos.length); i++) {
+    var p = produtos[i];
+    exemplosProdutos.push({
+      produto: p.produto,
+      skuMaster: p.skuMaster,
+      categoria: p.categoria,
+      fornecedor: p.fornecedor,
+      fabricante: p.fabricante,
+      precoCustoAtual: p.precoCustoAtual,
+      quantidadeTotalDemandada: p.quantTotal,
+      valorTotalDemandado: p.demandaR,
+      clientesComDemanda: p.clientesComDemanda
+    });
+  }
+
+  var exemplosComDoisClientes = [];
+  for (var j = 0; j < produtos.length && exemplosComDoisClientes.length < 5; j++) {
+    var pj = produtos[j];
+    var clientesArr = pj.clientesComDemanda ? pj.clientesComDemanda.split('; ').filter(Boolean) : [];
+    if (clientesArr.length >= 2) {
+      exemplosComDoisClientes.push({ produto: pj.produto, skuMaster: pj.skuMaster, clientes: clientesArr });
+    }
+  }
+
+  var exemplosCorrelacionadosSku = [];
+  for (var k = 0; k < produtos.length && exemplosCorrelacionadosSku.length < 5; k++) {
+    var pk = produtos[k];
+    if (pk.skuMaster) {
+      exemplosCorrelacionadosSku.push({ produto: pk.produto, skuMaster: pk.skuMaster });
+    }
+  }
+
+  var exemplosComPreco = [];
+  for (var m = 0; m < produtos.length && exemplosComPreco.length < 5; m++) {
+    var pm = produtos[m];
+    if (pm.precoCustoAtual && pm.precoCustoAtual > 0) {
+      exemplosComPreco.push({
+        produto: pm.produto,
+        skuMaster: pm.skuMaster,
+        precoCusto: pm.precoCustoAtual,
+        fornecedor: pm.fornecedor,
+        fabricante: pm.fabricante
+      });
+    }
+  }
+
+  var resultado = {
+    executadoEm: formatarDataHora(new Date()),
+    planilhaId: '1QLurrnKCXorjXUoUtPl6MoSP0Gk32Yz0AWBHxebifCw',
+    abasClientes: diag.abasClientes,
+    totalAbasClientes: diag.abasClientes.length,
+    linhasValidasPorCliente: diag.linhasValidasPorCliente,
+    registrosSkuMaster: diag.registrosSkuMaster,
+    registrosPrecos: diag.registrosPrecos,
+    totalProdutos: produtos.length,
+    totalComSku: totalComSku,
+    totalSemSku: totalSemSku,
+    totalComPreco: totalComPreco,
+    totalSemPreco: totalSemPreco,
+    quantidadeTotal: quantidadeTotal,
+    valorTotal: valorTotal,
+    exemplosProdutos: exemplosProdutos,
+    exemplosComDoisClientes: exemplosComDoisClientes,
+    exemplosCorrelacionadosSku: exemplosCorrelacionadosSku,
+    exemplosComPreco: exemplosComPreco
+  };
+
+  var json = JSON.stringify(resultado, null, 2);
+  Logger.log(json);
+  return resultado;
 }
 
 /************************************************************

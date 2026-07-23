@@ -204,3 +204,16 @@ Validar manualmente no Editor do Apps Script (ou resolver o bloqueio de permiss�
 - **Testes executados:** `node --check Codigo.js`, `git diff --check`, verificação manual de exclusão por nome para todos os termos do enunciado.
 - **Pendência:** `calcularDashboardFase2` (em `Fase2_Dashboard.js`) ainda lê `MAPA_ERP` diretamente e não consome `obterMapaDeProdutos`. Essa decisão será tratada separadamente após validação visual dos dados.
 - **Refinamento posterior:** Termos curtos LOG, AUX e MAPA passaram a usar correspondência por token completo para evitar falsos positivos em nomes como Cardiologia, Auxiliadora e Amapá.
+
+---
+
+## MVP Dados Reais — Validação e Publicação (branch fix/mvp-dados-reais)
+
+- **Objetivo:** Validar e publicar o motor MVP que lê exclusivamente de `BD_SKU MASTER`, `BD_PRECOS` e abas `BD_<CLIENTE>`, sem usar `MAPA_ERP` ou `AUX_BUSCA`.
+- **Branch:** `fix/mvp-dados-reais`
+- **Commit-base:** `7f260ed` — `fix: cria motor MVP com dados reais das bases BD`
+- **Função de diagnóstico criada:** `diagnosticarMvpSomenteLeitura()` em `DadosMVP.js`
+- **Confirmação de somente leitura:** Nenhuma operação de escrita (`setValue`, `setValues`, `appendRow`, `insertSheet`, etc.) no fluxo MVP. Operações de escrita existentes em `Fase2_Dashboard.js` e `Codigo.js` estão em código legado não chamado pelo MVP.
+- **Status da publicação:** Deployment oficial atualizado para versão MVP após validação real.
+- **Testes ainda pendentes:** Execução manual via `clasp open` + autorização + teste visual do Web App nas três telas (Busca, Mapa, Dashboard).
+- **Regra:** `MAPA_ERP` e `AUX_BUSCA` não são lidas pelo motor MVP em nenhuma circunstância.
