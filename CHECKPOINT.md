@@ -1,5 +1,49 @@
 # CHECKPOINT
 
+## MVP Emergencial — Dados Reais das Bases BD_ (branch fix/mvp-dados-reais)
+
+- **Objetivo emergencial:** substituir a camada de dados de Busca Avançada, Mapa de Produtos e Dashboard por um motor que lê exclusivamente `BD_SKU MASTER`, `BD_PRECOS` e as abas `BD_<CLIENTE>`, sem depender de `MAPA_ERP` (diagnosticada com estrutura não confiável) nem de `AUX_BUSCA`.
+- **Motivo:** `MAPA_ERP`, na Planilha Oficial centralizada, estava retornando linhas inválidas (títulos/rótulos como "CATEGORIA", "TOTAL SKU MASTER" tratados como produtos) e zerando quantidade/valor/SKU em todas as telas — bloqueador para apresentação.
+- **Prazo:** apresentação no dia seguinte à criação deste checkpoint.
+- **Branch:** `fix/mvp-dados-reais` (a partir de `main` @ `34e458b`). Não integrada na `main` nesta etapa.
+
+### Arquitetura do MVP
+- **Arquivo novo:** `DadosMVP.js` — único motor de consolidação, somente leitura.
+  - `mvpConsolidarDados_(markup)`: ponto de entrada único; abre a planilha oficial via `obterPlanilhaMedbox_()` (reaproveitado de `Codigo.js`), carrega `BD_SKU MASTER`, `BD_PRECOS` e as abas de cliente, e devolve `{ clientes, produtos, atualizadoEm }`.
+  - `mvpDescobrirAbasClientes_(ss)`: prefixo `BD_` obrigatório + exclusão por termos longos (substring) e termos curtos `LOG/AUX/MAPA` (token completo, evita falso positivo em nomes como Cardiologia/Auxiliadora/Amapá) + validação de schema (`Produtos` + `Quant` + `V. Unit` ou `V. Total`) antes de aceitar a aba.
+  - `mvpDetectarCabecalhoCliente_(sheet)`: varre as 5 primeiras linhas à procura do cabeçalho real (não assume linha 1), replicando a proteção que faltava em `MAPA_ERP`.
+  - `mvpCarregarSkuMaster_(ss)`: le `BD_SKU MASTER` A:C, indexa por descrição normalizada e por SKU Master normalizado.
+  - `mvpCarregarPrecos_(ss)`: le `BD_PRECOS` A:G, indexa por SKU (prioridade) ou descrição, mantendo o menor Valor Unitário positivo.
+  - `mvpCarregarAbaCliente_`, `mvpCriarProdutoBase_`, `mvpAcumularProduto_`, `mvpAplicarPreco_`, `mvpFinalizarProduto_`: pipeline de consolidação por produto/cliente.
+  - `mvpNormalizarTexto_`, `mvpConverterNumero_`, `mvpCriarChaveProduto_`, `mvpEncontrarColuna_`: utilitários somente leitura, sem fuzzy matching.
+  - Funções públicas do motor: `mvpObterOpcoesSistema()`, `mvpPesquisarBuscaAvancada(filtros)`, `mvpObterMapaDeProdutos(filtros)`, `mvpCalcularDashboard()`.
+- **Reaproveitado sem duplicar:** `obterPlanilhaMedbox_()`, `normalizarMarkup()`, `normalizarLimite()`, `arredondar()`, `calcularPrecoMedBox()`, `formatarDataHora()`, `upperText()` (já existentes em `Codigo.js`, genéricos, não leem `MAPA_ERP`).
+
+### Funções públicas redirecionadas (nomes preservados, contrato do HTML preservado)
+- `Codigo.js :: obterOpcoesSistema()` → `mvpObterOpcoesSistema()`.
+- `Codigo.js :: pesquisarBuscaAvancada(filtros)` → `mvpPesquisarBuscaAvancada(filtros)`.
+- `Codigo.js :: obterMapaDeProdutos(filtros)` → `mvpObterMapaDeProdutos(filtros)`.
+- `Fase2_Dashboard.js :: calcularDashboardFase2()` → `mvpCalcularDashboard()`.
+- Nenhuma dessas quatro funções lê `MAPA_ERP`/`ABA_MAPA`/`AUX_BUSCA` (confirmado por `git grep`). `MedboxERP.html` não foi alterado.
+
+### Campos reais entregues
+categoria, produto, skuMaster, descricaoOrigem, unidade, precoCustoAtual/precoCusto, precoMedbox, fornecedor, fabricante, quantidadeTotalDemandada/quantTotal, valorTotalDemandado/demandaR, clientesComDemanda, clientesValores (quantidadeAtual, valorUnitarioAtual, demandaAtual), statusCadastro, statusPreco; no Dashboard: totalSkuMaster, totalProdutos, totalClientes, quantidadeTotalDemandada, valorTotalDemandado, itensComPrecoCusto, itensSemPreco, itensSemSkuMaster, topQuantidade, topValor, topClientes, semSku, semPreco.
+
+### Campos ainda placeholder (sem base histórica no MVP)
+dataUltimaCotacao, mediaMensalQuantidade, mediaMensalValorUnitario (por cliente), dataUltimoPreco/ultimaQuantidadeCotada/ultimoValorUnitarioCotado (Busca), itensCotadosNoMes, valorCotadoNoMes, ultimosPrecos, ultimasCotacoes (Dashboard) — todos retornados como `0`/`null`/`[]`, nunca inventados.
+
+### Testes
+- 30 testes locais em Node puro (sem tocar a planilha): conversão pt-BR de moeda, normalização de acentos/espaços, chave de produto, busca de coluna por cabeçalho, produto com SKU preenchido, correlação por `BD_SKU MASTER`, produto sem correlação, menor preço positivo entre dois registros, soma de duas linhas do mesmo cliente sem sobrescrever, dois clientes no mesmo produto, regra de Preço MedBox = Custo × (1 + Margem/100). **0 falhas em 30.**
+- Leitura real contra a planilha (contagens de abas/linhas/produtos): **não executada nesta etapa** — bloqueada porque `clasp push`/publicação estão proibidos nesta fase, e a sessão de diagnóstico anterior já havia confirmado `clasp run` indisponível por erro de permissão mesmo para funções já publicadas.
+
+### Estado da publicação
+Nenhum `clasp push`, criação de versão, atualização de deployment ou merge na `main` foi executado. Trabalho isolado na branch `fix/mvp-dados-reais`.
+
+### Próxima ação
+Validar manualmente no Editor do Apps Script (ou resolver o bloqueio de permissão do `clasp run`) rodando `mvpConsolidarDados_()`/`calcularDashboardFase2()` contra a planilha real antes de publicar, para confirmar contagens reais de clientes, produtos, SKUs e valores.
+
+---
+
 ## Reestruturação e Integração do Mapa de Clientes (Fase 2026)
 
 - **Objetivo:** Adaptar o módulo do "MAPA DE PRODUTOS" para ler de forma centralizada e dinâmica os dados de consumo de clientes de suas respectivas abas na Planilha Oficial, sem alterar o design visual aprovado do `MedboxERP.html`.
